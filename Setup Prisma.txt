@@ -1,0 +1,14 @@
+1. npm install
+
+2.npm install @prisma/client
+
+4. Update .env
+
+   POSTGRES_PRISMA_URL=
+   POSTGRES_URL_NON_POOLING=
+
+4. Create prisma modals (src/prisma/schema.prisma) in this file
+
+5. npx prisma generate
+
+6.npx prisma migrate dev --name init
