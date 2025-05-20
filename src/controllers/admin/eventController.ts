@@ -208,16 +208,59 @@ export const editEventGet = async (req: Request, res: Response) => {
   req.session.formData = undefined;
   req.session.validationErrors = undefined;
 
-  const artist = await prisma.artist.findUnique({
-    where: { id }
-  });
+  const event = await prisma.event.findFirst({
+      where: { id },
+    });
 
-  res.render('event/edit-artist', {
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+    const artistIds: number[] = Array.isArray(event.artist_details)
+      ? event.artist_details.map(Number)
+      : [];
+
+    const artists = await prisma.artist.findMany({
+      where: { id: { in: artistIds } },
+    });
+
+    const enrichedArtists = artistIds.map(id => {
+      const artist = artists.find(a => a.id === id);
+      return {
+        artistId: id,
+        artistName: artist?.name || 'Unknown',
+      };
+    });
+
+    const ticketDetails: any[] = Array.isArray(event.ticket_details)
+      ? event.ticket_details
+      : [];
+
+    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: { id: { in: ticketTypeIds } },
+    });
+
+    const enrichedTickets = ticketDetails.map(ticket => {
+      const ticketType = ticketTypes.find(tt => tt.id === ticket.ticketTypeId);
+      return {
+        ...ticket,
+        ticketTypeName: ticketType?.name || 'Unknown',
+      };
+    });
+
+    const enrichedEvent = {
+      ...event,
+      artist_details: enrichedArtists,
+      ticket_details: enrichedTickets,
+    };
+
+  res.render('event/edit-event', {
     error,
     success,
     formData,
     validationErrors,
-    artist,
+    enrichedEvent,
   });
 };
 export const editEventPost = async (req: Request, res: Response) => {

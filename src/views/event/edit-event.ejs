@@ -1,0 +1,272 @@
+<%- include('../layouts/header.ejs') %>
+<div class="content-page">
+    <div class="content">
+
+        <div class="container-fluid">
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="header-title">Edit Event</h4>
+
+                            <form class="mt-4" method="POST" action="/event/edit/<%= enrichedEvent.id %>" enctype="multipart/form-data">
+                                <% if (success) { %>
+                                    <div class="alert alert-success"><%= success %></div>
+                                <% } %>
+                                <% if (error) { %>
+                                    <div class="alert alert-danger"><%= error %></div>
+                                <% } %>
+
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
+                                        <% if (validationErrors?.name) { %>
+                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Start Date Time</label>
+                                        <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                        <% if (validationErrors?.start_date_time) { %>
+                                            <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">End Date Time</label>
+                                        <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                        <% if (validationErrors?.end_date_time) { %>
+                                            <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Description</label>
+                                        <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
+                                        <% if (validationErrors?.discription) { %>
+                                            <small class="text-danger"><%= validationErrors.discription[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Ticket Policy</label>
+                                        <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
+                                        <% if (validationErrors?.policy) { %>
+                                            <small class="text-danger"><%= validationErrors.policy[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Organized By</label>
+                                        <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
+                                        <% if (validationErrors?.organized_by) { %>
+                                            <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Location</label>
+                                        <select class="form-control" data-toggle="select2" name="location" data-width="100%">
+                                            <option value="AZ" <%= (formData?.location || enrichedEvent.location) === 'AZ' ? 'selected' : '' %>>Arizona</option>
+                                            <option value="CO" <%= (formData?.location || enrichedEvent.location) === 'CO' ? 'selected' : '' %>>Colorado</option>
+                                            <option value="ID" <%= (formData?.location || enrichedEvent.location) === 'ID' ? 'selected' : '' %>>Idaho</option>
+                                        </select>
+                                        <% if (validationErrors?.location) { %>
+                                            <small class="text-danger"><%= validationErrors.location[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Artists</label>
+                                        <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
+                                            <% // Assuming 'allArtists' is passed to the view, similar to 'artists' in addEventGet %>
+                                            <% allArtists.forEach(artist => { %>
+                                                <option value="<%= artist.id %>" <%= (formData?.artists && formData.artists.includes(artist.id.toString())) || (enrichedEvent.artist_details && enrichedEvent.artist_details.some(a => a.artistId === artist.id)) ? 'selected' : '' %>>
+                                                    <%= artist.name %>
+                                                </option>
+                                            <% }); %>
+                                        </select>
+                                        <% if (validationErrors?.artists) { %>
+                                            <small class="text-danger"><%= validationErrors.artists[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Banner Image</label>
+                                        <input type="file" class="form-control" name="banner_image">
+                                        <% if (enrichedEvent.banner_image) { %>
+                                            <div class="mt-2">
+                                                <img src="<%= enrichedEvent.banner_image %>" alt="Banner Image" style="max-width: 150px; height: auto;">
+                                            </div>
+                                        <% } %>
+                                        <% if (validationErrors?.banner_image) { %>
+                                            <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Featured Image</label>
+                                        <input type="file" class="form-control" name="featured_image">
+                                        <% if (enrichedEvent.featured_image) { %>
+                                            <div class="mt-2">
+                                                <img src="<%= enrichedEvent.featured_image %>" alt="Featured Image" style="max-width: 150px; height: auto;">
+                                            </div>
+                                        <% } %>
+                                        <% if (validationErrors?.featured_image) { %>
+                                            <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <h4 class="header-title">Set Ticket Prices</h4>
+                                        <div id="ticket-container">
+                                            <% // Populate existing tickets %>
+                                            <% if (formData?.tickets && formData.tickets.length > 0) { %>
+                                                <% formData.tickets.forEach((ticket, index) => { %>
+                                                    <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">Ticket Type</label>
+                                                            <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
+                                                                <option value="">Select a type</option>
+                                                                <% ticketTypes.forEach(tt => { %>
+                                                                    <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= ticket.type_id == tt.id ? 'selected' : '' %>>
+                                                                        <%= tt.name %>
+                                                                    </option>
+                                                                <% }); %>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label">Price</label>
+                                                            <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= ticket.price %>" required>
+                                                        </div>
+                                                        <div class="col-md-3 ticket-count-wrapper" style="<%= ticketTypes.find(tt => tt.id == ticket.type_id)?.has_ticket_count ? 'display: block;' : 'display: none;' %>">
+                                                            <label class="form-label">Ticket Count</label>
+                                                            <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= ticket.count %>" <%= ticketTypes.find(tt => tt.id == ticket.type_id)?.has_ticket_count ? 'required' : '' %>>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                                                        </div>
+                                                    </div>
+                                                <% }); %>
+                                            <% } else if (enrichedEvent.ticket_details && enrichedEvent.ticket_details.length > 0) { %>
+                                                <% enrichedEvent.ticket_details.forEach((ticket, index) => { %>
+                                                    <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">Ticket Type</label>
+                                                            <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
+                                                                <option value="">Select a type</option>
+                                                                <% ticketTypes.forEach(tt => { %>
+                                                                    <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= ticket.ticketTypeId == tt.id ? 'selected' : '' %>>
+                                                                        <%= tt.name %>
+                                                                    </option>
+                                                                <% }); %>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label">Price</label>
+                                                            <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= ticket.price %>" required>
+                                                        </div>
+                                                        <div class="col-md-3 ticket-count-wrapper" style="<%= ticketTypes.find(tt => tt.id === ticket.ticketTypeId)?.has_ticket_count ? 'display: block;' : 'display: none;' %>">
+                                                            <label class="form-label">Ticket Count</label>
+                                                            <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= ticket.ticketCount || '' %>" <%= ticketTypes.find(tt => tt.id === ticket.ticketTypeId)?.has_ticket_count ? 'required' : '' %>>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                                                        </div>
+                                                    </div>
+                                                <% }); %>
+                                            <% } %>
+                                        </div>
+                                        <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
+                                    </div>
+                                </div>
+
+
+                                <button type="submit" class="btn btn-primary">Update</button>
+                            </form>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<%- include('../layouts/footer.ejs') %>
+
+<script>
+    const ticketTypes = <%- JSON.stringify(ticket_types) %>; // Ensure ticket_types is passed from the backend
+    let ticketIndex = 0; // Initialize for new rows
+
+    // Set initial ticketIndex based on existing tickets
+    const existingTicketRows = document.querySelectorAll('.ticket-row');
+    if (existingTicketRows.length > 0) {
+        ticketIndex = existingTicketRows.length;
+    }
+
+    function createTicketRow(index, ticketData = {}) {
+        let options = '';
+        ticketTypes.forEach(tt => {
+            options += `<option value="${tt.id}" data-has-count="${tt.has_ticket_count}" ${ticketData.type_id == tt.id ? 'selected' : ''}>${tt.name}</option>`;
+        });
+
+        const hasCount = ticketTypes.find(tt => tt.id == ticketData.type_id)?.has_ticket_count || false;
+
+        return `
+            <div class="row ticket-row align-items-end mb-2" data-index="${index}">
+                <div class="col-md-4">
+                    <label class="form-label">Ticket Type</label>
+                    <select name="tickets[${index}][type_id]" class="form-control ticket-type-select" required>
+                        <option value="">Select a type</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Price</label>
+                    <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" value="${ticketData.price || ''}" required>
+                </div>
+                <div class="col-md-3 ticket-count-wrapper" style="${hasCount ? 'display: block;' : 'display: none;'}">
+                    <label class="form-label">Ticket Count</label>
+                    <input type="number" name="tickets[${index}][count]" class="form-control" placeholder="Enter count" value="${ticketData.count || ''}" ${hasCount ? 'required' : ''}>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                </div>
+            </div>
+        `;
+    }
+
+    document.getElementById('add-ticket-btn').addEventListener('click', () => {
+        const rowHtml = createTicketRow(ticketIndex++);
+        document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
+    });
+
+    document.getElementById('ticket-container').addEventListener('change', function(e) {
+        if (e.target.classList.contains('ticket-type-select')) {
+            const row = e.target.closest('.ticket-row');
+            const selectedOption = e.target.selectedOptions[0];
+            const hasCount = selectedOption.dataset.hasCount === '1';
+            const countWrapper = row.querySelector('.ticket-count-wrapper');
+            const countInput = countWrapper.querySelector('input');
+
+            if (hasCount) {
+                countWrapper.style.display = 'block';
+                countInput.required = true;
+            } else {
+                countWrapper.style.display = 'none';
+                countInput.required = false;
+                countInput.value = ''; // Clear the value if not required
+            }
+        }
+    });
+
+    document.getElementById('ticket-container').addEventListener('click', function(e) {
+        if (e.target.classList.contains('remove-ticket-btn')) {
+            e.target.closest('.ticket-row').remove();
+        }
+    });
+
+    // Initialize datetime pickers
+    $(document).ready(function() {
+        $('.datetime-datepicker').flatpickr({
+            enableTime: true,
+            dateFormat: "Y-m-d H:i",
+        });
+
+        // Initialize select2
+        $('[data-toggle="select2"]').select2();
+    });
+</script>
