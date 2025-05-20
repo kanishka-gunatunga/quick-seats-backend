@@ -264,8 +264,6 @@ export const editEventPost = async (req: Request, res: Response) => {
 
   const schema = z.object({
     name: z.string().min(1, 'Name is required'),
-    start_date_time: z.string().min(1, 'Start date and time is required'),
-    end_date_time: z.string().min(1, 'End date and time is required'),
     discription: z.string().min(1, 'Description is required'),
     policy: z.string().min(1, 'Ticket Policy is required'),
     organized_by: z.string().min(1, 'Organized by is required'),
