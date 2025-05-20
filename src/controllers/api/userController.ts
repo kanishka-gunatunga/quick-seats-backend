@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { prisma } from '../../prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { z } from 'zod';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -45,8 +46,21 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
+export const login = async (req: Request, res: Response) => {
+  
+  const loginSchema = z.object({
+    email: z.string().email(),
+    password: z.string().min(1, "Password is required"),
+  });
 
-export const login = async (req: Request, res: Response): Promise<void> => {
+  const result = loginSchema.safeParse(req.body);
+
+  if (!result.success) {
+    req.session.error = 'Invalid input';
+    req.session.formData = { email: req.body.email };
+    return res.redirect('/');
+  }
+
   const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email },include: { userDetails: true }, });
