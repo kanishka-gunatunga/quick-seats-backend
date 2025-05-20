@@ -262,33 +262,56 @@ export const editEventGet = async (req: Request, res: Response) => {
 export const editEventPost = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);
 
-  // const schema = z.object({
-  //   name: z.string().min(1, 'Name is required'),
-  //   discription: z.string().min(1, 'Description is required'),
-  //   policy: z.string().min(1, 'Ticket Policy is required'),
-  //   organized_by: z.string().min(1, 'Organized by is required'),
-  //   location: z.string().min(1, 'Location is required'),
-  //   artists: z
-  //     .union([z.string(), z.array(z.string())])
-  //     .optional()
-  //     .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
-  //   tickets: z.array(z.object({
-  //     type_id: z.string().min(1, 'Ticket type is required'),
-  //     price: z.string().min(1, 'Ticket price is required'),
-  //     count: z.string().optional(),
-  //   })).optional().default([]),
-  // });
+  // Fetch ticket types for server-side conditional validation
+  const ticketTypesFromDb = await prisma.ticketType.findMany({ where: { status: 'active' } });
 
-  // const result = schema.safeParse(req.body);
+  const schema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    discription: z.string().min(1, 'Description is required'),
+    policy: z.string().min(1, 'Ticket Policy is required'),
+    organized_by: z.string().min(1, 'Organized by is required'),
+    location: z.string().min(1, 'Location is required'),
+    start_date_time: z.string().min(1, 'Start date and time is required.').datetime('Invalid start date/time format'),
+    end_date_time: z.string().min(1, 'End date and time is required.').datetime('Invalid end date/time format'),
+    artists: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
+    tickets: z.array(z.object({
+      type_id: z.string().min(1, 'Ticket type is required'), // Keep as string for initial parsing
+      price: z.string().min(1, 'Ticket price is required').transform(Number),
+      count: z.string().optional().transform(val => val ? Number(val) : undefined),
+    }))
+    .optional()
+    .default([])
+    .superRefine((tickets, ctx) => {
+        // Custom validation for ticket count based on ticket type
+        tickets.forEach((ticket, index) => {
+            // FIX: Convert ticket.type_id to a number for comparison
+            const ticketTypeIdAsNumber = Number(ticket.type_id);
+            const ticketType = ticketTypesFromDb.find(tt => tt.id === ticketTypeIdAsNumber);
 
-  // if (!result.success) {
-  //   const errors = result.error.flatten().fieldErrors;
-  //   req.session.error = 'Please fix the errors below.';
-  //   req.session.formData = req.body;
-  //   req.session.validationErrors = errors;
-  //   console.log(errors);
-  //   return res.redirect(`/event/edit/${eventId}`);
-  // }
+            if (ticketType && ticketType.has_ticket_count && (ticket.count === undefined || isNaN(ticket.count))) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: 'Ticket count is required for this ticket type.',
+                    path: ['tickets', index, 'count'],
+                });
+            }
+        });
+    }),
+  });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    const errors = result.error.flatten().fieldErrors;
+    req.session.error = 'Please fix the errors below.';
+    req.session.formData = req.body;
+    req.session.validationErrors = errors;
+    console.log('Validation Errors on POST:', errors); // Log errors for debugging
+    return res.redirect(`/event/edit/${eventId}`);
+  }
 
   const {
     name,
@@ -300,7 +323,7 @@ export const editEventPost = async (req: Request, res: Response) => {
     location,
     artists,
     tickets,
-  } = req.body;
+  } = result.data; // Use result.data for type safety and transformed values
 
   const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
   const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
@@ -308,7 +331,7 @@ export const editEventPost = async (req: Request, res: Response) => {
   try {
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { banner_image: true, featured_image: true, slug: true, name: true }, 
+      select: { banner_image: true, featured_image: true, slug: true, name: true },
     });
 
     if (!existingEvent) {
@@ -316,9 +339,8 @@ export const editEventPost = async (req: Request, res: Response) => {
       return res.redirect('/events');
     }
 
-    let bannerImageUrl: string | null = existingEvent.banner_image; 
-    let featuredImageUrl: string | null = existingEvent.featured_image; 
-
+    let bannerImageUrl: string | null = existingEvent.banner_image;
+    let featuredImageUrl: string | null = existingEvent.featured_image;
 
     if (bannerImageFile) {
       const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
@@ -333,24 +355,27 @@ export const editEventPost = async (req: Request, res: Response) => {
         access: 'public',
         addRandomSuffix: true,
       });
-      featuredImageUrl = url; 
+      featuredImageUrl = url;
     }
 
     let uniqueSlug = existingEvent.slug;
     if (name !== existingEvent.name) {
       let baseSlug = slugify(name, { lower: true, strict: true });
       let suffix = 1;
+      // Ensure the slug is unique and not for the current event ID
       while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
         uniqueSlug = `${baseSlug}-${suffix++}`;
       }
     }
 
+    // Map ticket details to match Prisma schema
     const ticketDetailsJson = tickets.map((ticket: any) => ({
-      ticketTypeId: parseInt(ticket.type_id, 10),
-      price: parseFloat(ticket.price),
-      ticketCount: ticket.count ? parseInt(ticket.count, 10) : null,
+      ticketTypeId: Number(ticket.type_id), // Ensure it's a number for Prisma
+      price: ticket.price,
+      ticketCount: ticket.count,
     }));
 
+    // Map artist IDs to numbers
     const artistIdsJson = artists.map(Number);
 
     const updatedEvent = await prisma.event.update({
@@ -368,14 +393,13 @@ export const editEventPost = async (req: Request, res: Response) => {
         featured_image: featuredImageUrl,
         ticket_details: ticketDetailsJson,
         artist_details: artistIdsJson,
-
       },
     });
 
     req.session.success = 'Event updated successfully!';
     req.session.formData = {};
     req.session.validationErrors = {};
-    return res.redirect(`/event/edit/${updatedEvent.id}`); 
+    return res.redirect(`/event/edit/${updatedEvent.id}`);
   } catch (err) {
     console.error('Error updating event:', err);
     req.session.error = 'An unexpected error occurred while updating the event.';
