@@ -150,17 +150,17 @@ if (bannerImageFile) {
 };
 
 export const events = async (req: Request, res: Response) => {
-  const artists = await prisma.artist.findMany({ });
+  const events = await prisma.event.findMany({ });
 
   const error = req.session.error;
   const success = req.session.success;
   req.session.error = undefined;
   req.session.success = undefined;
 
-  res.render('event/artists', {
+  res.render('event/events', {
     error,
     success,
-    artists,
+    events,
   });
 };
 
@@ -168,31 +168,31 @@ export const events = async (req: Request, res: Response) => {
 export const activateEvent = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   try {
-    await prisma.artist.update({
+    await prisma.event.update({
       where: { id },
       data: { status: 'active' },
     });
-    req.session.success = 'Artist activated successfully!';
+    req.session.success = 'Event activated successfully!';
   } catch (error) {
-    console.error('Error activating artist:', error);
-    req.session.error = 'Failed to activate artist. Please try again.';
+    console.error('Error activating event:', error);
+    req.session.error = 'Failed to activate event. Please try again.';
   }
-  return res.redirect('/artists'); 
+  return res.redirect('/events'); 
 };
 
 export const deactivateEvent = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   try {
-    await prisma.artist.update({
+    await prisma.event.update({
       where: { id },
       data: { status: 'inactive' },
     });
-    req.session.success = 'Artist deactivated successfully!';
+    req.session.success = 'Event deactivated successfully!';
   } catch (error) {
-    console.error('Error deactivating artist:', error);
-    req.session.error = 'Failed to deactivate artist. Please try again.';
+    console.error('Error deactivating event:', error);
+    req.session.error = 'Failed to deactivate event. Please try again.';
   }
-  return res.redirect('/artists');
+  return res.redirect('/events');
 };
 
 
