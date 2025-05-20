@@ -10,6 +10,15 @@ datasource db {
   directUrl = env("POSTGRES_URL_NON_POOLING") 
 }
 
+model user_sessions {
+  sid     String   @id @db.VarChar(255)
+  sess    Json
+  expire  DateTime
+
+  @@index([expire])
+}
+
+
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
