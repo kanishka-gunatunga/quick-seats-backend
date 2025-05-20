@@ -47,8 +47,8 @@ router.get('/ticket-types', isAdminLoggedIn, ticketTypes);
 //Event Management
 router.get('/add-event', isAdminLoggedIn, addEventGet);
 router.post('/add-event',upload.fields([{ name: 'banner_image', maxCount: 1 },{ name: 'featured_image', maxCount: 1 },]), isAdminLoggedIn, addEventPost);
-router.get('/event/activate/:id', isAdminLoggedIn, deactivateEvent);
-router.get('/event/deactivate/:id', isAdminLoggedIn, activateEvent);
+router.get('/event/activate/:id', isAdminLoggedIn, activateEvent);
+router.get('/event/deactivate/:id', isAdminLoggedIn, deactivateEvent);
 router.get('/event/edit/:id', isAdminLoggedIn, editEventGet);
 router.post('/event/edit/:id', isAdminLoggedIn, editEventPost);
 router.get('/events', isAdminLoggedIn, events);
