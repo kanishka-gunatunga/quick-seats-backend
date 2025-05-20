@@ -260,48 +260,127 @@ export const editEventGet = async (req: Request, res: Response) => {
   }
 };
 export const editEventPost = async (req: Request, res: Response) => {
-  const schema = z
-    .object({
-      name: z.string().min(1, 'Name is required'),
-    });
+  const eventId = Number(req.params.id);
 
+  const schema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    start_date_time: z.string().min(1, 'Start date and time is required'),
+    end_date_time: z.string().min(1, 'End date and time is required'),
+    discription: z.string().min(1, 'Description is required'),
+    policy: z.string().min(1, 'Ticket Policy is required'),
+    organized_by: z.string().min(1, 'Organized by is required'),
+    location: z.string().min(1, 'Location is required'),
+    artists: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
+    tickets: z.array(z.object({
+      type_id: z.string().min(1, 'Ticket type is required'),
+      price: z.string().min(1, 'Ticket price is required'),
+      count: z.string().optional(),
+    })).optional().default([]),
+  });
 
   const result = schema.safeParse(req.body);
 
   if (!result.success) {
     const errors = result.error.flatten().fieldErrors;
     req.session.error = 'Please fix the errors below.';
+    req.session.formData = req.body;
     req.session.validationErrors = errors;
-    return res.redirect(`/artist/edit/${req.params.id}`);
+    return res.redirect(`/event/edit/${eventId}`);
   }
 
-  const { name } = result.data;
-  const userId = parseInt(req.params.id);
+  const {
+    name,
+    start_date_time,
+    end_date_time,
+    discription,
+    policy,
+    organized_by,
+    location,
+    artists,
+    tickets,
+  } = result.data;
+
+  const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
+  const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
 
   try {
-    const artist = await prisma.artist.findUnique({
-      where: { id: userId }
+    const existingEvent = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { banner_image: true, featured_image: true, slug: true, name: true }, 
     });
 
-    if (!artist) {
-      req.session.error = 'Artist not found.';
-      return res.redirect('/artists');
+    if (!existingEvent) {
+      req.session.error = 'Event not found.';
+      return res.redirect('/events');
     }
 
-    await prisma.artist.update({
-      where: { id: userId },
+    let bannerImageUrl: string | null = existingEvent.banner_image; 
+    let featuredImageUrl: string | null = existingEvent.featured_image; 
+
+
+    if (bannerImageFile) {
+      const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
+        access: 'public',
+        addRandomSuffix: true,
+      });
+      bannerImageUrl = url;
+    }
+
+    if (featuredImageFile) {
+      const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
+        access: 'public',
+        addRandomSuffix: true,
+      });
+      featuredImageUrl = url; 
+    }
+
+    let uniqueSlug = existingEvent.slug;
+    if (name !== existingEvent.name) {
+      let baseSlug = slugify(name, { lower: true, strict: true });
+      let suffix = 1;
+      while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
+        uniqueSlug = `${baseSlug}-${suffix++}`;
+      }
+    }
+
+    const ticketDetailsJson = tickets.map((ticket: any) => ({
+      ticketTypeId: parseInt(ticket.type_id, 10),
+      price: parseFloat(ticket.price),
+      ticketCount: ticket.count ? parseInt(ticket.count, 10) : null,
+    }));
+
+    const artistIdsJson = artists.map(Number);
+
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
       data: {
-        name
+        name,
+        slug: uniqueSlug,
+        start_date_time: new Date(start_date_time),
+        end_date_time: new Date(end_date_time),
+        description: discription,
+        policy: policy,
+        organized_by: organized_by,
+        location,
+        banner_image: bannerImageUrl,
+        featured_image: featuredImageUrl,
+        ticket_details: ticketDetailsJson,
+        artist_details: artistIdsJson,
+
       },
     });
 
-
-    req.session.success = 'Artist updated successfully!';
+    req.session.success = 'Event updated successfully!';
+    req.session.formData = {};
     req.session.validationErrors = {};
-    return res.redirect(`/artist/edit/${userId}`);
+    return res.redirect(`/event/edit/${updatedEvent.id}`); 
   } catch (err) {
-    console.error('Error updating artist:', err);
-    req.session.error = 'An unexpected error occurred while updating the artist.';
-    return res.redirect(`/artist/edit/${userId}`);
+    console.error('Error updating event:', err);
+    req.session.error = 'An unexpected error occurred while updating the event.';
+    req.session.formData = req.body;
+    return res.redirect(`/event/edit/${eventId}`);
   }
 };
