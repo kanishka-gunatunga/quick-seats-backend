@@ -306,7 +306,7 @@ const selectedSeats = {};
 function updateHiddenSeatConfiguration() {
     const seatData = Object.keys(selectedSeats).map(seatId => ({
         seatId,
-        ticketTypeId: selectedSeats[seatId].ticketTypeId,
+        type_id: selectedSeats[seatId].type_id,
         ticketTypeName: selectedSeats[seatId].ticketTypeName,
         price: selectedSeats[seatId].price
     }));
@@ -336,11 +336,11 @@ const sc = $('#seat-map').seatCharts({
         if (this.status() === 'available') {
             const seatId = this.settings.label;
             const ticketTypeOptions = seatTicketTypes
-                .map(t => `${t.ticketTypeId}: ${t.ticketTypeName} (Rs.${t.price})`)
+                .map(t => `${t.type_id}: ${t.ticketTypeName} (Rs.${t.price})`)
                 .join('\n');
 
             const selectedId = prompt(`Choose ticket type for seat ${seatId}:\n${ticketTypeOptions}`);
-            const selectedType = seatTicketTypes.find(t => t.ticketTypeId == selectedId);
+            const selectedType = seatTicketTypes.find(t => t.type_id == selectedId);
 
             if (selectedType) {
                 selectedSeats[seatId] = selectedType;
