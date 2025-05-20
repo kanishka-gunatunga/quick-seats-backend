@@ -262,33 +262,33 @@ export const editEventGet = async (req: Request, res: Response) => {
 export const editEventPost = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);
 
-  const schema = z.object({
-    name: z.string().min(1, 'Name is required'),
-    discription: z.string().min(1, 'Description is required'),
-    policy: z.string().min(1, 'Ticket Policy is required'),
-    organized_by: z.string().min(1, 'Organized by is required'),
-    location: z.string().min(1, 'Location is required'),
-    artists: z
-      .union([z.string(), z.array(z.string())])
-      .optional()
-      .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
-    tickets: z.array(z.object({
-      type_id: z.string().min(1, 'Ticket type is required'),
-      price: z.string().min(1, 'Ticket price is required'),
-      count: z.string().optional(),
-    })).optional().default([]),
-  });
+  // const schema = z.object({
+  //   name: z.string().min(1, 'Name is required'),
+  //   discription: z.string().min(1, 'Description is required'),
+  //   policy: z.string().min(1, 'Ticket Policy is required'),
+  //   organized_by: z.string().min(1, 'Organized by is required'),
+  //   location: z.string().min(1, 'Location is required'),
+  //   artists: z
+  //     .union([z.string(), z.array(z.string())])
+  //     .optional()
+  //     .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
+  //   tickets: z.array(z.object({
+  //     type_id: z.string().min(1, 'Ticket type is required'),
+  //     price: z.string().min(1, 'Ticket price is required'),
+  //     count: z.string().optional(),
+  //   })).optional().default([]),
+  // });
 
-  const result = schema.safeParse(req.body);
+  // const result = schema.safeParse(req.body);
 
-  if (!result.success) {
-    const errors = result.error.flatten().fieldErrors;
-    req.session.error = 'Please fix the errors below.';
-    req.session.formData = req.body;
-    req.session.validationErrors = errors;
-    console.log(errors);
-    return res.redirect(`/event/edit/${eventId}`);
-  }
+  // if (!result.success) {
+  //   const errors = result.error.flatten().fieldErrors;
+  //   req.session.error = 'Please fix the errors below.';
+  //   req.session.formData = req.body;
+  //   req.session.validationErrors = errors;
+  //   console.log(errors);
+  //   return res.redirect(`/event/edit/${eventId}`);
+  // }
 
   const {
     name,
@@ -300,7 +300,7 @@ export const editEventPost = async (req: Request, res: Response) => {
     location,
     artists,
     tickets,
-  } = result.data;
+  } = req.body;
 
   const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
   const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
