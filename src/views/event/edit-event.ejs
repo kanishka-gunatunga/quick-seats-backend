@@ -306,12 +306,12 @@ const seatTicketTypes = [
     }
 ];
 
-// Create 10 rows (A-J) and 20 seats per row
-const rows = 10;
-const cols = 20;
-const seatMap = Array.from({ length: rows }, () => 'a'.repeat(cols));
+// Generate seat map: 10 rows (A-J), each with 20 seats
+const numRows = 10;
+const numCols = 20;
+const seatMap = Array.from({ length: numRows }, () => 'a'.repeat(numCols));
 
-// To map index 0 = A, 1 = B, ..., 9 = J
+// A–Z for row letters
 const rowLabels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 const selectedSeats = {};
@@ -327,7 +327,7 @@ const sc = $('#seat-map').seatCharts({
     naming: {
         top: false,
         getLabel: function (character, row, column) {
-            const rowLetter = rowLabels[row];
+            const rowLetter = rowLabels[row - 1]; // Fixes row offset (starts from 1)
             const seatNumber = column + 1;
             return `${rowLetter}${seatNumber}`;
         }
@@ -335,10 +335,13 @@ const sc = $('#seat-map').seatCharts({
     click: function () {
         if (this.status() === 'available') {
             const seatId = this.settings.label;
-            let ticketTypeOptions = seatTicketTypes.map(t => `${t.ticketTypeId}: ${t.ticketTypeName} (Rs.${t.price})`).join('\n');
-            let selectedId = prompt(`Choose ticket type for seat ${seatId}:\n` + ticketTypeOptions);
+            const ticketTypeOptions = seatTicketTypes
+                .map(t => `${t.ticketTypeId}: ${t.ticketTypeName} (Rs.${t.price})`)
+                .join('\n');
 
-            let selectedType = seatTicketTypes.find(t => t.ticketTypeId == selectedId);
+            const selectedId = prompt(`Choose ticket type for seat ${seatId}:\n${ticketTypeOptions}`);
+            const selectedType = seatTicketTypes.find(t => t.ticketTypeId == selectedId);
+
             if (selectedType) {
                 selectedSeats[seatId] = selectedType;
                 return 'selected';
