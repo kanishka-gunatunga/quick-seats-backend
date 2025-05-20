@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../prisma/client';
+import { prisma } from '../../prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
@@ -49,7 +49,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 export const login = async (req: Request, res: Response): Promise<void> => {
   const { email, password } = req.body;
 
-  const user = await prisma.user.findUnique({ where: { email } });
+  const user = await prisma.user.findUnique({ where: { email },include: { userDetails: true }, });
   if (!user) {
     res.status(400).json({ message: 'Invalid credentials' });
     return;

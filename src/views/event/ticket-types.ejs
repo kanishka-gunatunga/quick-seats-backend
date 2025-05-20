@@ -1,0 +1,86 @@
+<%- include('../layouts/header.ejs') %>
+<!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+         
+            <div class="content-page">
+                <div class="content">
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Ticket Types</h4>
+                                                <% if (success) { %>
+                                                    <div class="alert alert-success"><%= success %></div>
+                                                <% } %>
+                                                <% if (error) { %>
+                                                    <div class="alert alert-danger"><%= error %></div>
+                                                <% } %>
+
+                                         <div class="row">
+                                            <div class="col-12">
+                                                <div class="card">
+                                                    <div class="card-body table-responsive">
+                                                       
+                    
+                                                        <table id="responsive-datatable" class="table table-bordered table-bordered dt-responsive nowrap">
+                                                            <thead>
+                                                            <tr>
+                                                                <th>Name</th>
+                                                                <th>Has a ticket count</th>
+                                                                <th>Status</th>
+                                                                <th>Actions</th>
+
+                                                            </tr>
+                                                            </thead>
+                    
+                    
+                                                           <tbody>
+                                                                <% ticketTypes.forEach(ticketType => { %>
+                                                                    <tr>
+                                                                    <td><%= ticketType.name || 'N/A' %></td>
+                                                                    <td><%= ticketType.has_ticket_count === '1' ? 'Yes' : 'No' %></td>
+                                                                    <td>
+                                                                        <span class="badge <%= ticketType.status === 'active' ? 'bg-success' : 'bg-danger' %>">
+                                                                        <%= ticketType.status %>
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>
+                                                                        <a href="/ticket-type/edit/<%= ticketType.id %>" class="btn btn-primary rounded-pill waves-effect waves-light">Edit</a>
+                                                                        <% if (ticketType.status === 'active') { %>
+                                                                        <a href="/ticket-type/deactivate/<%= ticketType.id %>" class="btn btn-danger rounded-pill waves-effect waves-light">Deactivate</a>
+                                                                        <% } else { %>
+                                                                        <a href="/ticket-type/activate/<%= ticketType.id %>" class="btn btn-success rounded-pill waves-effect waves-light">Activate</a>
+                                                                        <% } %>
+                                                                    </td>
+                                                                   
+                                                                    </tr>
+                                                                <% }); %>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            
+                                            </div>
+                                        </div> <!-- end row -->   
+
+                                    </div> <!-- end card-body -->
+                                </div> <!-- end card -->
+                            </div>
+                        </div>
+                        <!-- end row -->        
+                        
+                    
+                    </div> <!-- container -->
+
+                </div>
+
+            </div>
+            <!-- ============================================================== -->
+            <!-- End Page content -->
+            <!-- ============================================================== -->
+<%- include('../layouts/footer.ejs') %>

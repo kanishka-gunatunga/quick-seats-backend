@@ -1,0 +1,41 @@
+<%- include('../layouts/header.ejs') %>
+<div class="content-page">
+                <div class="content">
+
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Add Artist</h4>
+
+                                                <form class="mt-4" method="POST" action="/add-artist">
+                                                    <% if (success) { %>
+                                                        <div class="alert alert-success"><%= success %></div>
+                                                    <% } %>
+                                                    <% if (error) { %>
+                                                        <div class="alert alert-danger"><%= error %></div>
+                                                    <% } %>
+
+                                                    <div class="row">
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Name</label>
+                                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || '' %>">
+                                                        <% if (validationErrors?.name) { %>
+                                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
+                                                        <% } %>
+                                                        </div>
+
+                                                      
+                                                    </div>
+
+                                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                                </form>
+
+                                    </div> </div> </div>
+                        </div>
+                        </div> </div>
+
+            </div>
+            <%- include('../layouts/footer.ejs') %>

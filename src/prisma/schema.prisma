@@ -20,6 +20,7 @@ model User {
   createdAt DateTime @default(now())
 
   userDetails UserDetails?
+  adminDetails AdminDetails?
 }
 
 model UserDetails {
@@ -33,4 +34,47 @@ model UserDetails {
   createdAt DateTime @default(now())
 
   user  User  @relation(fields: [user_id], references: [id])
+}
+
+model AdminDetails {
+  id        Int      @id @default(autoincrement())
+  user_id     Int   @unique
+  name  String?
+  phone  String?
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id])
+}
+
+model Artist {
+  id        Int      @id @default(autoincrement())
+  name  String?
+  status String
+  createdAt DateTime @default(now())
+
+}
+
+model TicketType {
+  id        Int      @id @default(autoincrement())
+  name  String?
+  has_ticket_count  String?
+  status String
+  createdAt DateTime @default(now())
+
+}
+
+model Event {
+  id            Int       @id @default(autoincrement())
+  name          String
+  start_date_time DateTime
+  end_date_time   DateTime
+  description   String
+  policy  String
+  organized_by   String
+  location      String
+  banner_image   String?
+  featured_image String?
+  ticket_details Json?     
+  artist_details Json?     
+  status String
 }
