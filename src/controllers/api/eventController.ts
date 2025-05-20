@@ -5,10 +5,46 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export const getAllEvents = async (req: Request, res: Response) => {
-  const events = await prisma.event.findMany({ where: { status:'active' }});
+  const events = await prisma.event.findMany({
+    where: { status: 'active' }
+  });
+
+  const enhancedEvents = await Promise.all(events.map(async (event) => {
+    
+    const artistIds: number[] = Array.isArray(event.artist_details) 
+      ? event.artist_details.map(Number) 
+      : [];
+
+    const ticketDetails: any[] = Array.isArray(event.ticket_details) 
+      ? event.ticket_details 
+      : [];
+
+    const artists = await prisma.artist.findMany({
+      where: { id: { in: artistIds } }
+    });
+
+    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: { id: { in: ticketTypeIds } }
+    });
+
+    const enrichedTickets = ticketDetails.map(ticket => {
+      const ticketType = ticketTypes.find(tt => tt.id === ticket.ticketTypeId);
+      return {
+        ...ticket,
+        ticketTypeName: ticketType?.name || 'Unknown'
+      };
+    });
+
+    return {
+      ...event,
+      artist_names: artists.map(a => a.name),
+      ticket_details: enrichedTickets
+    };
+  }));
 
   return res.json({
-    events
+    events: enhancedEvents
   });
 };
 
