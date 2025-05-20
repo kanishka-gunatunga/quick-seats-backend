@@ -56,11 +56,12 @@ export const login = async (req: Request, res: Response) => {
 
   const result = loginSchema.safeParse(req.body);
 
-  if (!result.success) {
-    req.session.error = 'Invalid input';
-    req.session.formData = { email: req.body.email };
-    return res.redirect('/');
-  }
+if (!result.success) {
+  return res.status(400).json({
+    message: 'Invalid input',
+    errors: result.error.flatten(),
+  });
+}
 
   const { email, password } = result.data;
 
