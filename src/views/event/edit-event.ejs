@@ -291,22 +291,8 @@
 
 </script>
 <script>
-const seatTicketTypes = [
-    {
-        price: 2500,
-        ticketCount: null,
-        ticketTypeId: 2,
-        ticketTypeName: "VIP Standing"
-    },
-    {
-        price: 3000,
-        ticketCount: 200,
-        ticketTypeId: 3,
-        ticketTypeName: "Balcony"
-    }
-];
+ const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
-// Generate seat map: 10 rows (A-J), each with 20 seats
 const numRows = 17;
 const numCols = 23;
 const seatMap = Array.from({ length: numRows }, () => 'a'.repeat(numCols));
@@ -373,27 +359,27 @@ const sc = $('#seat-map').seatCharts({
     }
 });
 
-$('#save-seats').on('click', function () {
-    const seatData = Object.keys(selectedSeats).map(seatId => ({
-        seatId,
-        ticketTypeId: selectedSeats[seatId].ticketTypeId,
-        ticketTypeName: selectedSeats[seatId].ticketTypeName,
-        price: selectedSeats[seatId].price
-    }));
+// $('#save-seats').on('click', function () {
+//     const seatData = Object.keys(selectedSeats).map(seatId => ({
+//         seatId,
+//         ticketTypeId: selectedSeats[seatId].ticketTypeId,
+//         ticketTypeName: selectedSeats[seatId].ticketTypeName,
+//         price: selectedSeats[seatId].price
+//     }));
 
-    console.log(seatData);
-    $.ajax({
-        url: '/api/seats/save',
-        method: 'POST',
-        contentType: 'application/json',
-        data: JSON.stringify({ seats: seatData }),
-        success: function (response) {
-            alert('Seats saved successfully!');
-        },
-        error: function (err) {
-            console.error(err);
-            alert('Error saving seats.');
-        }
-    });
-});
+//     console.log(seatData);
+//     $.ajax({
+//         url: '/api/seats/save',
+//         method: 'POST',
+//         contentType: 'application/json',
+//         data: JSON.stringify({ seats: seatData }),
+//         success: function (response) {
+//             alert('Seats saved successfully!');
+//         },
+//         error: function (err) {
+//             console.error(err);
+//             alert('Error saving seats.');
+//         }
+//     });
+// });
 </script>
