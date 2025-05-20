@@ -293,6 +293,7 @@
 <script>
  const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
+ console.log(seatTicketTypes);
 const numRows = 17;
 const numCols = 23;
 const seatMap = Array.from({ length: numRows }, () => 'a'.repeat(numCols));
