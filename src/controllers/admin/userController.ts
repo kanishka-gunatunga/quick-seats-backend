@@ -31,7 +31,7 @@ export const loginPost = async (req: Request, res: Response) => {
     return res.redirect('/');
   }
 
-  const { email, password } = req.body;
+  const { email, password } = result.data;
 
   const user = await prisma.user.findUnique({
     where: { email },

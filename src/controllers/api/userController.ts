@@ -47,7 +47,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 };
 
 export const login = async (req: Request, res: Response) => {
-  
+
   const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(1, "Password is required"),
@@ -61,7 +61,7 @@ export const login = async (req: Request, res: Response) => {
     return res.redirect('/');
   }
 
-  const { email, password } = req.body;
+  const { email, password } = result.data;
 
   const user = await prisma.user.findUnique({ where: { email },include: { userDetails: true }, });
   if (!user) {
