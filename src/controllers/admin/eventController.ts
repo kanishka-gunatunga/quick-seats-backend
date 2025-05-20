@@ -288,6 +288,7 @@ export const editEventPost = async (req: Request, res: Response) => {
     req.session.error = 'Please fix the errors below.';
     req.session.formData = req.body;
     req.session.validationErrors = errors;
+    console.log(errors);
     return res.redirect(`/event/edit/${eventId}`);
   }
 
