@@ -55,7 +55,7 @@
                                                                     </td>
                                                                     <td>
                                                                         <a href="/event/edit/<%= event.id %>" class="btn btn-primary rounded-pill waves-effect waves-light">Edit</a>
-                                                                        <% if (artist.status === 'active') { %>
+                                                                        <% if (event.status === 'active') { %>
                                                                         <a href="/event/deactivate/<%= event.id %>" class="btn btn-danger rounded-pill waves-effect waves-light">Deactivate</a>
                                                                         <% } else { %>
                                                                         <a href="/event/activate/<%= event.id %>" class="btn btn-success rounded-pill waves-effect waves-light">Activate</a>
