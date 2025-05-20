@@ -75,7 +75,7 @@
                                     <div class="col-md-4 mb-3">
                                         <label class="form-label">Artists</label>
                                         <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
-                                            <% // Assuming 'allArtists' is passed to the view, similar to 'artists' in addEventGet %>
+                               
                                             <% allArtists.forEach(artist => { %>
                                                 <option value="<%= artist.id %>" <%= (formData?.artists && formData.artists.includes(artist.id.toString())) || (enrichedEvent.artist_details && enrichedEvent.artist_details.some(a => a.artistId === artist.id)) ? 'selected' : '' %>>
                                                     <%= artist.name %>
@@ -113,7 +113,7 @@
                                     <div class="col-md-12 mb-3">
                                         <h4 class="header-title">Set Ticket Prices</h4>
                                         <div id="ticket-container">
-                                            <% // Populate existing tickets %>
+
                                             <% if (formData?.tickets && formData.tickets.length > 0) { %>
                                                 <% formData.tickets.forEach((ticket, index) => { %>
                                                     <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">

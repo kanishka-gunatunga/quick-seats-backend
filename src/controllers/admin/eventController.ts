@@ -212,6 +212,9 @@ export const editEventGet = async (req: Request, res: Response) => {
       where: { id },
     });
 
+  const allArtists = await prisma.artist.findMany({where: { status:'active' } });
+  const ticket_types = await prisma.ticketType.findMany({where: { status:'active' } });
+
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
@@ -261,6 +264,8 @@ export const editEventGet = async (req: Request, res: Response) => {
     formData,
     validationErrors,
     enrichedEvent,
+    allArtists,
+    ticket_types
   });
 };
 export const editEventPost = async (req: Request, res: Response) => {
