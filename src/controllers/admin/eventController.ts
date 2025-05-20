@@ -195,7 +195,6 @@ export const deactivateEvent = async (req: Request, res: Response) => {
   return res.redirect('/events');
 };
 
-
 export const editEventGet = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   const error = req.session.error;
@@ -208,65 +207,57 @@ export const editEventGet = async (req: Request, res: Response) => {
   req.session.formData = undefined;
   req.session.validationErrors = undefined;
 
-  const event = await prisma.event.findFirst({
+  try {
+    const event = await prisma.event.findFirst({
       where: { id },
     });
 
-  const allArtists = await prisma.artist.findMany({where: { status:'active' } });
-  const ticket_types = await prisma.ticketType.findMany({where: { status:'active' } });
-
     if (!event) {
-      return res.status(404).json({ error: 'Event not found' });
+      req.session.error = 'Event not found.';
+      return res.redirect('/events'); 
     }
 
-    const artistIds: number[] = Array.isArray(event.artist_details)
+    const allArtists = await prisma.artist.findMany({ where: { status: 'active' } });
+
+    const ticket_types = await prisma.ticketType.findMany({ where: { status: 'active' } });
+
+    const selectedArtistIds: number[] = Array.isArray(event.artist_details)
       ? event.artist_details.map(Number)
       : [];
 
-    const artists = await prisma.artist.findMany({
-      where: { id: { in: artistIds } },
-    });
-
-    const enrichedArtists = artistIds.map(id => {
-      const artist = artists.find(a => a.id === id);
-      return {
-        artistId: id,
-        artistName: artist?.name || 'Unknown',
-      };
-    });
-
-    const ticketDetails: any[] = Array.isArray(event.ticket_details)
-      ? event.ticket_details
+    const enrichedTickets = Array.isArray(event.ticket_details)
+      ? event.ticket_details.map((ticket: any) => {
+          const ticketType = ticket_types.find(tt => tt.id === ticket.ticketTypeId);
+          return {
+            type_id: ticket.ticketTypeId, 
+            price: ticket.price,
+            count: ticket.ticketCount, 
+            has_ticket_count: ticketType?.has_ticket_count || false,
+            ticketTypeName: ticketType?.name || 'Unknown', 
+          };
+        })
       : [];
-
-    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
-    const ticketTypes = await prisma.ticketType.findMany({
-      where: { id: { in: ticketTypeIds } },
-    });
-
-    const enrichedTickets = ticketDetails.map(ticket => {
-      const ticketType = ticketTypes.find(tt => tt.id === ticket.ticketTypeId);
-      return {
-        ...ticket,
-        ticketTypeName: ticketType?.name || 'Unknown',
-      };
-    });
 
     const enrichedEvent = {
       ...event,
-      artist_details: enrichedArtists,
+      artist_details: selectedArtistIds, 
       ticket_details: enrichedTickets,
     };
 
-  res.render('event/edit-event', {
-    error,
-    success,
-    formData,
-    validationErrors,
-    enrichedEvent,
-    allArtists,
-    ticket_types
-  });
+    res.render('event/edit-event', {
+      error,
+      success,
+      formData,
+      validationErrors,
+      enrichedEvent,
+      allArtists, 
+      ticket_types, 
+    });
+  } catch (err) {
+    console.error('Error fetching event for edit:', err);
+    req.session.error = 'An unexpected error occurred while loading the event for editing.';
+    return res.redirect('/events'); 
+  }
 };
 export const editEventPost = async (req: Request, res: Response) => {
   const schema = z
