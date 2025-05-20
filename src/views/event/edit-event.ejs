@@ -9,167 +9,237 @@
                     <div class="card">
                         <div class="card-body">
                             <h4 class="header-title">Edit Event</h4>
+                            <ul class="nav nav-pills navtab-bg nav-justified">
+                            <li class="nav-item">
+                                <a href="#home1" data-bs-toggle="tab" aria-expanded="false" class="nav-link active">
+                                   Basic Details
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="#profile1" data-bs-toggle="tab" aria-expanded="true" class="nav-link ">
+                                   Seat Configuration
+                                </a>
+                            </li>
+                            
+                        </ul>
 
-                            <form class="mt-4" method="POST" action="/event/edit/<%= enrichedEvent.id %>" enctype="multipart/form-data">
-                                <% if (success) { %>
-                                    <div class="alert alert-success"><%= success %></div>
-                                <% } %>
-                                <% if (error) { %>
-                                    <div class="alert alert-danger"><%= error %></div>
-                                <% } %>
+                        <div class="tab-content">
+                            <div class="tab-pane show active" id="home1">
+                                <form class="mt-4" method="POST" action="/event/edit/<%= enrichedEvent.id %>" enctype="multipart/form-data">
+                                    <% if (success) { %>
+                                        <div class="alert alert-success"><%= success %></div>
+                                    <% } %>
+                                    <% if (error) { %>
+                                        <div class="alert alert-danger"><%= error %></div>
+                                    <% } %>
 
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Name</label>
-                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
-                                        <% if (validationErrors?.name) { %>
-                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Start Date Time</label>
-                                        <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
-                                        <% if (validationErrors?.start_date_time) { %>
-                                            <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">End Date Time</label>
-                                        <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
-                                        <% if (validationErrors?.end_date_time) { %>
-                                            <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Description</label>
-                                        <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
-                                        <% if (validationErrors?.discription) { %>
-                                            <small class="text-danger"><%= validationErrors.discription[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label">Ticket Policy</label>
-                                        <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
-                                        <% if (validationErrors?.policy) { %>
-                                            <small class="text-danger"><%= validationErrors.policy[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Organized By</label>
-                                        <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
-                                        <% if (validationErrors?.organized_by) { %>
-                                            <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Location</label>
-                                        <select class="form-control" data-toggle="select2" name="location" data-width="100%">
-                                            <option value="AZ" <%= (formData?.location || enrichedEvent.location) === 'AZ' ? 'selected' : '' %>>Arizona</option>
-                                            <option value="CO" <%= (formData?.location || enrichedEvent.location) === 'CO' ? 'selected' : '' %>>Colorado</option>
-                                            <option value="ID" <%= (formData?.location || enrichedEvent.location) === 'ID' ? 'selected' : '' %>>Idaho</option>
-                                        </select>
-                                        <% if (validationErrors?.location) { %>
-                                            <small class="text-danger"><%= validationErrors.location[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Artists</label>
-                                        <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
-                                            <% allArtists.forEach(artist => { %>
-                                                <option value="<%= artist.id %>"
-                                                    <%
-                                                        // Check if the artist ID is in formData (after validation error)
-                                                        const isSelectedInFormData = formData?.artists && Array.isArray(formData.artists) && formData.artists.includes(artist.id.toString());
-                                                        // Check if the artist ID is in enrichedEvent.artist_details (from database)
-                                                        const isSelectedInEvent = enrichedEvent.artist_details && Array.isArray(enrichedEvent.artist_details) && enrichedEvent.artist_details.includes(artist.id);
-                                                        if (isSelectedInFormData || isSelectedInEvent) {
-                                                            %> selected <%
-                                                        }
-                                                    %>
-                                                >
-                                                    <%= artist.name %>
-                                                </option>
-                                            <% }); %>
-                                        </select>
-                                        <% if (validationErrors?.artists) { %>
-                                            <small class="text-danger"><%= validationErrors.artists[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Banner Image</label>
-                                        <input type="file" class="form-control" name="banner_image" accept="image/*">
-                                        <% if (enrichedEvent.banner_image) { %>
-                                            <div class="mt-2">
-                                                <img src="<%= enrichedEvent.banner_image %>" alt="Banner Image" style="max-width: 150px; height: auto;">
-                                            </div>
-                                        <% } %>
-                                        <% if (validationErrors?.banner_image) { %>
-                                            <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label">Featured Image</label>
-                                        <input type="file" class="form-control" name="featured_image" accept="image/*">
-                                        <% if (enrichedEvent.featured_image) { %>
-                                            <div class="mt-2">
-                                                <img src="<%= enrichedEvent.featured_image %>" alt="Featured Image" style="max-width: 150px; height: auto;">
-                                            </div>
-                                        <% } %>
-                                        <% if (validationErrors?.featured_image) { %>
-                                            <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
-                                        <% } %>
-                                    </div>
-                                    <div class="col-md-12 mb-3">
-                                        <h4 class="header-title">Set Ticket Prices</h4>
-                                        <div id="ticket-container">
-                                            <%
-                                            // Prioritize formData tickets if present (after validation error)
-                                            const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
-                                            %>
-
-                                            <% if (ticketsToRender && ticketsToRender.length > 0) { %>
-                                                <% ticketsToRender.forEach((ticket, index) => { %>
-                                                    <%
-                                                        // Determine if 'ticket' has 'type_id' (from formData) or 'ticketTypeId' (from enrichedEvent)
-                                                        const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
-                                                        const currentTicketPrice = ticket.price;
-                                                        const currentTicketCount = ticket.count || ticket.ticketCount;
-                                                        const currentTicketType = ticket_types.find(tt => tt.id === currentTicketTypeId);
-                                                        const currentHasCount = currentTicketType?.has_ticket_count;
-                                                    %>
-                                                    <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
-                                                        <div class="col-md-4">
-                                                            <label class="form-label">Ticket Type</label>
-                                                            <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
-                                                                <option value="">Select a type</option>
-                                                                <% ticket_types.forEach(tt => { %>
-                                                                    <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
-                                                                        <%= tt.name %>
-                                                                    </option>
-                                                                <% }); %>
-                                                            </select>
-                                                        </div>
-                                                        <div class="col-md-3">
-                                                            <label class="form-label">Price</label>
-                                                            <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
-                                                        </div>
-                                                        <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
-                                                            <label class="form-label">Ticket Count</label>
-                                                            <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
-                                                        </div>
-                                                        <div class="col-md-2">
-                                                            <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
-                                                        </div>
-                                                    </div>
-                                                <% }); %>
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Name</label>
+                                            <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
+                                            <% if (validationErrors?.name) { %>
+                                                <small class="text-danger"><%= validationErrors.name[0] %></small>
                                             <% } %>
                                         </div>
-                                        <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
-                                    </div>
-                                </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Start Date Time</label>
+                                            <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                            <% if (validationErrors?.start_date_time) { %>
+                                                <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">End Date Time</label>
+                                            <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                            <% if (validationErrors?.end_date_time) { %>
+                                                <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Description</label>
+                                            <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
+                                            <% if (validationErrors?.discription) { %>
+                                                <small class="text-danger"><%= validationErrors.discription[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label">Ticket Policy</label>
+                                            <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
+                                            <% if (validationErrors?.policy) { %>
+                                                <small class="text-danger"><%= validationErrors.policy[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Organized By</label>
+                                            <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
+                                            <% if (validationErrors?.organized_by) { %>
+                                                <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Location</label>
+                                            <select class="form-control" data-toggle="select2" name="location" data-width="100%">
+                                                <option value="AZ" <%= (formData?.location || enrichedEvent.location) === 'AZ' ? 'selected' : '' %>>Arizona</option>
+                                                <option value="CO" <%= (formData?.location || enrichedEvent.location) === 'CO' ? 'selected' : '' %>>Colorado</option>
+                                                <option value="ID" <%= (formData?.location || enrichedEvent.location) === 'ID' ? 'selected' : '' %>>Idaho</option>
+                                            </select>
+                                            <% if (validationErrors?.location) { %>
+                                                <small class="text-danger"><%= validationErrors.location[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Artists</label>
+                                            <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
+                                                <% allArtists.forEach(artist => { %>
+                                                    <option value="<%= artist.id %>"
+                                                        <%
+                                                            // Check if the artist ID is in formData (after validation error)
+                                                            const isSelectedInFormData = formData?.artists && Array.isArray(formData.artists) && formData.artists.includes(artist.id.toString());
+                                                            // Check if the artist ID is in enrichedEvent.artist_details (from database)
+                                                            const isSelectedInEvent = enrichedEvent.artist_details && Array.isArray(enrichedEvent.artist_details) && enrichedEvent.artist_details.includes(artist.id);
+                                                            if (isSelectedInFormData || isSelectedInEvent) {
+                                                                %> selected <%
+                                                            }
+                                                        %>
+                                                    >
+                                                        <%= artist.name %>
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                            <% if (validationErrors?.artists) { %>
+                                                <small class="text-danger"><%= validationErrors.artists[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Banner Image</label>
+                                            <input type="file" class="form-control" name="banner_image" accept="image/*">
+                                            <% if (enrichedEvent.banner_image) { %>
+                                                <div class="mt-2">
+                                                    <img src="<%= enrichedEvent.banner_image %>" alt="Banner Image" style="max-width: 150px; height: auto;">
+                                                </div>
+                                            <% } %>
+                                            <% if (validationErrors?.banner_image) { %>
+                                                <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Featured Image</label>
+                                            <input type="file" class="form-control" name="featured_image" accept="image/*">
+                                            <% if (enrichedEvent.featured_image) { %>
+                                                <div class="mt-2">
+                                                    <img src="<%= enrichedEvent.featured_image %>" alt="Featured Image" style="max-width: 150px; height: auto;">
+                                                </div>
+                                            <% } %>
+                                            <% if (validationErrors?.featured_image) { %>
+                                                <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
+                                            <% } %>
+                                        </div>
+                                        <div class="col-md-12 mb-3">
+                                            <h4 class="header-title">Set Ticket Prices</h4>
+                                            <div id="ticket-container">
+                                                <%
+                                                // Prioritize formData tickets if present (after validation error)
+                                                const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
+                                                %>
 
-                                <button type="submit" class="btn btn-primary">Update</button>
-                            </form>
+                                                <% if (ticketsToRender && ticketsToRender.length > 0) { %>
+                                                    <% ticketsToRender.forEach((ticket, index) => { %>
+                                                        <%
+                                                            // Determine if 'ticket' has 'type_id' (from formData) or 'ticketTypeId' (from enrichedEvent)
+                                                            const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
+                                                            const currentTicketPrice = ticket.price;
+                                                            const currentTicketCount = ticket.count || ticket.ticketCount;
+                                                            const currentTicketType = ticket_types.find(tt => tt.id === currentTicketTypeId);
+                                                            const currentHasCount = currentTicketType?.has_ticket_count;
+                                                        %>
+                                                        <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
+                                                            <div class="col-md-4">
+                                                                <label class="form-label">Ticket Type</label>
+                                                                <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
+                                                                    <option value="">Select a type</option>
+                                                                    <% ticket_types.forEach(tt => { %>
+                                                                        <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
+                                                                            <%= tt.name %>
+                                                                        </option>
+                                                                    <% }); %>
+                                                                </select>
+                                                            </div>
+                                                            <div class="col-md-3">
+                                                                <label class="form-label">Price</label>
+                                                                <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
+                                                            </div>
+                                                            <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
+                                                                <label class="form-label">Ticket Count</label>
+                                                                <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
+                                                            </div>
+                                                            <div class="col-md-2">
+                                                                <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                                                            </div>
+                                                        </div>
+                                                    <% }); %>
+                                                <% } %>
+                                            </div>
+                                            <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" class="btn btn-primary">Update</button>
+                                </form>
+                            </div>
+                            <div class="tab-pane" id="profile1">
+                                <form class="mt-4" method="POST" action="/event/update-seats/<%= enrichedEvent.id %>">
+                                    <% if (seatSuccess) { %>
+                                        <div class="alert alert-success"><%= seatSuccess %></div>
+                                    <% } %>
+                                    <% if (seatError) { %>
+                                        <div class="alert alert-danger"><%= seatError %></div>
+                                    <% } %>
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <label class="form-label">Select Ticket Type to Configure Seats</label>
+                                            <select class="form-control mb-3" id="ticket-type-seat-select">
+                                                <option value="">Select a ticket type</option>
+                                                <% enrichedEvent.ticket_details.forEach(ticket => { %>
+                                                    <option value="<%= ticket.type_id %>" data-ticket-type-name="<%= ticket.ticketTypeName %>">
+                                                        <%= ticket.ticketTypeName %> (Price: <%= ticket.price %><% if (ticket.has_ticket_count) { %>, Count: <%= ticket.count %><% } %>)
+                                                    </option>
+                                                <% }); %>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div id="seat-chart-container" style="display: none;">
+                                        <h5 class="mb-3">Seat Layout for <span id="selected-ticket-type-name"></span></h5>
+                                        <div class="seat-chart-options mb-3">
+                                            <label for="seat-rows">Number of Rows:</label>
+                                            <input type="number" id="seat-rows" class="form-control d-inline-block w-auto me-2" value="10">
+                                            <label for="seat-cols">Number of Columns:</label>
+                                            <input type="number" id="seat-cols" class="form-control d-inline-block w-auto me-2" value="15">
+                                            <button type="button" class="btn btn-info" id="generate-seat-chart">Generate Layout</button>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-8">
+                                                <div id="seat-map" style="overflow-x: auto;"></div>
+                                                <div class="front-indicator">Screen/Stage</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <div id="booking-details">
+                                                    <h6 class="mt-3">Selected Seats:</h6>
+                                                    <ul id="selected-seats-list" class="list-unstyled"></ul>
+                                                    <p>Total: <span id="total-price">0</span></p>
+                                                    <button type="submit" class="btn btn-primary" id="save-seat-config">Save Seat Configuration</button>
+                                                    <input type="hidden" name="selectedTicketTypeId" id="hidden-selected-ticket-type-id">
+                                                    <input type="hidden" name="seatMapData" id="hidden-seat-map-data">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                            </div>
+                           
+                        </div>
+
+                            
 
                         </div>
                     </div>
@@ -179,6 +249,8 @@
     </div>
 </div>
 <%- include('../layouts/footer.ejs') %>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-seat-charts/1.2.0/jquery.seat-charts.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-seat-charts/1.2.0/jquery.seat-charts.css" />
 
 <script>
 
@@ -258,4 +330,240 @@
 
 
 
+    
+
+    let sc; 
+
+    $(document).ready(function() {
+        const seatChartContainer = $('#seat-chart-container');
+        const ticketTypeSeatSelect = $('#ticket-type-seat-select');
+        const selectedTicketTypeNameSpan = $('#selected-ticket-type-name');
+        const generateSeatChartBtn = $('#generate-seat-chart');
+        const seatMapDiv = $('#seat-map');
+        const selectedSeatsList = $('#selected-seats-list');
+        const totalPriceSpan = $('#total-price');
+        const hiddenSelectedTicketTypeId = $('#hidden-selected-ticket-type-id');
+        const hiddenSeatMapData = $('#hidden-seat-map-data');
+        const seatRowsInput = $('#seat-rows');
+        const seatColsInput = $('#seat-cols');
+
+        let currentTicketTypeId = null;
+        let currentTicketPrice = 0;
+        let seatData = {}; // Stores seat data for each ticket type: { ticketTypeId: { map: [], legend: {} } }
+
+        // Initialize seat charts if data exists for the first ticket type on load
+        if (enrichedEvent.seat_configurations && enrichedEvent.seat_configurations.length > 0) {
+            const initialTicketTypeId = enrichedEvent.seat_configurations[0].ticketTypeId;
+            const initialSeatConfig = enrichedEvent.seat_configurations.find(config => config.ticketTypeId === initialTicketTypeId);
+            if (initialSeatConfig) {
+                ticketTypeSeatSelect.val(initialTicketTypeId);
+                selectedTicketTypeNameSpan.text(ticketTypeSeatSelect.find(':selected').data('ticketTypeName'));
+                seatChartContainer.show();
+                currentTicketTypeId = initialTicketTypeId;
+                currentTicketPrice = enrichedEvent.ticket_details.find(t => t.type_id === currentTicketTypeId)?.price || 0;
+                seatRowsInput.val(initialSeatConfig.rows);
+                seatColsInput.val(initialSeatConfig.cols);
+                
+                seatData = enrichedEvent.seat_configurations.reduce((acc, config) => {
+                    acc[config.ticketTypeId] = {
+                        map: config.seatMap,
+                        legend: config.legend
+                    };
+                    return acc;
+                }, {});
+
+                renderSeatChart(initialSeatConfig.seatMap, initialSeatConfig.legend);
+            }
+        }
+        
+        ticketTypeSeatSelect.on('change', function() {
+            currentTicketTypeId = $(this).val();
+            selectedTicketTypeNameSpan.text($(this).find(':selected').data('ticketTypeName'));
+            seatChartContainer.hide();
+            seatMapDiv.empty(); // Clear previous seat map
+
+            if (currentTicketTypeId) {
+                currentTicketPrice = enrichedEvent.ticket_details.find(t => t.type_id === parseInt(currentTicketTypeId))?.price || 0;
+                seatChartContainer.show();
+                hiddenSelectedTicketTypeId.val(currentTicketTypeId);
+
+                // Load existing seat configuration if available for this ticket type
+                if (seatData[currentTicketTypeId] && seatData[currentTicketTypeId].map) {
+                    renderSeatChart(seatData[currentTicketTypeId].map, seatData[currentTicketTypeId].legend);
+                } else {
+                    // Reset to default rows/cols if no existing configuration
+                    seatRowsInput.val(10);
+                    seatColsInput.val(15);
+                    // No need to generate here, let the user click generate
+                }
+            }
+        });
+
+        generateSeatChartBtn.on('click', function() {
+            const rows = parseInt(seatRowsInput.val());
+            const cols = parseInt(seatColsInput.val());
+
+            if (isNaN(rows) || isNaN(cols) || rows <= 0 || cols <= 0) {
+                alert('Please enter valid numbers for rows and columns.');
+                return;
+            }
+
+            const newSeatMap = Array(rows).fill('').map(() => 'a'.repeat(cols));
+            renderSeatChart(newSeatMap, {
+                a: 'Available',
+                u: 'Unavailable',
+                s: 'Selected' // This will be dynamic
+            });
+        });
+
+        function renderSeatChart(seatMap, legend) {
+            seatMapDiv.empty(); // Clear previous seat map
+            selectedSeatsList.empty();
+            totalPriceSpan.text('0');
+
+            sc = seatMapDiv.seatCharts({
+                map: seatMap,
+                seats: {
+                    a: {
+                        price: currentTicketPrice,
+                        classes: 'available-seat',
+                        category: 'Available'
+                    },
+                    u: {
+                        price: 0,
+                        classes: 'unavailable-seat',
+                        category: 'Unavailable'
+                    }
+                },
+                legend: {
+                    node: $('#booking-details'),
+                    items: [
+                        ['a', 'available-seat', 'Available'],
+                        ['u', 'unavailable-seat', 'Unavailable']
+                    ]
+                },
+                click: function() {
+                    if (this.status() == 'available') {
+                        // Select seat
+                        $('<li>' + this.data().category + ' Seat # ' + this.settings.label + ': <b>$' + this.data().price + '</b> <a href="#" class="cancel-cart-item" data-seat-id="' + this.settings.id + '">X</a></li>')
+                            .attr('id', 'cart-item-' + this.settings.id)
+                            .data('seatId', this.settings.id)
+                            .appendTo(selectedSeatsList);
+
+                        totalPriceSpan.text(recalculateTotal(this.data().price));
+
+                        return 'selected';
+                    } else if (this.status() == 'selected') {
+                        // Unselect seat
+                        totalPriceSpan.text(recalculateTotal(-this.data().price));
+                        $('#cart-item-' + this.settings.id).remove();
+                        return 'available';
+                    } else if (this.status() == 'unavailable') {
+                        return 'unavailable';
+                    } else {
+                        return this.style();
+                    }
+                }
+            });
+
+            // Re-select previously saved seats if any
+            if (seatData[currentTicketTypeId] && sc) {
+                sc.get(seatData[currentTicketTypeId].selected || []).each(function() {
+                    this.status('selected');
+                });
+                 // Re-add selected seats to the list and update total price
+                 selectedSeatsList.empty();
+                 let currentTotal = 0;
+                 sc.find('selected').each(function() {
+                    $('<li>' + this.data().category + ' Seat # ' + this.settings.label + ': <b>$' + this.data().price + '</b> <a href="#" class="cancel-cart-item" data-seat-id="' + this.settings.id + '">X</a></li>')
+                            .attr('id', 'cart-item-' + this.settings.id)
+                            .data('seatId', this.settings.id)
+                            .appendTo(selectedSeatsList);
+                    currentTotal += this.data().price;
+                 });
+                 totalPriceSpan.text(currentTotal);
+            }
+        }
+
+        selectedSeatsList.on('click', '.cancel-cart-item', function() {
+            sc.get($(this).data('seatId')).click();
+        });
+
+        function recalculateTotal(priceChange) {
+            let total = parseFloat(totalPriceSpan.text());
+            total += priceChange;
+            return total.toFixed(2);
+        }
+
+        $('#save-seat-config').on('click', function(e) {
+            e.preventDefault(); // Prevent default form submission
+
+            if (!currentTicketTypeId) {
+                alert('Please select a ticket type to save seat configuration.');
+                return;
+            }
+
+            if (!sc) {
+                alert('Please generate a seat layout first.');
+                return;
+            }
+
+            const seatMapArray = sc.get  ().map(function(seat) {
+                return seat.status(); // Get current status of all seats
+            });
+
+            // Transform the flat array back into a 2D map string
+            const rows = parseInt(seatRowsInput.val());
+            const cols = parseInt(seatColsInput.val());
+            let seatMapString = [];
+            for (let i = 0; i < rows; i++) {
+                seatMapString.push(seatMapArray.slice(i * cols, (i + 1) * cols).join(''));
+            }
+
+            const selectedSeats = [];
+            sc.find('selected').each(function() {
+                selectedSeats.push(this.settings.id);
+            });
+
+            // Store the data temporarily
+            seatData[currentTicketTypeId] = {
+                rows: rows,
+                cols: cols,
+                seatMap: seatMapString,
+                legend: {
+                    a: 'Available',
+                    u: 'Unavailable',
+                    s: 'Selected'
+                },
+                selected: selectedSeats // Save selected seats
+            };
+
+            // Prepare data for submission
+            const dataToSave = {
+                ticketTypeId: parseInt(currentTicketTypeId),
+                rows: rows,
+                cols: cols,
+                seatMap: seatMapString, // This is your 2D array of seat statuses
+                legend: { a: 'Available', u: 'Unavailable' }, // Simplified legend
+                selectedSeats: selectedSeats // Array of selected seat IDs
+            };
+            
+            // Assign the data to the hidden input for form submission
+            hiddenSeatMapData.val(JSON.stringify(dataToSave));
+
+            // Manually submit the form for seat configuration
+            $(this).closest('form').submit();
+        });
+
+        // Handle initial display of seat chart if seat configurations exist
+        if (enrichedEvent.seat_configurations && enrichedEvent.seat_configurations.length > 0) {
+            const initialTicketTypeId = enrichedEvent.seat_configurations[0].ticketTypeId;
+            ticketTypeSeatSelect.val(initialTicketTypeId).trigger('change'); // Trigger change to load the first config
+        }
+    });
 </script>
+
+
+
+
+
