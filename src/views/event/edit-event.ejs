@@ -291,7 +291,7 @@
 </script>
 
 <script>
-    const seatTicketTypes = [
+const seatTicketTypes = [
     {
         price: 2500,
         ticketCount: null,
@@ -306,13 +306,17 @@
     }
 ];
 
+// Create 10 rows (A-J) and 20 seats per row
+const rows = 10;
+const cols = 20;
+const seatMap = Array.from({ length: rows }, () => 'a'.repeat(cols));
+
+// To map index 0 = A, 1 = B, ..., 9 = J
+const rowLabels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 const selectedSeats = {};
 const sc = $('#seat-map').seatCharts({
-    map: [
-        'aaaaa',
-        'aaaaa',
-        'aaaaa'
-    ],
+    map: seatMap,
     seats: {
         a: {
             price: 0,
@@ -323,13 +327,14 @@ const sc = $('#seat-map').seatCharts({
     naming: {
         top: false,
         getLabel: function (character, row, column) {
-            return row + '_' + column;
+            const rowLetter = rowLabels[row];
+            const seatNumber = column + 1;
+            return `${rowLetter}${seatNumber}`;
         }
     },
     click: function () {
         if (this.status() === 'available') {
-            // Ask user to choose ticket type
-            const seatId = this.settings.id;
+            const seatId = this.settings.label;
             let ticketTypeOptions = seatTicketTypes.map(t => `${t.ticketTypeId}: ${t.ticketTypeName} (Rs.${t.price})`).join('\n');
             let selectedId = prompt(`Choose ticket type for seat ${seatId}:\n` + ticketTypeOptions);
 
@@ -342,7 +347,7 @@ const sc = $('#seat-map').seatCharts({
                 return 'available';
             }
         } else if (this.status() === 'selected') {
-            delete selectedSeats[this.settings.id];
+            delete selectedSeats[this.settings.label];
             return 'available';
         } else {
             return this.style();
@@ -358,6 +363,7 @@ $('#save-seats').on('click', function () {
         price: selectedSeats[seatId].price
     }));
 
+    console.log(seatData);
     $.ajax({
         url: '/api/seats/save',
         method: 'POST',
