@@ -188,7 +188,12 @@
                             </div>
                             <div class="tab-pane " id="profile1">
                                 <form class="mt-4" method="POST" action="/event/update-seats/<%= enrichedEvent.id %>" enctype="multipart/form-data">
+                                    <div id="seat-map">
+                                        <div class="front">STAGE</div>
+                                    </div>
+                                    <div id="legend"></div>
 
+                                    <button id="save-seats">Save Selection</button>
                                 </form>
                             </div>
                            
@@ -283,4 +288,88 @@
 
 
 
+</script>
+
+<script>
+    const seatTicketTypes = [
+    {
+        price: 2500,
+        ticketCount: null,
+        ticketTypeId: 2,
+        ticketTypeName: "VIP Standing"
+    },
+    {
+        price: 3000,
+        ticketCount: 200,
+        ticketTypeId: 3,
+        ticketTypeName: "Balcony"
+    }
+];
+
+const selectedSeats = {};
+const sc = $('#seat-map').seatCharts({
+    map: [
+        'aaaaa',
+        'aaaaa',
+        'aaaaa'
+    ],
+    seats: {
+        a: {
+            price: 0,
+            classes: 'available-seat',
+            category: 'Available'
+        }
+    },
+    naming: {
+        top: false,
+        getLabel: function (character, row, column) {
+            return row + '_' + column;
+        }
+    },
+    click: function () {
+        if (this.status() === 'available') {
+            // Ask user to choose ticket type
+            const seatId = this.settings.id;
+            let ticketTypeOptions = seatTicketTypes.map(t => `${t.ticketTypeId}: ${t.ticketTypeName} (Rs.${t.price})`).join('\n');
+            let selectedId = prompt(`Choose ticket type for seat ${seatId}:\n` + ticketTypeOptions);
+
+            let selectedType = seatTicketTypes.find(t => t.ticketTypeId == selectedId);
+            if (selectedType) {
+                selectedSeats[seatId] = selectedType;
+                return 'selected';
+            } else {
+                alert('Invalid ticket type');
+                return 'available';
+            }
+        } else if (this.status() === 'selected') {
+            delete selectedSeats[this.settings.id];
+            return 'available';
+        } else {
+            return this.style();
+        }
+    }
+});
+
+$('#save-seats').on('click', function () {
+    const seatData = Object.keys(selectedSeats).map(seatId => ({
+        seatId,
+        ticketTypeId: selectedSeats[seatId].ticketTypeId,
+        ticketTypeName: selectedSeats[seatId].ticketTypeName,
+        price: selectedSeats[seatId].price
+    }));
+
+    $.ajax({
+        url: '/api/seats/save',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ seats: seatData }),
+        success: function (response) {
+            alert('Seats saved successfully!');
+        },
+        error: function (err) {
+            console.error(err);
+            alert('Error saving seats.');
+        }
+    });
+});
 </script>
