@@ -75,6 +75,7 @@ model TicketType {
 model Event {
   id            Int       @id @default(autoincrement())
   name          String
+  slug            String   @unique
   start_date_time DateTime
   end_date_time   DateTime
   description   String

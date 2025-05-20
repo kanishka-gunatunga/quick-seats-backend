@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import slugify from 'slugify';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { put } from '@vercel/blob';
@@ -32,6 +33,7 @@ export const addEventGet = async (req: Request, res: Response) => {
 };
 
 export const addEventPost = async (req: Request, res: Response) => {
+  
 
  const schema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -99,6 +101,15 @@ if (bannerImageFile) {
       });
       featuredImageUrl = url;
     }
+
+    let baseSlug = slugify(name, { lower: true, strict: true });
+    let uniqueSlug = baseSlug;
+    let suffix = 1;
+
+    while (await prisma.event.findUnique({ where: { slug: uniqueSlug } })) {
+      uniqueSlug = `${baseSlug}-${suffix++}`;
+    }
+
     const ticketDetailsJson = tickets.map((ticket: any) => ({
       ticketTypeId: parseInt(ticket.type_id, 10),
       price: parseFloat(ticket.price),
@@ -110,6 +121,7 @@ if (bannerImageFile) {
     const event = await prisma.event.create({
       data: {
         name,
+        slug: uniqueSlug,
         start_date_time: new Date(start_date_time),
         end_date_time: new Date(end_date_time),
         description: discription,
