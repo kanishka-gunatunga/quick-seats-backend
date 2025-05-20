@@ -259,26 +259,58 @@ export const editEventGet = async (req: Request, res: Response) => {
     return res.redirect('/events'); 
   }
 };
+
 export const editEventPost = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);
 
-  // Directly destructure from req.body without Zod validation
-  const {
-    name,
-    start_date_time,
-    end_date_time,
-    discription,
-    policy,
-    organized_by,
-    location,
-    artists, // This will be string or array of strings, or undefined
-    tickets, // This will be array of objects with string values, or undefined
-  } = req.body;
+  // Zod schema for validation, similar to your addEventPost function
+  const schema = z.object({
+    name: z.string().min(1, 'Name is required'),
+    start_date_time: z.string().min(1, 'Start date and time is required'),
+    end_date_time: z.string().min(1, 'End date and time is required'),
+    discription: z.string().min(1, 'Description is required'),
+    policy: z.string().min(1, 'Ticket Policy is required'),
+    organized_by: z.string().min(1, 'Organized by is required'),
+    location: z.string().min(1, 'Location is required'),
+    artists: z
+      .union([z.string(), z.array(z.string())])
+      .optional()
+      .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])), // Ensure it's always an array of strings
+    tickets: z.array(z.object({
+      type_id: z.string().min(1, 'Ticket type is required'),
+      price: z.string().min(1, 'Ticket price is required'),
+      count: z.string().optional(),
+    })).optional().default([]),
+  });
 
   const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
   const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
 
   try {
+    // Attempt to parse the request body using Zod
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      req.session.error = 'Please fix the errors below.';
+      req.session.formData = req.body;
+      req.session.validationErrors = errors;
+      return res.redirect(`/event/edit/${eventId}`); // Redirect back to the edit page with errors
+    }
+
+    // Destructure validated data
+    const {
+      name,
+      start_date_time,
+      end_date_time,
+      discription,
+      policy,
+      organized_by,
+      location,
+      artists,
+      tickets,
+    } = result.data;
+
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
       select: { banner_image: true, featured_image: true, slug: true, name: true },
@@ -286,13 +318,17 @@ export const editEventPost = async (req: Request, res: Response) => {
 
     if (!existingEvent) {
       req.session.error = 'Event not found.';
-      return res.redirect('/events');
+      return res.redirect('/events'); // Redirect to events list if event not found
     }
 
     let bannerImageUrl: string | null = existingEvent.banner_image;
     let featuredImageUrl: string | null = existingEvent.featured_image;
 
+    // Handle banner image upload
     if (bannerImageFile) {
+      // You might want to delete the old image from Vercel Blob if it exists
+      // For deletion, you'd typically store the public ID or URL and use the `del` function.
+      // Example: if (existingEvent.banner_image) await del(existingEvent.banner_image);
       const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
         access: 'public',
         addRandomSuffix: true,
@@ -300,7 +336,9 @@ export const editEventPost = async (req: Request, res: Response) => {
       bannerImageUrl = url;
     }
 
+    // Handle featured image upload
     if (featuredImageFile) {
+      // Example: if (existingEvent.featured_image) await del(existingEvent.featured_image);
       const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
         access: 'public',
         addRandomSuffix: true,
@@ -309,40 +347,35 @@ export const editEventPost = async (req: Request, res: Response) => {
     }
 
     let uniqueSlug = existingEvent.slug;
-    // Only regenerate slug if the name has changed
+    // Only regenerate slug if the name has changed to avoid unnecessary updates
     if (name !== existingEvent.name) {
       let baseSlug = slugify(name, { lower: true, strict: true });
       let suffix = 1;
       // Ensure the slug is unique and not for the current event ID
-      // This loop is important to avoid slug conflicts.
       while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
         uniqueSlug = `${baseSlug}-${suffix++}`;
       }
     }
 
-    // Map ticket details. You'll need to manually ensure types if not using Zod.
-    // Assuming 'tickets' from req.body is an array of objects like:
-    // [{ type_id: '1', price: '100', count: '5' }, ...]
-    const ticketDetailsJson = Array.isArray(tickets) ? tickets.map((ticket: any) => ({
+    // Map ticket details from validated Zod output.
+    // Zod's .transform ensures `tickets` is an array.
+    const ticketDetailsJson = tickets.map((ticket: { type_id: string; price: string; count?: string }) => ({
       ticketTypeId: Number(ticket.type_id), // Convert to Number
-      price: Number(ticket.price),         // Convert to Number
+      price: Number(ticket.price),           // Convert to Number
       ticketCount: ticket.count ? Number(ticket.count) : null, // Convert to Number, handle optional
-    })) : [];
+    }));
 
-    // Map artist IDs. Handle single string vs. array of strings.
-    const artistIdsJson = Array.isArray(artists)
-      ? artists.map(Number)
-      : (artists ? [Number(artists)] : []); // If a single artist, convert to array with one number
+    // Map artist IDs from validated Zod output.
+    // Zod's .transform ensures `artists` is an array of strings.
+    const artistIdsJson = artists.map(Number);
 
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
       data: {
         name,
         slug: uniqueSlug,
-        // Convert date-time strings to Date objects.
-        // If these are invalid strings, this will throw an error.
-        start_date_time: new Date(start_date_time),
-        end_date_time: new Date(end_date_time),
+        start_date_time: new Date(start_date_time), // Convert string to Date object
+        end_date_time: new Date(end_date_time),     // Convert string to Date object
         description: discription,
         policy: policy,
         organized_by: organized_by,
@@ -357,11 +390,15 @@ export const editEventPost = async (req: Request, res: Response) => {
     req.session.success = 'Event updated successfully!';
     req.session.formData = {}; // Clear form data on success
     req.session.validationErrors = {}; // Clear validation errors on success
-    return res.redirect(`/event/edit/${updatedEvent.id}`);
+    return res.redirect(`/event/edit/${updatedEvent.id}`); // Redirect back to the updated event's edit page
   } catch (err) {
     console.error('Error updating event:', err);
+    // If an unexpected error occurs (e.g., database error), store general error message
     req.session.error = 'An unexpected error occurred while updating the event.';
-    req.session.formData = req.body; // Keep form data if a server-side error occurs
+    // Keep form data and validation errors for rendering the form again
+    req.session.formData = req.body;
+    // Note: Zod validation errors are cleared in the try block, so this `validationErrors`
+    // will only contain errors if something else went wrong after successful Zod parse.
     return res.redirect(`/event/edit/${eventId}`);
   }
 };
