@@ -48,6 +48,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
 export const login = async (req: Request, res: Response) => {
 
+  console.log('BODY:', req.body);
   const loginSchema = z.object({
     email: z.string().email(),
     password: z.string().min(1, "Password is required"),
