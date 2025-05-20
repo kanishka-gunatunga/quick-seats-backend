@@ -328,7 +328,7 @@ const sc = $('#seat-map').seatCharts({
         getLabel: function (character, row, column) {
             const rowLetter = rowLabels[row - 1];
             // Adjust seat number to start from 1
-            const seatNumber = column + 1;
+            const seatNumber = column;
             return `${rowLetter}${seatNumber}`;
         }
     },
