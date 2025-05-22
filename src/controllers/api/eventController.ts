@@ -5,55 +5,100 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 export const getAllEvents = async (req: Request, res: Response) => {
-  const events = await prisma.event.findMany({
-    where: { status: 'active' }
-  });
+  try {
+    const {
+      startDate,  // format: "2025-05-22"
+      endDate,    // format: "2025-05-24"
+      artistId,   // single ID or comma-separated IDs
+      location,
+      minPrice,   // minimum ticket price
+      maxPrice    // maximum ticket price
+    } = req.query;
 
-  const enhancedEvents = await Promise.all(events.map(async (event) => {
-
-    const artistIds: number[] = Array.isArray(event.artist_details)
-      ? event.artist_details.map(Number)
-      : [];
-
-    const ticketDetails: any[] = Array.isArray(event.ticket_details)
-      ? event.ticket_details
-      : [];
-
-    const artists = await prisma.artist.findMany({
-      where: { id: { in: artistIds } }
+    // Step 1: Get all active events
+    let events = await prisma.event.findMany({
+      where: {
+        status: 'active',
+        ...(location && { location: String(location) }),
+        ...(startDate && endDate && {
+          start_date_time: {
+            gte: new Date(String(startDate)),
+            lte: new Date(String(endDate)),
+          }
+        })
+      }
     });
 
-    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
-    const ticketTypes = await prisma.ticketType.findMany({
-      where: { id: { in: ticketTypeIds } }
-    });
+    // Step 2: Filter by artist (if artistId is provided)
+    if (artistId) {
+      const filterArtistIds = String(artistId).split(',').map(Number);
+      events = events.filter(event => {
+        const eventArtistIds = Array.isArray(event.artist_details)
+          ? event.artist_details.map(Number)
+          : [];
+        return eventArtistIds.some(id => filterArtistIds.includes(id));
+      });
+    }
 
-    const enrichedTickets = ticketDetails.map(ticket => {
-      const ticketType = ticketTypes.find(tt => tt.id === ticket.ticketTypeId);
+    // Step 3: Filter by price range (if given)
+    if (minPrice || maxPrice) {
+      const min = Number(minPrice) || 0;
+      const max = Number(maxPrice) || Infinity;
+
+      events = events.filter(event => {
+        const tickets: any[] = Array.isArray(event.ticket_details) ? event.ticket_details : [];
+        return tickets.some(ticket => ticket.price >= min && ticket.price <= max);
+      });
+    }
+
+    // Step 4: Enrich each event with artists and ticket types
+    const enhancedEvents = await Promise.all(events.map(async (event) => {
+      const artistIds: number[] = Array.isArray(event.artist_details)
+        ? event.artist_details.map(Number)
+        : [];
+
+      const ticketDetails: any[] = Array.isArray(event.ticket_details)
+        ? event.ticket_details
+        : [];
+
+      const artists = await prisma.artist.findMany({
+        where: { id: { in: artistIds } }
+      });
+
+      const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
+      const ticketTypes = await prisma.ticketType.findMany({
+        where: { id: { in: ticketTypeIds } }
+      });
+
+      const enrichedTickets = ticketDetails.map(ticket => {
+        const ticketType = ticketTypes.find(tt => tt.id === ticket.ticketTypeId);
+        return {
+          ...ticket,
+          ticketTypeName: ticketType?.name || 'Unknown'
+        };
+      });
+
+      const enrichedArtists = artistIds.map(id => {
+        const artist = artists.find(a => a.id === id);
+        return {
+          artistId: id,
+          artistName: artist?.name || 'Unknown'
+        };
+      });
+
       return {
-        ...ticket,
-        ticketTypeName: ticketType?.name || 'Unknown'
+        ...event,
+        ticket_details: enrichedTickets,
+        artist_details: enrichedArtists
       };
-    });
+    }));
 
-    const enrichedArtists = artistIds.map(id => {
-      const artist = artists.find(a => a.id === id);
-      return {
-        artistId: id,
-        artistName: artist?.name || 'Unknown'
-      };
-    });
+    return res.json({ events: enhancedEvents });
 
-    return {
-      ...event,
-      ticket_details: enrichedTickets,
-      artist_details: enrichedArtists
-    };
-  }));
-
-  return res.json({
-    events: enhancedEvents
-  });
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    return res.status(500).json({ message: 'Failed to fetch events.' });
+  }
 };
 
 export const getTrendingEvents = async (req: Request, res: Response) => {
