@@ -110,7 +110,7 @@ model Order {
   country        String
   event_id       String
   user_id        String
-  seat_ids String[]   
+  seat_ids       Json
   sub_total      Float
   discount       Float
   total          Float
