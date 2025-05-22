@@ -30,6 +30,7 @@ model User {
 
   userDetails UserDetails?
   adminDetails AdminDetails?
+  staffDetails StaffDetails?
 }
 
 model UserDetails {
@@ -46,6 +47,16 @@ model UserDetails {
 }
 
 model AdminDetails {
+  id        Int      @id @default(autoincrement())
+  user_id     Int   @unique
+  name  String?
+  phone  String?
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id])
+}
+
+model StaffDetails {
   id        Int      @id @default(autoincrement())
   user_id     Int   @unique
   name  String?

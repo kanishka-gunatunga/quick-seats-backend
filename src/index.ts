@@ -6,6 +6,7 @@ import pgSession from 'connect-pg-simple';
 import { Pool } from 'pg';
 import apiRoutes from './routes/api/api.routes';
 import adminRoutes from './routes/admin/admin.routes';
+import staffRoutes from './routes/staff/staff.routes';
 import path from 'path';
 const PgSession = pgSession(session);
 const pool = new Pool({
@@ -50,6 +51,7 @@ app.set('view engine', 'ejs');
 
 app.use('/api', apiRoutes);
 app.use('/', adminRoutes);
+app.use('/staff ', staffRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

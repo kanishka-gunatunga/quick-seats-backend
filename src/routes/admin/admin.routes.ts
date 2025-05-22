@@ -6,7 +6,7 @@ import { addAdminGet, addAdminPost, admins, activateAdmin, deactivateAdmin ,edit
 import { addArtistGet, addArtistPost, artists, activateArtist, deactivateArtist ,editArtistGet, editArtistPost} from '../../controllers/admin/artistController';
 import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, deactivateTicketType ,editTicketTypeGet, editTicketTypePost} from '../../controllers/admin/ticketTypeController';
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost} from '../../controllers/admin/eventController';
- 
+ import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
 
 
 const router = express.Router();
@@ -25,6 +25,15 @@ router.get('/admin/deactivate/:id', isAdminLoggedIn, deactivateAdmin);
 router.get('/admin/edit/:id', isAdminLoggedIn, editAdminGet);
 router.post('/admin/edit/:id', isAdminLoggedIn, editAdminPost);
 router.get('/admins', isAdminLoggedIn, admins);
+
+//Staff Management
+router.get('/add-staff', isAdminLoggedIn, addStaffGet);
+router.post('/add-staff', isAdminLoggedIn, addStaffPost);
+router.get('/staff/activate/:id', isAdminLoggedIn, activateStaff);
+router.get('/staff/deactivate/:id', isAdminLoggedIn, deactivateStaff);
+router.get('/staff/edit/:id', isAdminLoggedIn, editStaffGet);
+router.post('/staff/edit/:id', isAdminLoggedIn, editStaffPost);
+router.get('/staffs', isAdminLoggedIn, staffs);
 
 //Artists Management
 router.get('/add-artist', isAdminLoggedIn, addArtistGet);
