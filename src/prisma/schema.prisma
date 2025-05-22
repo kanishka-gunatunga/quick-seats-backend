@@ -99,3 +99,20 @@ model Event {
   artist_details Json?     
   status String
 }
+
+model Order {
+  id             Int      @id @default(autoincrement())
+  email          String
+  first_name     String 
+  last_name      String
+  contact_number String
+  nic_passport   String
+  country        String
+  event_id       String
+  user_id        String
+  seat_ids String[]   
+  sub_total      Float
+  discount       Float
+  total          Float
+  status         String
+}
