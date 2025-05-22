@@ -15,7 +15,10 @@ export const checkout = async (req: Request, res: Response) => {
   country: z.string().min(1, 'Country is required'),
   event_id: z.string().min(1, 'Event id is required'),
   user_id: z.string().min(1, 'User id is required'),
-  seat_ids: z.array(z.string()).min(1, 'At least one seat must be selected')
+   seat_ids: z.union([
+    z.array(z.string()),
+    z.string().transform((val) => JSON.parse(val))
+  ])
 });
 
   const result = schema.safeParse(req.body);
