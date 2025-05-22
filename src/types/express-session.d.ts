@@ -9,6 +9,12 @@ declare module 'express-session' {
       name: string?;
       phone: string?;
     };
+    staff?: {
+      id: number;
+      email: string;
+      name: string?;
+      phone: string?;
+    };
     success: string?;
     error: string?;
     formData?: Record<string, any>; 

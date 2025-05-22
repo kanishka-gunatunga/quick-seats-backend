@@ -1,7 +1,7 @@
 import express from 'express';
 import upload from '../../middlewares/upload';
-import { isAdminLoggedIn } from '../../middlewares/authAdmin';
-import { loginGet, loginPost, dashboard,logout } from '../../controllers/admin/userController';
+import { isAdminLoggedIn } from '../../middlewares/authStaff';
+import { loginGet, loginPost, dashboard,logout } from '../../controllers/staff/userController';
 
  
 
