@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
-
+import QRCode from 'qrcode';
 
 const prisma = new PrismaClient();
 
@@ -40,7 +40,7 @@ export const checkout = async (req: Request, res: Response) => {
 
   try {
 
-    await prisma.order.create({
+    const order = await prisma.order.create({
       data: {
         email,
         first_name,
@@ -58,7 +58,14 @@ export const checkout = async (req: Request, res: Response) => {
       },
     });
 
-    return res.status(201).json({ message: 'User registered successfully' });
+    const qrData = `https://yourdomain.com/order/${order.id}`; // or just order.id
+    const qrCode = await QRCode.toDataURL(qrData);
+
+    return res.status(201).json({
+      message: 'Order created successfully',
+      order_id: order.id,
+      qr_code: qrCode, 
+    });
   } catch (err) {
     console.error('Registration error:', err);
     return res.status(500).json({ message: 'Internal server error' });
