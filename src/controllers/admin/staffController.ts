@@ -93,12 +93,12 @@ export const addStaffPost = async (req: Request, res: Response) => {
 };
 
 export const staffs = async (req: Request, res: Response) => {
-  const admins = await prisma.user.findMany({
+  const staffs = await prisma.user.findMany({
     where: {
       user_role: 1,
     },
     include: {
-      adminDetails: true,
+      staffDetails: true,
     },
   });
 
@@ -107,10 +107,10 @@ export const staffs = async (req: Request, res: Response) => {
   req.session.error = undefined;
   req.session.success = undefined;
 
-  res.render('user/admins', {
+  res.render('user/staffs', {
     error,
     success,
-    admins,
+    staffs,
   });
 };
 
@@ -122,12 +122,12 @@ export const activateStaff = async (req: Request, res: Response) => {
       where: { id },
       data: { status: 'active' },
     });
-    req.session.success = 'Admin activated successfully!';
+    req.session.success = 'Staff Member activated successfully!';
   } catch (error) {
     console.error('Error activating admin:', error);
     req.session.error = 'Failed to activate admin. Please try again.';
   }
-  return res.redirect('/admins'); 
+  return res.redirect('/staffs'); 
 };
 
 export const deactivateStaff = async (req: Request, res: Response) => {
@@ -137,12 +137,12 @@ export const deactivateStaff = async (req: Request, res: Response) => {
       where: { id },
       data: { status: 'inactive' },
     });
-    req.session.success = 'Admin deactivated successfully!';
+    req.session.success = 'Staff Member deactivated successfully!';
   } catch (error) {
     console.error('Error deactivating admin:', error);
     req.session.error = 'Failed to deactivate admin. Please try again.';
   }
-  return res.redirect('/admins');
+  return res.redirect('/staffs');
 };
 
 
