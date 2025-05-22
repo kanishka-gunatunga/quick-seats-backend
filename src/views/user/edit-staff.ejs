@@ -1,0 +1,77 @@
+<%- include('../layouts/header.ejs') %>
+<div class="content-page">
+                <div class="content">
+
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Edit Staff</h4>
+
+                                                <form class="mt-4" method="POST" action="/staff/edit/<%= user.id %>">
+                                                    <% if (success) { %>
+                                                        <div class="alert alert-success"><%= success %></div>
+                                                    <% } %>
+                                                    <% if (error) { %>
+                                                        <div class="alert alert-danger"><%= error %></div>
+                                                    <% } %>
+
+                                                    <div class="row">
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Name</label>
+                                                        <input type="text" class="form-control" name="name" value="<%= user.staffDetails.name %>">
+                                                        <% if (validationErrors?.name) { %>
+                                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
+                                                        <% } %>
+                                                        </div>
+
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Phone No</label>
+                                                        <input type="text" class="form-control" name="phone" value="<%= user.staffDetails.phone %>">
+                                                        <% if (validationErrors?.phone) { %>
+                                                            <small class="text-danger"><%= validationErrors.phone[0] %></small>
+                                                        <% } %>
+                                                        </div>
+
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Email</label>
+                                                        <input type="email" class="form-control" name="email" value="<%= user.email %>">
+                                                        <% if (validationErrors?.email) { %>
+                                                            <small class="text-danger"><%= validationErrors.email[0] %></small>
+                                                        <% } %>
+                                                        </div>
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Current Password</label>
+                                                        <input type="password" class="form-control" name="current_password">
+                                                        <% if (validationErrors?.current_password) { %>
+                                                            <small class="text-danger"><%= validationErrors.current_password[0] %></small>
+                                                        <% } %>
+                                                        </div>
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">New Password</label>
+                                                        <input type="password" class="form-control" name="password">
+                                                        <% if (validationErrors?.password) { %>
+                                                            <small class="text-danger"><%= validationErrors.password[0] %></small>
+                                                        <% } %>
+                                                        </div>
+
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Confirm Password</label>
+                                                        <input type="password" class="form-control" name="confirm_password">
+                                                        <% if (validationErrors?.confirm_password) { %>
+                                                            <small class="text-danger"><%= validationErrors.confirm_password[0] %></small>
+                                                        <% } %>
+                                                        </div>
+                                                    </div>
+
+                                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                                </form>
+
+                                    </div> </div> </div>
+                        </div>
+                        </div> </div>
+
+            </div>
+            <%- include('../layouts/footer.ejs') %>

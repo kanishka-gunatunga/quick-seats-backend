@@ -95,7 +95,7 @@ export const addStaffPost = async (req: Request, res: Response) => {
 export const staffs = async (req: Request, res: Response) => {
   const staffs = await prisma.user.findMany({
     where: {
-      user_role: 1,
+      user_role: 3,
     },
     include: {
       staffDetails: true,
@@ -160,10 +160,10 @@ export const editStaffGet = async (req: Request, res: Response) => {
 
   const user = await prisma.user.findUnique({
     where: { id },
-    include: { adminDetails: true },
+    include: { staffDetails: true },
   });
 
-  res.render('user/edit-admin', {
+  res.render('user/edit-staff', {
     error,
     success,
     formData,
@@ -197,7 +197,7 @@ export const editStaffPost = async (req: Request, res: Response) => {
     const errors = result.error.flatten().fieldErrors;
     req.session.error = 'Please fix the errors below.';
     req.session.validationErrors = errors;
-    return res.redirect(`/admin/edit/${req.params.id}`);
+    return res.redirect(`/staff/edit/${req.params.id}`);
   }
 
   const { name, phone, email, current_password, password } = result.data;
@@ -206,24 +206,24 @@ export const editStaffPost = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { adminDetails: true },
+      include: { staffDetails: true },
     });
 
     if (!user) {
-      req.session.error = 'Admin not found.';
-      return res.redirect('/admins');
+      req.session.error = 'Staff member not found.';
+      return res.redirect('/staffs');
     }
 
     if (password) {
       if (!current_password) {
         req.session.error = 'Current password is required to set a new password.';
-        return res.redirect(`/admin/edit/${userId}`);
+        return res.redirect(`/staff/edit/${userId}`);
       }
 
       const isMatch = await bcrypt.compare(current_password, user.password);
       if (!isMatch) {
         req.session.error = 'Current password is incorrect.';
-        return res.redirect(`/admin/edit/${userId}`);
+        return res.redirect(`/staff/edit/${userId}`);
       }
     }
 
@@ -232,7 +232,7 @@ export const editStaffPost = async (req: Request, res: Response) => {
       const existingUser = await prisma.user.findUnique({ where: { email } });
       if (existingUser && existingUser.id !== userId) {
         req.session.error = 'Email already exists.';
-        return res.redirect(`/admin/edit/${userId}`);
+        return res.redirect(`/staff/edit/${userId}`);
       }
     }
 
@@ -244,7 +244,7 @@ export const editStaffPost = async (req: Request, res: Response) => {
       },
     });
 
-    await prisma.adminDetails.update({
+    await prisma.staffDetails.update({
       where: { user_id: userId },
       data: {
         name,
@@ -252,12 +252,12 @@ export const editStaffPost = async (req: Request, res: Response) => {
       },
     });
 
-    req.session.success = 'Admin updated successfully!';
+    req.session.success = 'Staff member updated successfully!';
     req.session.validationErrors = {};
-    return res.redirect(`/admin/edit/${userId}`);
+    return res.redirect(`/staff/edit/${userId}`);
   } catch (err) {
-    console.error('Error updating admin:', err);
-    req.session.error = 'An unexpected error occurred while updating the admin.';
-    return res.redirect(`/admin/edit/${userId}`);
+    console.error('Error updating staff member:', err);
+    req.session.error = 'An unexpected error occurred while updating the staff member.';
+    return res.redirect(`/staff/edit/${userId}`);
   }
 };
