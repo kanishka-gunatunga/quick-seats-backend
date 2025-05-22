@@ -5,15 +5,15 @@ import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
-export const register = async (req: Request, res: Response) => {
+export const checkout = async (req: Request, res: Response) => {
     const schema = z
     .object({
       first_name: z.string().min(1, 'First name is required'),
       last_name: z.string().min(1, 'Last name is required'),
       contact_number: z.string().min(1, 'Contact number is required'),
       email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
-      nic_passport: z.string().optional(),
-      country: z.string().optional(),
+      nic_passport: z.string().min(1, 'NIC/Passport is required'),
+      country: z.string().min(1, 'Country is required'),
       event_id: z.string().min(1, 'Event id is required'),
       user_id: z.string().min(1, 'User id is required'),
       seat_ids: z.array(z.string()).min(1, 'At least one seat must be selected')
