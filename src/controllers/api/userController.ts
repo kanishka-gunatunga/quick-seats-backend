@@ -124,7 +124,16 @@ export const updateProfileSettings = async (req: Request, res: Response) => {
       nic_passport: z.string().optional(),
       country: z.string().optional(),
       gender: z.string().optional(),
-      dob: z.date().optional(),
+      dob: z.preprocess(
+      (val) => {
+        if (typeof val === 'string' || val instanceof Date) {
+          const date = new Date(val);
+          return isNaN(date.getTime()) ? undefined : date;
+        }
+        return undefined;
+      },
+      z.date().optional()
+    ),
       address_line1: z.string().optional(),
       address_line2: z.string().optional(),
       city: z.string().optional(),
