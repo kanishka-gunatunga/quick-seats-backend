@@ -14,6 +14,6 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     req.body.userId = decoded.userId;
     next();
   } catch (err) {
-    return res.status(403).json({ message: 'Invalid token' });
+    return res.status(403).json({ message: err });
   }
 };
