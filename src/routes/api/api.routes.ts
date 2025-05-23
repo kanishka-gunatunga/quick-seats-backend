@@ -2,11 +2,12 @@ import express from 'express';
 import { login, register, updateProfileSettings } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails } from '../../controllers/api/eventController';
 import { checkout} from '../../controllers/api/checkoutController';
+import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
 
 router.post('/register', register);
 router.post('/login', login);
-router.post('/update-profile-settings/:id', updateProfileSettings);
+router.post('/update-profile-settings/:id',authenticate, updateProfileSettings);
 
 //Events
 router.get('/get-all-events', getAllEvents);
