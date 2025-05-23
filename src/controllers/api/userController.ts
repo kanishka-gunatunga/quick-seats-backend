@@ -154,7 +154,7 @@ export const updateProfileSettings = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      include: { adminDetails: true },
+      include: { userDetails: true },
     });
 
     if (!user) {
@@ -194,6 +194,70 @@ export const updateProfileSettings = async (req: Request, res: Response) => {
      return res.status(201).json({ message: 'User updated successfully' });
   } catch (err) {
     console.error('Error updating admin:', err);
-     return res.status(400).json({ message: 'An unexpected error occurred while updating the admin.' });
+     return res.status(400).json({ message: 'An unexpected error occurred while updating the user.' });
+  }
+};
+
+export const updateSecuritySettings = async (req: Request, res: Response) => {
+
+  const userId = parseInt(req.params.id);
+
+  const schema = z
+    .object({
+      old_password: z.string().min(1, 'Confirm password is required'),
+      password: z.string().min(6, 'Password must be at least 6 characters'),
+      confirm_password: z.string().min(1, 'Confirm password is required'),
+    })
+    .refine((data) => {
+      if (data.password || data.confirm_password) {
+        return data.password === data.confirm_password;
+      }
+      return true;
+    }, {
+      path: ['confirm_password'],
+      message: 'Passwords do not match',
+    });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+  return res.status(400).json({
+    message: 'Invalid input',
+    errors: result.error.flatten(),
+  });
+  }
+
+  const {old_password, password } = result.data;
+
+  try {
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { userDetails: true },
+    });
+
+    if (!user) {
+       return res.status(400).json({ message: 'User not found.' });
+    }
+
+    if (password) {
+
+      const isMatch = await bcrypt.compare(old_password, user.password);
+      if (!isMatch) {
+         return res.status(400).json({ message: 'Current password is incorrect.' });
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(password ? { password: await bcrypt.hash(password, 10) } : {}),
+      },
+    });
+
+    return res.status(201).json({ message: 'User updated successfully' });
+  } catch (err) {
+    console.error('Error updating admin:', err);
+    return res.status(400).json({ message: 'An unexpected error occurred while updating the user.' });
   }
 };
