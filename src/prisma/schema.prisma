@@ -41,6 +41,11 @@ model UserDetails {
   contact_number  String?
   nic_passport  String?
   country String?
+  gender String?
+  dob DateTime?
+  address_line1  String?
+  address_line2  String?
+  city  String?
   createdAt DateTime @default(now())
 
   user  User  @relation(fields: [user_id], references: [id])

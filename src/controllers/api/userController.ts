@@ -109,3 +109,85 @@ if (!result.success) {
     },
   });
 };
+
+
+export const updateProfileSettings = async (req: Request, res: Response) => {
+
+  const userId = parseInt(req.params.id);
+
+  const schema = z
+    .object({
+      first_name: z.string().min(1, 'First name is required'),
+      last_name: z.string().min(1, 'Last name is required'),
+      contact_number: z.string().min(1, 'Contact number is required'),
+      email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+      nic_passport: z.string().optional(),
+      country: z.string().optional(),
+      gender: z.string().optional(),
+      dob: z.date().optional(),
+      address_line1: z.string().optional(),
+      address_line2: z.string().optional(),
+      city: z.string().optional(),
+    });
+
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+  return res.status(400).json({
+    message: 'Invalid input',
+    errors: result.error.flatten(),
+  });
+  }
+
+  const { first_name, last_name, contact_number, email, nic_passport, country, gender, dob, address_line1, address_line2, city } = result.data;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: { adminDetails: true },
+    });
+
+    if (!user) {
+       return res.status(400).json({ message: 'User not found.' });
+    }
+
+    if (email !== user.email) {
+      const existingUser = await prisma.user.findUnique({ where: { email } });
+      if (existingUser && existingUser.id !== userId) {
+         return res.status(400).json({ message: 'Email already exists.' });
+      }
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        email
+      },
+    });
+
+    await prisma.userDetails.update({
+      where: { user_id: userId },
+      data: {
+        first_name,
+        last_name,
+        contact_number,
+        nic_passport,
+        country,
+        gender,
+        dob,
+        address_line1,
+        address_line2,
+        city,
+      },
+    });
+
+    req.session.success = 'Admin updated successfully!';
+    req.session.validationErrors = {};
+    return res.redirect(`/admin/edit/${userId}`);
+  } catch (err) {
+    console.error('Error updating admin:', err);
+    req.session.error = 'An unexpected error occurred while updating the admin.';
+    return res.redirect(`/admin/edit/${userId}`);
+  }
+};
