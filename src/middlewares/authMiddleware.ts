@@ -11,9 +11,9 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    req.body.userId = decoded.userId;
+    (req as any).user = { id: decoded.userId };
     next();
   } catch (err) {
-    return res.status(403).json({ message: err });
+    return res.status(403).json({ message: 'Invalid token' });
   }
 };
