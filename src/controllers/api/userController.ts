@@ -191,12 +191,9 @@ export const updateProfileSettings = async (req: Request, res: Response) => {
       },
     });
 
-    req.session.success = 'Admin updated successfully!';
-    req.session.validationErrors = {};
-    return res.redirect(`/admin/edit/${userId}`);
+     return res.status(201).json({ message: 'User updated successfully' });
   } catch (err) {
     console.error('Error updating admin:', err);
-    req.session.error = 'An unexpected error occurred while updating the admin.';
-    return res.redirect(`/admin/edit/${userId}`);
+     return res.status(400).json({ message: 'An unexpected error occurred while updating the admin.' });
   }
 };
