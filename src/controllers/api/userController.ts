@@ -289,3 +289,17 @@ export const bookingHistory = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to fetch booking history' });
   }
 };
+export const paymentHistory = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+
+  try {
+    const orders = await prisma.order.findMany({ where: { user_id: userId } });
+
+    return res.json({
+      orders: orders,
+    });
+  } catch (error) {
+    console.error('Error fetching payment history:', error);
+    return res.status(500).json({ message: 'Failed to fetch payment history' });
+  }
+};
