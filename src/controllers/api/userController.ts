@@ -261,3 +261,31 @@ export const updateSecuritySettings = async (req: Request, res: Response) => {
     return res.status(400).json({ message: 'An unexpected error occurred while updating the user.' });
   }
 };
+export const bookingHistory = async (req: Request, res: Response) => {
+  const userId = req.params.id;
+
+  try {
+    const orders = await prisma.order.findMany({ where: { user_id: userId } });
+
+    const bookingHistory = await Promise.all(
+      orders.map(async (order) => {
+
+        const event = await prisma.event.findUnique({
+          where: { id: parseInt(order.event_id) },
+        });
+
+        return {
+          ...order,
+          event,
+        };
+      })
+    );
+
+    return res.json({
+      booking_history: bookingHistory,
+    });
+  } catch (error) {
+    console.error('Error fetching booking history:', error);
+    return res.status(500).json({ message: 'Failed to fetch booking history' });
+  }
+};
