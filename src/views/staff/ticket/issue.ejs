@@ -111,15 +111,15 @@
 
   async function issueTicket(orderId, seatId) {
     try {
-      const res = await fetch("/api/ticket/issue", { // This endpoint needs to be handled by your backend
+      const res = await fetch("/staff/confirm-ticket-issue", { 
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, seatId }) // Send orderId and specific seatId
+        body: JSON.stringify({ orderId, seatId }) 
       });
 
       const result = await res.json();
       const statusEl = document.getElementById(`status-${seatId}`);
-      const seatListItem = document.getElementById(`seat-${seatId}`); // Get the whole list item
+      const seatListItem = document.getElementById(`seat-${seatId}`); 
 
       if (res.ok) {
         if (seatListItem) {

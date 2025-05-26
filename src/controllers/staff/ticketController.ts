@@ -67,3 +67,59 @@ export const ticketVerify = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };  
+
+export const confirmTicketIssue = async (req: Request, res: Response) => {
+  try {
+    const { orderId, seatId } = req.body;
+
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(orderId) },
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: parseInt(order.event_id) },
+    });
+
+    if (!event) {
+      return res.status(404).json({ message: 'Event not found' });
+    }
+
+    let eventSeats: any[] = typeof event.seats === 'string'
+      ? JSON.parse(event.seats)
+      : (event.seats as any[]) || [];
+
+    let seatFound = false;
+
+    eventSeats = eventSeats.map(seat => {
+      if (seat.seatId === seatId) {
+        seatFound = true;
+        return {
+          ...seat,
+          status: 'issued'
+        };
+      }
+      return seat;
+    });
+
+    if (!seatFound) {
+      return res.status(400).json({ message: 'Seat not found in event seats' });
+    }
+
+    await prisma.event.update({
+      where: { id: event.id },
+      data: {
+        seats: JSON.stringify(eventSeats)
+      }
+    });
+
+    return res.json({ message: 'Ticket successfully issued' });
+
+  } catch (err) {
+    console.error('Ticket issue error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
