@@ -265,30 +265,63 @@ export const bookingHistory = async (req: Request, res: Response) => {
   const userId = req.params.id;
 
   try {
-    const orders = await prisma.order.findMany({ where: { user_id: userId } });
+    const orders = await prisma.order.findMany({
+      where: { user_id: userId },
+    });
 
     const bookingHistory = await Promise.all(
       orders.map(async (order) => {
-
         const event = await prisma.event.findUnique({
           where: { id: parseInt(order.event_id) },
         });
 
+        if (!event) return null;
+
+        const ticketCounts: { [key: string]: number } = {};
+        
+          if (Array.isArray(order.seat_ids)) {
+            if (Array.isArray(event.seats)) {
+              const seats = event.seats as Array<{ seatId: number; ticketTypeName: string }>;
+
+              order.seat_ids.forEach((seatId) => {
+                const seat = seats.find((s) => s.seatId === seatId);
+                if (seat) {
+                  if (!ticketCounts[seat.ticketTypeName]) {
+                    ticketCounts[seat.ticketTypeName] = 1;
+                  } else {
+                    ticketCounts[seat.ticketTypeName]++;
+                  }
+                }
+              });
+            } else {
+              console.warn(`Event seats is not an array for event ${event.id}`);
+            }
+          } else {
+            console.warn(`Order ${order.id} seat_ids is not an array`);
+          }
+
+        const tickets = Object.entries(ticketCounts).map(([type, count]) => ({
+          type,
+          count,
+        }));
+
         return {
-          ...order,
-          event,
+          event_name: event.name,
+          start_date_time: event.start_date_time,
+          tickets,
         };
       })
     );
 
     return res.json({
-      booking_history: bookingHistory,
+      booking_history: bookingHistory.filter(Boolean), 
     });
   } catch (error) {
     console.error('Error fetching booking history:', error);
     return res.status(500).json({ message: 'Failed to fetch booking history' });
   }
 };
+
 export const paymentHistory = async (req: Request, res: Response) => {
   const userId = req.params.id;
 
