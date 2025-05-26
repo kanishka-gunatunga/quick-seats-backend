@@ -303,3 +303,19 @@ export const paymentHistory = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to fetch payment history' });
   }
 };
+
+
+export const getUserDetails = async (req: Request, res: Response) => {
+
+  const userId = parseInt(req.params.id);
+
+
+  const user = await prisma.user.findUnique({ where: { id:userId },include: { userDetails: true }, });
+  if (!user) {
+    return res.status(400).json({ message: 'User not found' });
+  }
+  
+  return res.json({
+    user
+  });
+};
