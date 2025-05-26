@@ -5,69 +5,142 @@ import QRCode from 'qrcode';
 
 const prisma = new PrismaClient();
 
+interface Seat {
+  seatId: string | number;
+  status: string;
+  price: number;
+  ticketTypeName: string;
+  type_id: number;
+}
+
 export const checkout = async (req: Request, res: Response) => {
     const schema = z.object({
-  first_name: z.string().min(1, 'First name is required'),
-  last_name: z.string().min(1, 'Last name is required'),
-  contact_number: z.string().min(1, 'Contact number is required'),
-  email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
-  nic_passport: z.string().min(1, 'NIC/Passport is required'),
-  country: z.string().min(1, 'Country is required'),
-  event_id: z.string().min(1, 'Event id is required'),
-  user_id: z.string().min(1, 'User id is required'),
-  seat_ids: z.preprocess((val) => {
-    if (typeof val === 'string') {
-      try {
-        return JSON.parse(val);
-      } catch {
-        return [];
-      }
+        first_name: z.string().min(1, 'First name is required'),
+        last_name: z.string().min(1, 'Last name is required'),
+        contact_number: z.string().min(1, 'Contact number is required'),
+        email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+        nic_passport: z.string().min(1, 'NIC/Passport is required'),
+        country: z.string().min(1, 'Country is required'),
+        event_id: z.string().min(1, 'Event id is required'),
+        user_id: z.string().min(1, 'User id is required'),
+        seat_ids: z.preprocess((val) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return [];
+                }
+            }
+            return val;
+        }, z.array(z.union([z.number(), z.string()])).min(1, 'At least one seat must be selected')),
+    });
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            message: 'Invalid input',
+            errors: result.error.flatten(),
+        });
     }
-    return val;
-  }, z.array(z.union([z.number(), z.string()])).min(1, 'At least one seat must be selected')),
+    const { email, first_name, last_name, contact_number, nic_passport, country, event_id, user_id, seat_ids } = result.data;
 
-});
+    try {
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(event_id) },
+            select: {
+                seats: true,
+            },
+        });
 
-  const result = schema.safeParse(req.body);
+        if (!event || event.seats === null) {
+            return res.status(404).json({ message: 'Event not found or has no seat data.' });
+        }
 
-  if (!result.success) {
-    return res.status(400).json({
-    message: 'Invalid input',
-    errors: result.error.flatten(),
-  });
-  }
-  const { email, first_name, last_name, contact_number, nic_passport, country, event_id, user_id, seat_ids } =  result.data;
+        const eventSeats: Seat[] = event.seats as unknown as Seat[];
 
-  try {
+        const groupedSeats: { [ticketTypeName: string]: string[] } = {};
+        const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
+        let subTotal = 0;
 
-    const order = await prisma.order.create({
-      data: {
-        email,
-        first_name,
-        last_name,
-        contact_number,
-        nic_passport,
-        country,
-        event_id,
-        user_id,
-        seat_ids,
-        sub_total:1000,
-        discount:0,
-        total:1000,
-        status:'pending'
-      },
-    });
+        for (const seatId of seat_ids) {
+            const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId === seatId);
 
-    const qrData = `https://yourdomain.com/order/${order.id}`; // or just order.id
-    const qrCode = await QRCode.toDataURL(qrData);
+            if (!foundSeat) {
+                return res.status(400).json({ message: `Seat ${seatId} not found or invalid for this event.` });
+            }
+            if (foundSeat.status !== 'available') {
+                return res.status(400).json({ message: `Seat ${seatId} is already ${foundSeat.status}.` });
+            }
 
-    return res.status(201).json({
-      message: 'Order created successfully',
-      order_id: order.id,
-      qr_code: qrCode, 
-    });
-  } catch (err) {
-    console.error('Registration error:', err);
-    return res.status(500).json({ message: 'Internal server error' });
-  }
+            const ticketTypeName = foundSeat.ticketTypeName;
+            if (!groupedSeats[ticketTypeName]) {
+                groupedSeats[ticketTypeName] = [];
+            }
+            groupedSeats[ticketTypeName].push(seatId.toString()); 
+            seatDetailsMap[seatId.toString()] = { price: foundSeat.price, ticketTypeName: foundSeat.ticketTypeName, type_id: foundSeat.type_id };
+            subTotal += foundSeat.price;
+        }
+
+        const order = await prisma.order.create({
+            data: {
+                email,
+                first_name,
+                last_name,
+                contact_number,
+                nic_passport,
+                country,
+                event_id: event_id,
+                user_id: user_id,
+                seat_ids: seat_ids,
+                sub_total: subTotal,
+                discount: 0,
+                total: subTotal,
+                status: 'pending',
+            },
+        });
+
+        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string }[] = [];
+
+        for (const ticketTypeName in groupedSeats) {
+            if (Object.prototype.hasOwnProperty.call(groupedSeats, ticketTypeName)) {
+                const seatsForType = groupedSeats[ticketTypeName];
+                const count = seatsForType.length;
+                const qrData = JSON.stringify({
+                    orderId: order.id,
+                    ticketTypeName: ticketTypeName,
+                    ticketCount: count,
+                });
+                const qrCodeDataURL = await QRCode.toDataURL(qrData);
+                qrCodes.push({
+                    ticketTypeName: ticketTypeName,
+                    count: count,
+                    qrCodeData: qrCodeDataURL,
+                });
+            }
+        }
+
+        const updatedSeats = eventSeats.map((seat: Seat) => {
+            if (seat_ids.includes(seat.seatId)) {
+                return { ...seat, status: 'booked' };
+            }
+            return seat;
+        });
+
+        await prisma.event.update({
+            where: { id: parseInt(event_id) },
+            data: {
+                seats: JSON.stringify(updatedSeats),
+            },
+        });
+
+        return res.status(201).json({
+            message: 'Order created successfully and seats booked',
+            order_id: order.id,
+            qr_codes: qrCodes,
+        });
+    } catch (err) {
+        console.error('Checkout error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
 };
