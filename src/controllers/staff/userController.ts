@@ -52,7 +52,7 @@ export const loginPost = async (req: Request, res: Response) => {
     return res.redirect('/staff');
   }
 
-  req.session.admin = {
+  req.session.staff = {
     id: user.id,
     email: user.email,
     name: user.staffDetails?.name || '',

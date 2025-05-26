@@ -1,6 +1,6 @@
 import express from 'express';
 import upload from '../../middlewares/upload';
-import { isAdminLoggedIn } from '../../middlewares/authStaff';
+import { isStaffLoggedIn } from '../../middlewares/authStaff';
 import { loginGet, loginPost, dashboard,logout } from '../../controllers/staff/userController';
 
  
@@ -12,6 +12,6 @@ const router = express.Router();
 router.get('/', loginGet);
 router.post('/login', loginPost);
 router.get('/logout', logout);
-router.get('/dashboard', isAdminLoggedIn, dashboard);
+router.get('/dashboard', isStaffLoggedIn, dashboard);
 
 export default router;
