@@ -10,14 +10,23 @@
                                     <div class="card-body">
                                         <h4 class="header-title">Issue Ticket</h4>
 
-                                            <div>
-                                                <h2>Scan QR Code</h2>
-                                                <div id="qr-reader" style="width: 300px;"></div>
-                                                <div id="qr-result" style="margin-top: 20px;">
-                                                    <h4>Scanned QR Code Data:</h4>
-                                                    <pre id="decoded-data">Waiting for scan...</pre>
-                                                </div>
+                                        <div>
+                                            <h2>Scan or Upload QR Code</h2>
+
+                                            <!-- Live Scanner -->
+                                            <div id="qr-reader" style="width: 300px;"></div>
+
+                                            <!-- File Upload Scanner -->
+                                            <div style="margin-top: 20px;">
+                                                <input type="file" id="qr-file-input" accept="image/*" />
                                             </div>
+
+                                            <!-- Display scanned data -->
+                                            <div id="qr-result" style="margin-top: 20px;">
+                                                <h4>Scanned QR Code Data:</h4>
+                                                <pre id="decoded-data">Waiting for scan...</pre>
+                                            </div>
+                                        </div>
 
                                     </div> </div> </div>
                         </div>
@@ -28,25 +37,19 @@
 
             <script src="https://unpkg.com/html5-qrcode"></script>
 
-            <script>
-  function onScanSuccess(decodedText, decodedResult) {
-    // Show scanned result
-    document.getElementById('decoded-data').textContent = decodedText;
+          <script>
+  const qrResult = document.getElementById('decoded-data');
 
-    // If QR content is JSON, you can parse and display it nicely
+  function displayDecodedData(decodedText) {
     try {
       const parsed = JSON.parse(decodedText);
-      document.getElementById('decoded-data').textContent = JSON.stringify(parsed, null, 2);
-    } catch (e) {
-      // Not JSON
+      qrResult.textContent = JSON.stringify(parsed, null, 2);
+    } catch {
+      qrResult.textContent = decodedText;
     }
   }
 
-  function onScanFailure(error) {
-    // Optionally log scan errors
-    console.warn(`QR scan failed: ${error}`);
-  }
-
+  // Live camera scanning
   const html5QrCode = new Html5Qrcode("qr-reader");
   const config = { fps: 10, qrbox: 250 };
 
@@ -55,13 +58,30 @@
       html5QrCode.start(
         { facingMode: "environment" },
         config,
-        onScanSuccess,
-        onScanFailure
+        (decodedText) => {
+          displayDecodedData(decodedText);
+        },
+        (error) => {
+          // You can show scanning error here if needed
+        }
       );
     } else {
       alert("No cameras found.");
     }
-  }).catch(err => {
-    console.error("Camera error: ", err);
+  });
+
+  // File upload QR scanning
+  const fileInput = document.getElementById('qr-file-input');
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      const decodedText = await html5QrCode.scanFile(file, true);
+      displayDecodedData(decodedText);
+    } catch (err) {
+      qrResult.textContent = "Failed to scan QR code from image.";
+      console.error("QR scan file error: ", err);
+    }
   });
 </script>
