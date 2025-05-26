@@ -64,7 +64,8 @@ export const checkout = async (req: Request, res: Response) => {
         let subTotal = 0;
 
         for (const seatId of seat_ids) {
-            const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId === seatId);
+            // Ensure seatId is treated consistently as a string for map keys if it can be number or string
+            const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
 
             if (!foundSeat) {
                 return res.status(400).json({ message: `Seat ${seatId} not found or invalid for this event.` });
@@ -77,7 +78,7 @@ export const checkout = async (req: Request, res: Response) => {
             if (!groupedSeats[ticketTypeName]) {
                 groupedSeats[ticketTypeName] = [];
             }
-            groupedSeats[ticketTypeName].push(seatId.toString()); 
+            groupedSeats[ticketTypeName].push(seatId.toString());
             seatDetailsMap[seatId.toString()] = { price: foundSeat.price, ticketTypeName: foundSeat.ticketTypeName, type_id: foundSeat.type_id };
             subTotal += foundSeat.price;
         }
@@ -100,28 +101,41 @@ export const checkout = async (req: Request, res: Response) => {
             },
         });
 
-        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string }[] = [];
+        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string; type_id: number; seat_ids_for_type: string[] }[] = [];
 
         for (const ticketTypeName in groupedSeats) {
             if (Object.prototype.hasOwnProperty.call(groupedSeats, ticketTypeName)) {
                 const seatsForType = groupedSeats[ticketTypeName];
                 const count = seatsForType.length;
+
+                const sampleSeatId = seatsForType[0];
+                const type_id = seatDetailsMap[sampleSeatId]?.type_id;
+
+                if (type_id === undefined) {
+                    console.warn(`Could not find type_id for ticketTypeName: ${ticketTypeName}`);
+                    continue;
+                }
+
                 const qrData = JSON.stringify({
                     orderId: order.id,
                     ticketTypeName: ticketTypeName,
                     ticketCount: count,
+                    ticketTypeId: type_id,
+                    seatIdsForType: seatsForType, 
                 });
                 const qrCodeDataURL = await QRCode.toDataURL(qrData);
                 qrCodes.push({
                     ticketTypeName: ticketTypeName,
                     count: count,
                     qrCodeData: qrCodeDataURL,
+                    type_id: type_id,
+                    seat_ids_for_type: seatsForType,
                 });
             }
         }
 
         const updatedSeats = eventSeats.map((seat: Seat) => {
-            if (seat_ids.includes(seat.seatId)) {
+            if (seat_ids.map(String).includes(seat.seatId.toString())) {
                 return { ...seat, status: 'booked' };
             }
             return seat;
