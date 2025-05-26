@@ -6,8 +6,8 @@ import { addAdminGet, addAdminPost, admins, activateAdmin, deactivateAdmin ,edit
 import { addArtistGet, addArtistPost, artists, activateArtist, deactivateArtist ,editArtistGet, editArtistPost} from '../../controllers/admin/artistController';
 import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, deactivateTicketType ,editTicketTypeGet, editTicketTypePost} from '../../controllers/admin/ticketTypeController';
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost} from '../../controllers/admin/eventController';
- import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
-
+import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
+import { orderReport } from '../../controllers/admin/reportController';
 
 const router = express.Router();
 
@@ -62,4 +62,6 @@ router.get('/event/edit/:id', isAdminLoggedIn, editEventGet);
 router.post('/event/edit/:id',upload.fields([{ name: 'banner_image', maxCount: 1 },{ name: 'featured_image', maxCount: 1 },]), isAdminLoggedIn, editEventPost);
 router.get('/events', isAdminLoggedIn, events);
 
+//Reports
+router.get('/order-report', isAdminLoggedIn, orderReport);
 export default router;
