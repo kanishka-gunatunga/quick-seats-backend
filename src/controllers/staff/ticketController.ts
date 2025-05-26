@@ -38,13 +38,16 @@ export const ticketVerify = async (req: Request, res: Response) => {
     if (!event) {
       return res.status(404).json({ message: 'Event not found' });
     }
-    const eventSeats: any[] = (event.seats as any) || [];
+
+    const eventSeats: any[] = typeof event.seats === 'string'
+      ? JSON.parse(event.seats)
+      : (event.seats as any[]) || [];
 
     const seats = seatIdsForType.map((seatId: string) => {
       const seat = eventSeats.find(
         (s) => s.seatId === seatId && s.type_id === ticketTypeId
       );
- 
+
       return {
         seatId,
         status: seat?.status || 'unknown',
@@ -63,4 +66,4 @@ export const ticketVerify = async (req: Request, res: Response) => {
     console.error('Ticket verification error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
-};   
+};
