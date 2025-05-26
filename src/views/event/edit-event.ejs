@@ -338,7 +338,8 @@ function updateHiddenSeatConfiguration() {
         seatId,
         type_id: selectedSeats[seatId].type_id,
         ticketTypeName: selectedSeats[seatId].ticketTypeName,
-        price: selectedSeats[seatId].price
+        price: selectedSeats[seatId].price,
+        status: 'avilable'
     }));
     $('#seat_configuration').val(JSON.stringify(seatData));
     console.log("Hidden field updated:", seatData); // For debugging

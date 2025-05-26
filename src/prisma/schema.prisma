@@ -102,7 +102,7 @@ model Event {
   featured_image String?
   ticket_details Json?     
   artist_details Json?   
-  tickets Json?  
+  seats Json?  
   status String
 }
 
