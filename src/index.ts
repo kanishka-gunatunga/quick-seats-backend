@@ -41,6 +41,7 @@ app.use(session({
 
 app.use((req, res, next) => {
   res.locals.admin = req.session.admin;
+  res.locals.staff = req.session.staff;
   next();
 });
 
