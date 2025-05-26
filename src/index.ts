@@ -51,7 +51,7 @@ app.set('view engine', 'ejs');
 
 app.use('/api', apiRoutes);
 app.use('/', adminRoutes);
-app.use('/staff ', staffRoutes);
+app.use('/staff', staffRoutes);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
