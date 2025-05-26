@@ -2,7 +2,7 @@ import express from 'express';
 import upload from '../../middlewares/upload';
 import { isStaffLoggedIn } from '../../middlewares/authStaff';
 import { loginGet, loginPost, dashboard,logout } from '../../controllers/staff/userController';
-import { issueTickets } from '../../controllers/staff/ticketController';
+import { issueTickets,ticketVerify } from '../../controllers/staff/ticketController';
  
 
 
@@ -14,4 +14,5 @@ router.post('/login', loginPost);
 router.get('/logout', logout);
 router.get('/dashboard', isStaffLoggedIn, dashboard);
 router.get('/issue-tickets', isStaffLoggedIn, issueTickets);
+router.post('/ticket-verify', isStaffLoggedIn, ticketVerify);
 export default router;
