@@ -1,0 +1,67 @@
+<%- include('../layouts/header.ejs') %>
+<div class="content-page">
+                <div class="content">
+
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Issue Ticket</h4>
+
+                                            <div>
+                                                <h2>Scan QR Code</h2>
+                                                <div id="qr-reader" style="width: 300px;"></div>
+                                                <div id="qr-result" style="margin-top: 20px;">
+                                                    <h4>Scanned QR Code Data:</h4>
+                                                    <pre id="decoded-data">Waiting for scan...</pre>
+                                                </div>
+                                            </div>
+
+                                    </div> </div> </div>
+                        </div>
+                        </div> </div>
+
+            </div>
+            <%- include('../layouts/footer.ejs') %>
+
+            <script src="https://unpkg.com/html5-qrcode"></script>
+
+            <script>
+  function onScanSuccess(decodedText, decodedResult) {
+    // Show scanned result
+    document.getElementById('decoded-data').textContent = decodedText;
+
+    // If QR content is JSON, you can parse and display it nicely
+    try {
+      const parsed = JSON.parse(decodedText);
+      document.getElementById('decoded-data').textContent = JSON.stringify(parsed, null, 2);
+    } catch (e) {
+      // Not JSON
+    }
+  }
+
+  function onScanFailure(error) {
+    // Optionally log scan errors
+    console.warn(`QR scan failed: ${error}`);
+  }
+
+  const html5QrCode = new Html5Qrcode("qr-reader");
+  const config = { fps: 10, qrbox: 250 };
+
+  Html5Qrcode.getCameras().then(cameras => {
+    if (cameras && cameras.length) {
+      html5QrCode.start(
+        { facingMode: "environment" },
+        config,
+        onScanSuccess,
+        onScanFailure
+      );
+    } else {
+      alert("No cameras found.");
+    }
+  }).catch(err => {
+    console.error("Camera error: ", err);
+  });
+</script>
