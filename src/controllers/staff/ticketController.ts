@@ -5,13 +5,7 @@ import { z } from 'zod';
 
 const prisma = new PrismaClient();
 
-interface EventSeat {
-    price: number;
-    seatId: string;
-    status: string;
-    type_id: number;
-    ticketTypeName: string;
-}
+
 
 export const issueTickets = async (req: Request, res: Response) => {
   const error = req.session.error;
@@ -26,48 +20,47 @@ export const issueTickets = async (req: Request, res: Response) => {
 };
 
 export const ticketVerify = async (req: Request, res: Response) => {
+  try {
     const { orderId, ticketTypeId, seatIdsForType } = req.body;
 
     const order = await prisma.order.findUnique({
-        where: { id: parseInt(orderId) },
+      where: { id: parseInt(orderId) },
     });
 
     if (!order) {
-        return res.status(404).json({ message: 'Order not found' });
+      return res.status(404).json({ message: 'Order not found' });
     }
 
     const event = await prisma.event.findUnique({
-        where: { id: parseInt(order.event_id) },
+      where: { id: parseInt(order.event_id) },
     });
 
     if (!event) {
-        return res.status(404).json({ message: 'Event not found' });
+      return res.status(404).json({ message: 'Event not found' });
     }
+    const eventSeats: any[] = (event.seats as any) || [];
 
-    const eventName = event.name || 'Unknown Event';
+    const seats = seatIdsForType.map((seatId: string) => {
+      const seat = eventSeats.find(
+        (s) => s.seatId === seatId && s.type_id === ticketTypeId
+      );
 
-    const allEventSeats: EventSeat[] = (event.seats as EventSeat[] | null) || [];
-
-    const relevantSeats = seatIdsForType.map((requestedSeatId: string) => {
-        const foundSeat = allEventSeats.find(
-            (seat) =>
-                seat.seatId === requestedSeatId && seat.type_id === ticketTypeId
-        );
-        return {
-            seatId: requestedSeatId,
-            status: foundSeat ? foundSeat.status : 'notFound',
-        };
+      return {
+        seatId,
+        status: seat?.status || 'unknown',
+      };
     });
 
-    const ticketTypeInfo = allEventSeats.find(
-        (seat) => seat.type_id === ticketTypeId
-    );
-    const ticketTypeName = ticketTypeInfo ? ticketTypeInfo.ticketTypeName : 'Unknown Ticket Type';
+    const ticketTypeName =
+      eventSeats.find((s) => s.type_id === ticketTypeId)?.ticketTypeName || 'Unknown';
 
-
-    return res.status(200).json({
-        eventName,
-        ticketTypeName,
-        seats: relevantSeats,
+    return res.json({
+      eventName: event.name,
+      ticketTypeName,
+      seats,
     });
+  } catch (err) {
+    console.error('Ticket verification error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 };
