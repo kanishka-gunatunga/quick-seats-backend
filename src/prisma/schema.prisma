@@ -101,7 +101,8 @@ model Event {
   banner_image   String?
   featured_image String?
   ticket_details Json?     
-  artist_details Json?     
+  artist_details Json?   
+  tickets Json?  
   status String
 }
 
