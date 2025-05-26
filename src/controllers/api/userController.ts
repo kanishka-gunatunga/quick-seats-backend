@@ -306,16 +306,32 @@ export const paymentHistory = async (req: Request, res: Response) => {
 
 
 export const getUserDetails = async (req: Request, res: Response) => {
-
   const userId = parseInt(req.params.id);
 
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { userDetails: true },
+  });
 
-  const user = await prisma.user.findUnique({ where: { id:userId },include: { userDetails: true }, });
   if (!user) {
     return res.status(400).json({ message: 'User not found' });
   }
-  
+
   return res.json({
-    user
+    id: user.id,
+    email: user.email,
+    createdAt: user.createdAt,
+    userDetails: {
+      first_name: user.userDetails?.first_name,
+      last_name: user.userDetails?.last_name,
+      contact_number: user.userDetails?.contact_number,
+      nic_passport: user.userDetails?.nic_passport,
+      country: user.userDetails?.country,
+      gender: user.userDetails?.gender,
+      dob: user.userDetails?.dob,
+      address_line1: user.userDetails?.address_line1,
+      address_line2: user.userDetails?.address_line2,
+      city: user.userDetails?.city,
+    }
   });
 };
