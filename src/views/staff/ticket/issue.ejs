@@ -11,7 +11,7 @@
                                         <h4 class="header-title">Issue Ticket</h4>
 
                                         <div>
-                                            <h2>Scan or Upload QR Code</h2>
+                                            <h6>Scan or Upload QR Code</h6>
 
                                             <div id="qr-reader" style="width: 300px;"></div>
 
@@ -26,8 +26,10 @@
                                         </div>
 
                                         <hr>
+                                        <h4 class="header-title">QR Details</h4>
+                                        <div id="ticket-details" style="margin-top: 20px;">
 
-                                        <div id="ticket-details" style="margin-top: 20px;"></div>
+                                        </div>
 
 
                                     </div> </div> </div>
@@ -89,16 +91,16 @@
 
   function renderTicketDetails(orderId, eventName, ticketTypeName, seats) {
     ticketDetails.innerHTML = `
-      <h4>🎫 Event: ${eventName}</h4>
+      <h4>Event Name: ${eventName}</h4>
       <h5>Ticket Type: ${ticketTypeName}</h5>
-      <ul>
+      <ul class="list-group mb-0 user-list">
         ${seats.map(seat => `
-          <li id="seat-${seat.seatId}">
+          <li id="seat-${seat.seatId}" class="list-group-item">
             Seat: <strong>${seat.seatId}</strong>
             ${
               seat.status === "issued"
                 ? '<span style="color: green;">✅ Already Issued</span>'
-                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}')">Issue Ticket</button>`
+                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Ticket</button>`
             }
             <span id="status-${seat.seatId}" style="margin-left: 10px;"></span>
           </li>
