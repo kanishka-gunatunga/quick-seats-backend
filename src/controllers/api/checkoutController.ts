@@ -52,12 +52,15 @@ export const checkout = async (req: Request, res: Response) => {
             },
         });
 
-        if (!event || event.seats === null) {
+         if (!event || event.seats === null) {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
 
+
         // IMPORTANT: Parse the JSON string from the database
-        const eventSeats: Seat[] = JSON.parse(event.seats as string) as Seat[];
+        const eventSeats: Seat[] = typeof event.seats === 'string'
+        ? JSON.parse(event.seats)
+        : event.seats;
 
         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
