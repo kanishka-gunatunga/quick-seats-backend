@@ -63,4 +63,4 @@ export const ticketVerify = async (req: Request, res: Response) => {
     console.error('Ticket verification error:', err);
     return res.status(500).json({ message: 'Internal server error' });
   }
-};
+};   
