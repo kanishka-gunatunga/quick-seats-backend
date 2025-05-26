@@ -44,7 +44,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
       const seat = eventSeats.find(
         (s) => s.seatId === seatId && s.type_id === ticketTypeId
       );
-
+ 
       return {
         seatId,
         status: seat?.status || 'unknown',
