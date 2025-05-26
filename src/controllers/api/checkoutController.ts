@@ -4,13 +4,12 @@ import { z } from 'zod';
 import QRCode from 'qrcode';
 
 const prisma = new PrismaClient();
-
 interface Seat {
-  seatId: string | number;
-  status: string;
-  price: number;
-  ticketTypeName: string;
-  type_id: number;
+    seatId: string | number;
+    status: string;
+    price: number;
+    ticketTypeName: string;
+    type_id: number;
 }
 
 export const checkout = async (req: Request, res: Response) => {
@@ -57,7 +56,8 @@ export const checkout = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
 
-        const eventSeats: Seat[] = event.seats as unknown as Seat[];
+        // IMPORTANT: Parse the JSON string from the database
+        const eventSeats: Seat[] = JSON.parse(event.seats as string) as Seat[];
 
         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
