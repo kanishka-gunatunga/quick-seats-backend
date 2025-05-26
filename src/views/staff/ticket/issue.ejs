@@ -28,6 +28,11 @@
                                             </div>
                                         </div>
 
+                                        <hr>
+
+                                        <div id="ticket-details" style="margin-top: 20px;"></div>
+
+
                                     </div> </div> </div>
                         </div>
                         </div> </div>
@@ -35,42 +40,103 @@
             </div>
             <%- include('../../layouts/staff-footer.ejs') %>
 
-            <script src="https://unpkg.com/html5-qrcode"></script>
+ <script src="https://unpkg.com/html5-qrcode"></script>
 
-          <script>
+<script>
   const qrResult = document.getElementById('decoded-data');
+  const ticketDetails = document.getElementById("ticket-details");
 
-  function displayDecodedData(decodedText) {
-    try {
-      const parsed = JSON.parse(decodedText);
-      qrResult.textContent = JSON.stringify(parsed, null, 2);
-    } catch {
-      qrResult.textContent = decodedText;
-    }
-  }
-
-  // Live camera scanning
   const html5QrCode = new Html5Qrcode("qr-reader");
   const config = { fps: 10, qrbox: 250 };
 
+  async function handleDecodedData(decodedText) {
+    let scannedData;
+    try {
+      scannedData = JSON.parse(decodedText);
+      qrResult.textContent = JSON.stringify(scannedData, null, 2);
+    } catch (err) {
+      qrResult.textContent = "Invalid QR data.";
+      return;
+    }
+
+    const { orderId, ticketTypeId } = scannedData;
+
+    try {
+      const res = await fetch("/api/ticket/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, ticketTypeId })
+      });
+
+      if (!res.ok) throw new Error("Verification failed");
+
+      const { eventName, ticketTypeName, seats } = await res.json();
+
+      renderTicketDetails(orderId, eventName, ticketTypeName, seats);
+    } catch (err) {
+      ticketDetails.innerHTML = `<p style="color: red;">❌ Failed to verify ticket info from backend.</p>`;
+    }
+  }
+
+  function renderTicketDetails(orderId, eventName, ticketTypeName, seats) {
+    ticketDetails.innerHTML = `
+      <h4>🎫 Event: ${eventName}</h4>
+      <h5>Ticket Type: ${ticketTypeName}</h5>
+      <ul>
+        ${seats.map(seat => `
+          <li id="seat-${seat.seatId}">
+            Seat: <strong>${seat.seatId}</strong>
+            ${
+              seat.status === "issued"
+                ? `<span style="color: green;">✅ Already Issued</span>`
+                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}')">Issue Ticket</button>
+                   <span id="status-${seat.seatId}" style="margin-left: 10px;"></span>`
+            }
+          </li>
+        `).join("")}
+      </ul>
+    `;
+  }
+
+  async function issueTicket(orderId, seatId) {
+    try {
+      const res = await fetch("/api/ticket/issue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, seatId })
+      });
+
+      const result = await res.json();
+      const statusEl = document.getElementById(`status-${seatId}`);
+      statusEl.innerText = result.message || '✅ Issued';
+
+      // Disable the button
+      const button = document.querySelector(`#seat-${seatId} button`);
+      button.disabled = true;
+      button.style.opacity = 0.5;
+    } catch (err) {
+      document.getElementById(`status-${seatId}`).innerText = "❌ Error issuing";
+    }
+  }
+
+  // === LIVE SCAN ===
   Html5Qrcode.getCameras().then(cameras => {
     if (cameras && cameras.length) {
       html5QrCode.start(
         { facingMode: "environment" },
         config,
         (decodedText) => {
-          displayDecodedData(decodedText);
+          html5QrCode.stop(); // Optional: stop scanning after 1 scan
+          handleDecodedData(decodedText);
         },
-        (error) => {
-          // You can show scanning error here if needed
-        }
+        () => {}
       );
     } else {
       alert("No cameras found.");
     }
   });
 
-  // File upload QR scanning
+  // === FILE SCAN ===
   const fileInput = document.getElementById('qr-file-input');
   fileInput.addEventListener('change', async (e) => {
     const file = e.target.files[0];
@@ -78,9 +144,9 @@
 
     try {
       const decodedText = await html5QrCode.scanFile(file, true);
-      displayDecodedData(decodedText);
+      handleDecodedData(decodedText);
     } catch (err) {
-      qrResult.textContent = "Failed to scan QR code from image.";
+      qrResult.textContent = "❌ Failed to scan QR code from image.";
       console.error("QR scan file error: ", err);
     }
   });
