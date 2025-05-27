@@ -2,6 +2,17 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import QRCode from 'qrcode';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+    host: 'mail.techvoice.lk',
+    port: 465,
+    secure: true,
+    auth: {
+        user: process.env.MAIL_USERNAME,
+        pass: process.env.MAIL_PASSWORD, 
+    },
+});
 
 const prisma = new PrismaClient();
 interface Seat {
@@ -151,8 +162,26 @@ export const checkout = async (req: Request, res: Response) => {
             },
         });
 
+        const qrEmailHtml = `
+            <h2>Hi ${first_name},</h2>
+            <p>Here are your QR tickets for the event.</p>
+            ${qrCodes.map(qr =>
+                `<div>
+                    <p><strong>${qr.ticketTypeName}</strong> - ${qr.count} ticket(s)</p>
+                    <img src="${qr.qrCodeData}" alt="QR Code for ${qr.ticketTypeName}" />
+                </div>`).join('')}
+            <p>Thank you for booking!</p>
+        `;
+
+        await transporter.sendMail({
+            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+            to: email,
+            subject: 'Your Event QR Tickets',
+            html: qrEmailHtml,
+        });
+
         return res.status(201).json({
-            message: 'Order created successfully and seats booked',
+            message: 'Order created successfully, seats booked, and QR codes emailed',
             order_id: order.id,
             qr_codes: qrCodes,
         });
