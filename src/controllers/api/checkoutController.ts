@@ -161,15 +161,24 @@ export const checkout = async (req: Request, res: Response) => {
                 seats: JSON.stringify(updatedSeats),
             },
         });
-
+        const attachments: any[] = [];
         const qrEmailHtml = `
             <h2>Hi ${first_name},</h2>
-            <p>Here are your QR tickets for the event.</p>
-            ${qrCodes.map(qr =>
-                `<div>
-                    <p><strong>${qr.ticketTypeName}</strong> - ${qr.count} ticket(s)</p>
-                    <img src="${qr.qrCodeData}" alt="QR Code for ${qr.ticketTypeName}" />
-                </div>`).join('')}
+            <p>Here are your QR tickets for the event:</p>
+            ${qrCodes.map((qr, index) => {
+                const cid = `qr${index}@event.com`;
+                attachments.push({
+                    filename: `ticket-${qr.ticketTypeName}-${index + 1}.png`,
+                    content: qr.qrCodeData.split("base64,")[1],
+                    encoding: 'base64',
+                    cid,
+                });
+                return `
+                    <div>
+                        <p><strong>${qr.ticketTypeName}</strong> - ${qr.count} ticket(s)</p>
+                        <img src="cid:${cid}" alt="QR Code for ${qr.ticketTypeName}" />
+                    </div>`;
+            }).join('')}
             <p>Thank you for booking!</p>
         `;
 
@@ -178,6 +187,7 @@ export const checkout = async (req: Request, res: Response) => {
             to: email,
             subject: 'Your Event QR Tickets',
             html: qrEmailHtml,
+            attachments: attachments,
         });
 
         return res.status(201).json({
