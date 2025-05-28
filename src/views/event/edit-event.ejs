@@ -625,7 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
             seatGroup.style.cursor = 'pointer';
 
             // Visually mark "booked" or "issued" seats if desired
-            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued') {
+            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
                 // You might want to add a different visual cue for these,
                 // e.g., a patterned fill or a slightly darker shade.
                 // For now, we'll just set the cursor to 'not-allowed'.
@@ -654,9 +654,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
 
             // --- Logic to prevent changing booked/issued seats ---
-            if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued') {
+            if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
                 alert(`This seat is already ${currentSeatStatus} and cannot be changed.`);
-                return; // Stop further processing
+                return; 
             }
 
             if (existingSeatIndex > -1) {

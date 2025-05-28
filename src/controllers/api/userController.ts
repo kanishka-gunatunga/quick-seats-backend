@@ -3,6 +3,7 @@ import { prisma } from '../../prisma/client';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
+import transporter from '../../services/mailTransporter';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -367,4 +368,52 @@ export const getUserDetails = async (req: Request, res: Response) => {
       city: user.userDetails?.city,
     }
   });
+};
+
+export const forgotPassword = async (req: Request, res: Response) => {
+  const schema = z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+  });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      message: 'Invalid input',
+      errors: result.error.flatten(),
+    });
+  }
+
+  const { email } = result.data;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email address.' });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    await transporter.sendMail({
+      from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+      to: email,
+      subject: 'Password Reset OTP',
+      html: `<p>Your OTP for resetting your password is: <strong>${otp}</strong></p>`,
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: otp
+      },
+    });
+
+    return res.status(200).json({ message: 'OTP sent to your email.' });
+  } catch (err) {
+    console.error('Error during forgot password process:', err);
+    return res.status(500).json({ message: 'An unexpected error occurred.' });
+  }
 };

@@ -2,7 +2,17 @@ import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import QRCode from 'qrcode';
-import transporter from '../../services/mailTransporter';
+import nodemailer from 'nodemailer';
+
+const transporter = nodemailer.createTransport({
+    host: 'mail.techvoice.lk',
+    port: 465,
+    secure: true,
+    auth: {
+        user: process.env.MAIL_USERNAME,
+        pass: process.env.MAIL_PASSWORD, 
+    },
+});
 
 const prisma = new PrismaClient();
 interface Seat {
@@ -13,7 +23,7 @@ interface Seat {
     type_id: number;
 }
 
-export const checkout = async (req: Request, res: Response) => {
+export const selectSeat = async (req: Request, res: Response) => {
     const schema = z.object({
         first_name: z.string().min(1, 'First name is required'),
         last_name: z.string().min(1, 'Last name is required'),
