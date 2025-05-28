@@ -28,6 +28,7 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
   const schema = z
     .object({
       name: z.string().min(1, 'Name is required'),
+      color: z.string().min(1, 'Color is required'),
       has_ticket_count: z.string().optional(),
     });
 
@@ -41,7 +42,7 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
     return res.redirect('/add-admin'); 
   }
 
-  const { name,has_ticket_count} = result.data;
+  const { name,has_ticket_count,color} = result.data;
 
   try {
 
@@ -49,6 +50,7 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
     await prisma.ticketType.create({
       data: {
         name,
+        color
         has_ticket_count,
         status: 'active',
       },
@@ -142,6 +144,7 @@ export const editTicketTypePost = async (req: Request, res: Response) => {
   const schema = z
     .object({
       name: z.string().min(1, 'Name is required'),
+      color: z.string().min(1, 'Color is required'),
       has_ticket_count: z.string().optional(),
     });
 
@@ -155,7 +158,7 @@ export const editTicketTypePost = async (req: Request, res: Response) => {
     return res.redirect(`/ticket-type/edit/${req.params.id}`);
   }
 
-  const { name,has_ticket_count } = result.data;
+  const { name,has_ticket_count,color } = result.data;
   const userId = parseInt(req.params.id);
 
   try {
@@ -172,6 +175,7 @@ export const editTicketTypePost = async (req: Request, res: Response) => {
       where: { id: userId },
       data: {
         name,
+        color
         has_ticket_count
       },
     });

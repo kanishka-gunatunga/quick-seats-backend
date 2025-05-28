@@ -234,6 +234,7 @@ export const editEventGet = async (req: Request, res: Response) => {
             count: ticket.ticketCount, 
             has_ticket_count: ticketType?.has_ticket_count || false,
             ticketTypeName: ticketType?.name || 'Unknown', 
+            color: ticket.color, 
           };
         })
       : [];
