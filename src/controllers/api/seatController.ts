@@ -25,24 +25,8 @@ interface Seat {
 
 export const selectSeat = async (req: Request, res: Response) => {
     const schema = z.object({
-        first_name: z.string().min(1, 'First name is required'),
-        last_name: z.string().min(1, 'Last name is required'),
-        contact_number: z.string().min(1, 'Contact number is required'),
-        email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
-        nic_passport: z.string().min(1, 'NIC/Passport is required'),
-        country: z.string().min(1, 'Country is required'),
         event_id: z.string().min(1, 'Event id is required'),
-        user_id: z.string().min(1, 'User id is required'),
-        seat_ids: z.preprocess((val) => {
-            if (typeof val === 'string') {
-                try {
-                    return JSON.parse(val);
-                } catch {
-                    return [];
-                }
-            }
-            return val;
-        }, z.array(z.union([z.number(), z.string()])).min(1, 'At least one seat must be selected')),
+        seat_id: z.string().min(1, 'Seat id is required'),
     });
 
     const result = schema.safeParse(req.body);
@@ -53,7 +37,7 @@ export const selectSeat = async (req: Request, res: Response) => {
             errors: result.error.flatten(),
         });
     }
-    const { email, first_name, last_name, contact_number, nic_passport, country, event_id, user_id, seat_ids } = result.data;
+    const { event_id, seat_id } = result.data;
 
     try {
         const event = await prisma.event.findUnique({
@@ -63,140 +47,117 @@ export const selectSeat = async (req: Request, res: Response) => {
             },
         });
 
-         if (!event || event.seats === null) {
+        if (!event || event.seats === null) {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
 
+        const seats: Array<{ seatId: string; status: string; [key: string]: any }> = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
 
-        // IMPORTANT: Parse the JSON string from the database
-        const eventSeats: Seat[] = typeof event.seats === 'string'
-        ? JSON.parse(event.seats)
-        : event.seats;
+        const seatIndex = seats.findIndex(seat => seat.seatId === seat_id);
 
-        const groupedSeats: { [ticketTypeName: string]: string[] } = {};
-        const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
-        let subTotal = 0;
-
-        for (const seatId of seat_ids) {
-            // Ensure seatId is treated consistently as a string for map keys if it can be number or string
-            const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
-
-            if (!foundSeat) {
-                return res.status(400).json({ message: `Seat ${seatId} not found or invalid for this event.` });
-            }
-            if (foundSeat.status !== 'available') {
-                return res.status(400).json({ message: `Seat ${seatId} is already ${foundSeat.status}.` });
-            }
-
-            const ticketTypeName = foundSeat.ticketTypeName;
-            if (!groupedSeats[ticketTypeName]) {
-                groupedSeats[ticketTypeName] = [];
-            }
-            groupedSeats[ticketTypeName].push(seatId.toString());
-            seatDetailsMap[seatId.toString()] = { price: foundSeat.price, ticketTypeName: foundSeat.ticketTypeName, type_id: foundSeat.type_id };
-            subTotal += foundSeat.price;
+        if (seatIndex === -1) {
+            return res.status(404).json({ message: 'Seat not found for this event.' });
         }
 
-        const order = await prisma.order.create({
-            data: {
-                email,
-                first_name,
-                last_name,
-                contact_number,
-                nic_passport,
-                country,
-                event_id: event_id,
-                user_id: user_id,
-                seat_ids: seat_ids,
-                sub_total: subTotal,
-                discount: 0,
-                total: subTotal,
-                status: 'pending',
-            },
-        });
+        const selectedSeat = seats[seatIndex];
 
-        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string; type_id: number; seat_ids_for_type: string[] }[] = [];
-
-        for (const ticketTypeName in groupedSeats) {
-            if (Object.prototype.hasOwnProperty.call(groupedSeats, ticketTypeName)) {
-                const seatsForType = groupedSeats[ticketTypeName];
-                const count = seatsForType.length;
-
-                const sampleSeatId = seatsForType[0];
-                const type_id = seatDetailsMap[sampleSeatId]?.type_id;
-
-                if (type_id === undefined) {
-                    console.warn(`Could not find type_id for ticketTypeName: ${ticketTypeName}`);
-                    continue;
-                }
-
-                const qrData = JSON.stringify({
-                    orderId: order.id,
-                    ticketTypeName: ticketTypeName,
-                    ticketCount: count,
-                    ticketTypeId: type_id,
-                    seatIdsForType: seatsForType, 
-                });
-                const qrCodeDataURL = await QRCode.toDataURL(qrData);
-                qrCodes.push({
-                    ticketTypeName: ticketTypeName,
-                    count: count,
-                    qrCodeData: qrCodeDataURL,
-                    type_id: type_id,
-                    seat_ids_for_type: seatsForType,
-                });
-            }
+        if (selectedSeat.status !== 'available') {
+            return res.status(400).json({ message: `Seat ${seat_id} is currently ${selectedSeat.status}. Only 'available' seats can be selected.` });
         }
 
-        const updatedSeats = eventSeats.map((seat: Seat) => {
-            if (seat_ids.map(String).includes(seat.seatId.toString())) {
-                return { ...seat, status: 'booked' };
-            }
-            return seat;
-        });
+        seats[seatIndex].status = 'pending';
 
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
-                seats: JSON.stringify(updatedSeats),
+                seats: seats,
             },
         });
-        const attachments: any[] = [];
-        const qrEmailHtml = `
-            <h2>Hi ${first_name},</h2>
-            <p>Here are your QR tickets for the event:</p>
-            ${qrCodes.map((qr, index) => {
-                const cid = `qr${index}@event.com`;
-                attachments.push({
-                    filename: `ticket-${qr.ticketTypeName}-${index + 1}.png`,
-                    content: qr.qrCodeData.split("base64,")[1],
-                    encoding: 'base64',
-                    cid,
-                });
-                return `
-                    <div>
-                        <p><strong>${qr.ticketTypeName}</strong> - ${qr.count} ticket(s)</p>
-                        <img src="cid:${cid}" alt="QR Code for ${qr.ticketTypeName}" />
-                    </div>`;
-            }).join('')}
-            <p>Thank you for booking!</p>
-        `;
 
-        await transporter.sendMail({
-            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-            to: email,
-            subject: 'Your Event QR Tickets',
-            html: qrEmailHtml,
-            attachments: attachments,
+        return res.status(200).json({
+            message: `Seat ${seat_id} has been marked as 'pending'.`,
+            seat: seats[seatIndex]
         });
 
-        return res.status(201).json({
-            message: 'Order created successfully, seats booked, and QR codes emailed',
-            order_id: order.id,
-            qr_codes: qrCodes,
-        });
     } catch (err) {
-        console.error('Checkout error:', err);
+        console.error('Seat selection error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const resetSeats = async (req: Request, res: Response) => {
+    const schema = z.object({
+        event_id: z.string().min(1, 'Event id is required'),
+        seat_ids: z.preprocess((val) => {
+            if (typeof val === 'string') {
+                try {
+                    return JSON.parse(val);
+                } catch {
+                    return [];
+                }
+            }
+            return val;
+        }, z.array(z.string()).min(1, 'At least one seat ID must be provided')),
+    });
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            message: 'Invalid input',
+            errors: result.error.flatten(),
+        });
+    }
+    const { event_id, seat_ids } = result.data;
+
+    try {
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(event_id) },
+            select: {
+                seats: true,
+            },
+        });
+
+        if (!event || event.seats === null) {
+            return res.status(404).json({ message: 'Event not found or has no seat data.' });
+        }
+        let seats: Array<{ seatId: string; status: string; [key: string]: any }> = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
+        const updatedSeatIds: string[] = [];
+        const notFoundSeatIds: string[] = [];
+
+        for (const seatIdToReset of seat_ids) {
+            const seatIndex = seats.findIndex(seat => seat.seatId === seatIdToReset);
+
+            if (seatIndex !== -1) {
+                seats[seatIndex].status = 'available';
+                updatedSeatIds.push(seatIdToReset);
+            } else {
+                notFoundSeatIds.push(seatIdToReset);
+            }
+        }
+
+        if (updatedSeatIds.length === 0 && notFoundSeatIds.length > 0) {
+            return res.status(404).json({
+                message: 'None of the provided seats were found for this event.',
+                notFoundSeatIds: notFoundSeatIds,
+            });
+        }
+        
+        await prisma.event.update({
+            where: { id: parseInt(event_id) },
+            data: {
+                seats: seats,
+            },
+        });
+
+        return res.status(200).json({
+            message: 'Selected seats have been reset to "available".',
+            resetSeats: updatedSeatIds,
+            notFoundSeats: notFoundSeatIds,
+        });
+
+    } catch (err) {
+        console.error('Seat reset error:', err);
         return res.status(500).json({ message: 'Internal server error' });
     }
 };

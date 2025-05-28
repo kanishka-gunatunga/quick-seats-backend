@@ -27,6 +27,7 @@ router.get('/get-event-details/:slug', getEventDetails);
 
 //Booking
 router.post('/select-seat', selectSeat);
+router.post('/reset-seats', resetSeats);
 
 //Checkout
 router.post('/checkout', checkout);
