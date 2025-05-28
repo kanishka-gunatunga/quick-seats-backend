@@ -393,3 +393,48 @@ export const editEventPost = async (req: Request, res: Response) => {
     return res.redirect(`/event/edit/${eventId}`);
   }
 };
+
+
+export const updateEventSeats = async (req: Request, res: Response) => {
+  const eventId = Number(req.params.id);
+
+  const schema = z.object({
+    seat_configuration: z.string().optional(),
+  });
+
+  try {
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+      const errors = result.error.flatten().fieldErrors;
+      req.session.error = 'Please fix the errors below.';
+      req.session.formData = req.body;
+      req.session.validationErrors = errors;
+      return res.redirect(`/event/edit/${eventId}`); 
+    }
+
+
+    const {
+      seat_configuration
+    } = result.data;
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        seats:seat_configuration,
+      },
+    });
+
+    req.session.success = 'Seats updated successfully!';
+    req.session.formData = {}; 
+    req.session.validationErrors = {};
+    return res.redirect(`/event/edit/${eventId}`);
+  } catch (err) {
+    console.error('Error updating seats:', err);
+    req.session.error = 'An unexpected error occurred while updating the seats.';
+
+    req.session.formData = req.body;
+    return res.redirect(`/event/edit/${eventId}`);
+  }
+};
