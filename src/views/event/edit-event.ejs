@@ -85,9 +85,8 @@ height: auto;
                                         <div class="col-md-4 mb-3">
                                             <label class="form-label">Location</label>
                                             <select class="form-control" data-toggle="select2" name="location" data-width="100%">
-                                                <option value="AZ" <%= (formData?.location || enrichedEvent.location) === 'AZ' ? 'selected' : '' %>>Arizona</option>
-                                                <option value="CO" <%= (formData?.location || enrichedEvent.location) === 'CO' ? 'selected' : '' %>>Colorado</option>
-                                                <option value="ID" <%= (formData?.location || enrichedEvent.location) === 'ID' ? 'selected' : '' %>>Idaho</option>
+                                                <option value="BMICH" <%= (formData?.location || enrichedEvent.location) === 'BMICH' ? 'selected' : '' %>>Arizona</option>
+                                                <option value="Nelum Pokuna" <%= (formData?.location || enrichedEvent.location) === 'Nelum Pokuna' ? 'selected' : '' %>>Colorado</option>
                                             </select>
                                             <% if (validationErrors?.location) { %>
                                                 <small class="text-danger"><%= validationErrors.location[0] %></small>
@@ -194,7 +193,14 @@ height: auto;
                             </div>
                             <div class="tab-pane " id="profile1">
                                 <form class="mt-4" method="POST" action="/event/update-seats/<%= enrichedEvent.id %>" enctype="multipart/form-data">
-                                   
+                                 <div class="col-md-4 mb-3 mt-3">
+                                    <label class="form-label">Assign Ticket Type</label>
+                                    <select class="form-control" id="ticket-type-select" data-width="100%">
+                                         <option value="">Select Ticket Type</option>
+                                    </select>
+
+                                </div>   
+      
                               <svg xmlns="http://www.w3.org/2000/svg" width="3010" height="2224" viewBox="0 0 3010 2224" fill="none">
                                     <g id="Chosen seat">
                                     <rect width="3010" height="2224" rx="50" fill="#130B2B"/>
@@ -4811,12 +4817,7 @@ height: auto;
                                     </defs>
                                     </svg>
 
-                                    <div style="margin-top: 20px;">
-                                    <label for="ticket-type-select">Assign Ticket Type:</label>
-                                    <select id="ticket-type-select">
-                                        <option value="">Select Ticket Type</option>
-                                    </select>
-                                    </div>
+                                   
                                     <input type="hidden" name="seat_configuration" id="seat_configuration">   
                                     <button type="submit" class="btn btn-primary">Save</button>
                                 </form>
@@ -4921,12 +4922,7 @@ height: auto;
 document.addEventListener('DOMContentLoaded', () => {
   // Define your ticket types
   // Added a default color for each ticket type for visual feedback
-  const ticketTypes = [
-    { price: 5000, type_id: 1, ticketTypeName: 'VVIP Seated', color: '#FF53C0' },
-    { price: 3000, type_id: 2, ticketTypeName: 'VIP Standing', color: '#A9146E' },
-    { price: 1000, type_id: 5, ticketTypeName: 'Children', color: '#88B04B' },
-    // Add more ticket types as needed
-  ];
+ const ticketTypes = seatTicketTypes;
 
   // Array to store selected seat data
   // Initialize with any pre-existing configuration if you have it (e.g., loaded from a database)
