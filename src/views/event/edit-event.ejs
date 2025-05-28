@@ -5020,7 +5020,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script> -->
 <script>
-const mapedSeats = <%= enrichedEvent.seats %>;
+const mapedSeats = <%- JSON.stringify(enrichedEvent.seats) %>;
 console.log(mapedSeats);
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
