@@ -5145,7 +5145,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script> -->
 <script>
-const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats) %>);
+const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
 document.addEventListener('DOMContentLoaded', () => {
