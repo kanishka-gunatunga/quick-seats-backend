@@ -1,5 +1,6 @@
 import express from 'express';
-import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,validateOtp } from '../../controllers/api/userController';
+import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,
+validateOtp, resetPassword } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails } from '../../controllers/api/eventController';
 import { checkout} from '../../controllers/api/checkoutController';
 import { selectSeat} from '../../controllers/api/seatController';
@@ -11,6 +12,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/forgot-password', forgotPassword);
 router.post('/validate-otp', validateOtp);
+router.post('/reset-password', resetPassword);
 router.get('/get-user-details/:id',authenticate, getUserDetails);
 router.post('/update-profile-settings/:id',authenticate, updateProfileSettings);
 router.post('/update-security-settings/:id',authenticate, updateSecuritySettings);

@@ -462,3 +462,50 @@ export const validateOtp = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'An unexpected error occurred.' });
   }
 };
+
+
+export const resetPassword = async (req: Request, res: Response) => {
+  const schema = z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    password: z.string().min(6, 'Password must be at least 6 characters'),
+    confirm_password: z.string().min(1, 'Confirm password is required'),
+  })
+  .refine((data) => data.password === data.confirm_password, {
+      path: ['confirm_password'],
+      message: 'Passwords do not match',
+    });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      message: 'Invalid input',
+      errors: result.error.flatten(),
+    });
+  }
+
+  const { email, password } = result.data;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email address.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+      },
+    });
+
+    return res.status(200).json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('Error during password update:', err);
+    return res.status(500).json({ message: 'An unexpected error occurred.' });
+  }
+};
