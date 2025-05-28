@@ -1,4 +1,10 @@
 <%- include('../layouts/header.ejs') %>
+<style>
+svg{
+width: 100%;
+height: auto; 
+}
+</style>
 <div class="content-page">
     <div class="content">
 
@@ -4904,4 +4910,105 @@
 <script>
  const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
+document.addEventListener('DOMContentLoaded', () => {
+  // Define your ticket types
+  // Added a default color for each ticket type for visual feedback
+  const ticketTypes = [
+    { price: 5000, type_id: 1, ticketTypeName: 'VVIP Seated', color: '#FF53C0' },
+    { price: 3000, type_id: 2, ticketTypeName: 'VIP Standing', color: '#A9146E' },
+    { price: 1000, type_id: 5, ticketTypeName: 'Children', color: '#88B04B' },
+    // Add more ticket types as needed
+  ];
+
+  // Array to store selected seat data
+  // Initialize with any pre-existing configuration if you have it (e.g., loaded from a database)
+  const seatConfiguration = [];
+  let selectedTicketType = null; // To hold the currently chosen ticket type from the dropdown
+
+  const ticketTypeSelect = document.getElementById('ticket-type-select');
+  const seatConfigurationInput = document.getElementById('seat_configuration');
+  // Select all seat groups using the new class 'seat-group'
+  const seats = document.querySelectorAll('.seat-group');
+
+  // Populate the ticket type dropdown
+  ticketTypes.forEach((type) => {
+    const option = document.createElement('option');
+    // Store the entire object as a stringified JSON in the option's value
+    option.value = JSON.stringify(type);
+    option.textContent = type.ticketTypeName;
+    ticketTypeSelect.appendChild(option);
+  });
+
+  // Event listener for ticket type selection
+  ticketTypeSelect.addEventListener('change', (event) => {
+    if (event.target.value) {
+      selectedTicketType = JSON.parse(event.target.value);
+      console.log('Selected Ticket Type:', selectedTicketType);
+    } else {
+      selectedTicketType = null;
+      console.log('No ticket type selected. Please select a ticket type.');
+    }
+  });
+
+  // Event listener for seat clicks
+  seats.forEach((seatGroup) => {
+    // Add a class for styling (e.g., change cursor on hover)
+    seatGroup.classList.add('clickable-seat');
+    seatGroup.style.cursor = 'pointer'; // Visual cue that it's clickable
+
+    seatGroup.addEventListener('click', () => {
+      // Get the ID directly from the seat group element (e.g., "F1")
+      const seatId = seatGroup.id;
+
+      if (!selectedTicketType) {
+        alert('Please select a ticket type first from the dropdown!');
+        return;
+      }
+
+      // Find if the seat is already in the configuration
+      const existingSeatIndex = seatConfiguration.findIndex((seat) => seat.seatId === seatId);
+
+      // Get all child <path> elements within the seat group
+      const seatPaths = seatGroup.querySelectorAll('path');
+
+      if (existingSeatIndex > -1) {
+        // Seat already exists, remove it (effectively un-selecting)
+        seatConfiguration.splice(existingSeatIndex, 1);
+        // Revert seat color to default (original gray from your SVG)
+        seatPaths.forEach(path => {
+            path.style.fill = '#C4C4C4';
+        });
+      } else {
+        // Add the seat to the configuration
+        const newSeat = {
+          price: selectedTicketType.price,
+          seatId: seatId,
+          status: 'available', // You can change this to 'booked' or other initial status
+          type_id: selectedTicketType.type_id,
+          ticketTypeName: selectedTicketType.ticketTypeName,
+        };
+        seatConfiguration.push(newSeat);
+
+        // Change seat color to indicate selection with the selected ticket type's color
+        seatPaths.forEach(path => {
+            path.style.fill = selectedTicketType.color;
+        });
+      }
+
+      // Update the hidden input field with the JSON data
+      seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+      console.log('Current Seat Configuration:', seatConfiguration); // For debugging
+    });
+  });
+
+  // Optional: Add some basic CSS for hover effect on seats
+  const style = document.createElement('style');
+  style.innerHTML = `
+    .clickable-seat:hover {
+      opacity: 0.8; /* Dim on hover */
+      transition: opacity 0.2s ease-in-out;
+    }
+  `;
+  document.head.appendChild(style);
+});
 </script>
