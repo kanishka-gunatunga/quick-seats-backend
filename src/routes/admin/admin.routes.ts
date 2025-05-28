@@ -61,7 +61,7 @@ router.get('/event/deactivate/:id', isAdminLoggedIn, deactivateEvent);
 router.get('/event/edit/:id', isAdminLoggedIn, editEventGet);
 router.post('/event/edit/:id',upload.fields([{ name: 'banner_image', maxCount: 1 },{ name: 'featured_image', maxCount: 1 },]), isAdminLoggedIn, editEventPost);
 router.get('/events', isAdminLoggedIn, events);
-router.post('/update-event-seats/:id', isAdminLoggedIn, updateEventSeats);
+router.post('/event/update-event-seats/:id', isAdminLoggedIn, updateEventSeats);
 
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);
