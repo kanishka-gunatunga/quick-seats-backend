@@ -4917,6 +4917,7 @@ height: auto;
 <script>
  const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
+ console.log(seatTicketTypes);
 document.addEventListener('DOMContentLoaded', () => {
   // Define your ticket types
   // Added a default color for each ticket type for visual feedback
