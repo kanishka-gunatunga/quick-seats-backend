@@ -3,7 +3,7 @@ import { login, register, updateProfileSettings, updateSecuritySettings,bookingH
 validateOtp, resetPassword } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails } from '../../controllers/api/eventController';
 import { checkout} from '../../controllers/api/checkoutController';
-import { selectSeat} from '../../controllers/api/seatController';
+import { selectSeat,resetSeats} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
 
