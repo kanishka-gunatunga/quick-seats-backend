@@ -4818,7 +4818,7 @@ height: auto;
                                     </svg>
 
                                    
-                                    <input type="hidden" name="seat_configuration" id="seat_configuration" <%= formData?.seat_configuration || enrichedEvent.seats || '' %>>   
+                                    <input type="hidden" name="seat_configuration" id="seat_configuration" value="<%= formData?.seat_configuration || enrichedEvent.seats || '' %>">   
                                     <button type="submit" class="btn btn-primary mt-4">Save</button>
                                 </form>
                             </div>
@@ -4837,7 +4837,8 @@ height: auto;
 <%- include('../layouts/footer.ejs') %>
 
 <script>
-    const mapedSeats = 
+    const mapedSeats = <%= enrichedEvent.seats %>;
+    console.log(mapedSeats);
     const ticketTypes = <%- JSON.stringify(ticket_types) %>;
     let ticketIndex = 0; 
 
