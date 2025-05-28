@@ -408,6 +408,7 @@ export const updateEventSeats = async (req: Request, res: Response) => {
 
     if (!result.success) {
       const errors = result.error.flatten().fieldErrors;
+      console.log(errors);
       req.session.error = 'Please fix the errors below.';
       req.session.formData = req.body;
       req.session.validationErrors = errors;
