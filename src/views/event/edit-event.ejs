@@ -4818,7 +4818,7 @@ height: auto;
                                     </svg>
 
                                    
-                                    <input type="hidden" name="seat_configuration" id="seat_configuration" value="<%= formData?.seat_configuration || enrichedEvent.seats || '' %>">   
+                                    <input type="hidden" name="seat_configuration" id="seat_configuration" value="<%- JSON.stringify(enrichedEvent.seats) %>">   
                                     <button type="submit" class="btn btn-primary mt-4">Save</button>
                                 </form>
                             </div>
