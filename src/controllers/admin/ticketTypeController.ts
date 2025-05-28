@@ -50,7 +50,7 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
     await prisma.ticketType.create({
       data: {
         name,
-        color
+        color,
         has_ticket_count,
         status: 'active',
       },
@@ -175,7 +175,7 @@ export const editTicketTypePost = async (req: Request, res: Response) => {
       where: { id: userId },
       data: {
         name,
-        color
+        color,
         has_ticket_count
       },
     });
