@@ -63,7 +63,7 @@ export const addEventPost = async (req: Request, res: Response) => {
     req.session.error = 'Please fix the errors below.';
     req.session.formData = req.body;
     req.session.validationErrors = errors;
-    return res.redirect('/add-admin'); 
+    return res.redirect('/add-event'); 
   }
 
    const {
@@ -140,7 +140,7 @@ if (bannerImageFile) {
     req.session.success = 'event added successfully!';
     req.session.formData = {}; 
     req.session.validationErrors = {};
-    return res.redirect('/add-event'); 
+    return res.redirect(`/event/edit/${event.id}`); 
   } catch (err) {
     console.error('Error adding event:', err);
     req.session.error = 'An unexpected error occurred while adding the event.';
