@@ -310,49 +310,39 @@ height: auto;
 
 
 </script>
+
 <script>
 const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
 document.addEventListener('DOMContentLoaded', () => {
     const ticketTypes = [
-        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' },
+        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' }, // Black color for unavailable
         ...seatTicketTypes
     ];
 
+    // Initialize seatConfiguration with existing mapped seats
+    // Ensure that 'status' is properly set for initial load if not already present in mapedSeats
     const seatConfiguration = mapedSeats.map(seat => {
+        // Find the corresponding ticket type from your defined ticketTypes
         const ticketType = ticketTypes.find(type => type.type_id === seat.type_id);
-        const color = ticketType ? ticketType.color : '#C4C4C4';
+        const color = ticketType ? ticketType.color : '#C4C4C4'; // Default if type not found
+
+        // Add a default status if it's missing (though your sample data has it)
         const status = seat.status || (ticketType && ticketType.isUnavailable ? 'unavailable' : 'available');
-        
+
         return {
             ...seat,
-            color: color,
-            status: status
+            color: color, // Store color for initial rendering
+            status: status // Ensure status is explicitly set
         };
     });
 
     let selectedTicketType = null;
-    let isSelecting = false;
-    let selectionStart = { x: 0, y: 0 };
-    let selectionEnd = { x: 0, y: 0 };
-    let selectionBox = null;
-    const selectedSeats = new Set();
 
     const ticketTypeSelect = document.getElementById('ticket-type-select');
     const seatConfigurationInput = document.getElementById('seat_configuration');
     const seats = document.querySelectorAll('.seat-group');
-    const seatMapContainer = document.querySelector('.seat-map-container') || document.body;
-
-    // Create selection box element
-    selectionBox = document.createElement('div');
-    selectionBox.style.position = 'absolute';
-    selectionBox.style.border = '2px dashed #3498db';
-    selectionBox.style.backgroundColor = 'rgba(52, 152, 219, 0.2)';
-    selectionBox.style.pointerEvents = 'none';
-    selectionBox.style.display = 'none';
-    selectionBox.style.zIndex = '1000';
-    seatMapContainer.appendChild(selectionBox);
 
     // Populate the ticket type dropdown
     ticketTypes.forEach((type) => {
@@ -366,8 +356,10 @@ document.addEventListener('DOMContentLoaded', () => {
     ticketTypeSelect.addEventListener('change', (event) => {
         if (event.target.value) {
             selectedTicketType = JSON.parse(event.target.value);
+            console.log('Selected Ticket Type:', selectedTicketType);
         } else {
             selectedTicketType = null;
+            console.log('No ticket type selected. Please select a ticket type.');
         }
     });
 
@@ -379,105 +371,78 @@ document.addEventListener('DOMContentLoaded', () => {
                 path.style.fill = ticketType.color;
             });
         } else {
+            // Default color if no specific ticket type or color is defined (e.g., when un-selecting)
             seatPaths.forEach(path => {
-                path.style.fill = '#C4C4C4';
+                path.style.fill = '#C4C4C4'; // Original gray
             });
         }
     }
 
-    // Function to get seat elements in selection area
-    function getSeatsInSelection() {
-        const seatsInSelection = [];
-        const rect = {
-            left: Math.min(selectionStart.x, selectionEnd.x),
-            top: Math.min(selectionStart.y, selectionEnd.y),
-            right: Math.max(selectionStart.x, selectionEnd.x),
-            bottom: Math.max(selectionStart.y, selectionEnd.y)
-        };
-
-        seats.forEach(seat => {
-            const seatRect = seat.getBoundingClientRect();
-            const seatCenter = {
-                x: seatRect.left + seatRect.width / 2,
-                y: seatRect.top + seatRect.height / 2
-            };
-
-            if (seatCenter.x >= rect.left && seatCenter.x <= rect.right &&
-                seatCenter.y >= rect.top && seatCenter.y <= rect.bottom) {
-                seatsInSelection.push(seat);
+    // --- Initial Rendering of Mapped Seats ---
+    seatConfiguration.forEach(configuredSeat => {
+        const seatGroup = document.getElementById(configuredSeat.seatId);
+        if (seatGroup) {
+            // Find the full ticket type object to get its color
+            const correspondingTicketType = ticketTypes.find(
+                type => type.type_id === configuredSeat.type_id
+            );
+            if (correspondingTicketType) {
+                updateSeatVisual(seatGroup, correspondingTicketType);
+            } else if (configuredSeat.status === 'unavailable') {
+                // If it's unavailable and no specific type found, use the default unavailable type
+                const unavailableType = ticketTypes.find(type => type.isUnavailable);
+                updateSeatVisual(seatGroup, unavailableType);
             }
-        });
+            // Add initial cursor style
+            seatGroup.style.cursor = 'pointer';
 
-        return seatsInSelection;
-    }
-
-    // Mouse down event - start selection
-    seatMapContainer.addEventListener('mousedown', (e) => {
-        if (!selectedTicketType) {
-            alert('Please select a ticket type first from the dropdown!');
-            return;
+            // Visually mark "booked" or "issued" seats if desired
+            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
+                // You might want to add a different visual cue for these,
+                // e.g., a patterned fill or a slightly darker shade.
+                // For now, we'll just set the cursor to 'not-allowed'.
+                 seatGroup.style.cursor = 'not-allowed';
+                 // You could also add a class for specific styling
+                 // seatGroup.classList.add('seat-status-locked');
+            }
         }
-
-        isSelecting = true;
-        selectionStart = {
-            x: e.clientX,
-            y: e.clientY
-        };
-        selectionEnd = { ...selectionStart };
-
-        selectionBox.style.left = `${selectionStart.x}px`;
-        selectionBox.style.top = `${selectionStart.y}px`;
-        selectionBox.style.width = '0';
-        selectionBox.style.height = '0';
-        selectionBox.style.display = 'block';
     });
 
-    // Mouse move event - update selection box
-    seatMapContainer.addEventListener('mousemove', (e) => {
-        if (!isSelecting) return;
 
-        selectionEnd = {
-            x: e.clientX,
-            y: e.clientY
-        };
+    // Event listener for seat clicks
+    seats.forEach((seatGroup) => {
+        seatGroup.classList.add('clickable-seat'); // Add a class for styling
+        // Cursor is initially set during initial rendering or will be set by click handler
 
-        const left = Math.min(selectionStart.x, selectionEnd.x);
-        const top = Math.min(selectionStart.y, selectionEnd.y);
-        const width = Math.abs(selectionEnd.x - selectionStart.x);
-        const height = Math.abs(selectionEnd.y - selectionStart.y);
-
-        selectionBox.style.left = `${left}px`;
-        selectionBox.style.top = `${top}px`;
-        selectionBox.style.width = `${width}px`;
-        selectionBox.style.height = `${height}px`;
-    });
-
-    // Mouse up event - finalize selection
-    seatMapContainer.addEventListener('mouseup', (e) => {
-        if (!isSelecting) return;
-        isSelecting = false;
-        selectionBox.style.display = 'none';
-
-        const selectedSeatGroups = getSeatsInSelection();
-        
-        selectedSeatGroups.forEach(seatGroup => {
+        seatGroup.addEventListener('click', () => {
             const seatId = seatGroup.id;
-            const existingSeatIndex = seatConfiguration.findIndex((seat) => seat.seatId === seatId);
-            const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
 
-            // Skip if seat is booked/issued/pending
-            if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
+            if (!selectedTicketType) {
+                alert('Please select a ticket type first from the dropdown!');
                 return;
             }
 
+            const existingSeatIndex = seatConfiguration.findIndex((seat) => seat.seatId === seatId);
+            const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
+
+            // --- Logic to prevent changing booked/issued seats ---
+            if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
+                alert(`This seat is already ${currentSeatStatus} and cannot be changed.`);
+                return; 
+            }
+
             if (existingSeatIndex > -1) {
-                // Update existing seat
+                // Seat already exists in configuration
+
+                // If the selected ticket type is 'Unavailable' and the existing seat is also 'Unavailable',
+                // or if it's the same ticket type, then un-select it (revert to default)
                 if (selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].status === 'unavailable' ||
                     (!selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].type_id === selectedTicketType.type_id)
                 ) {
                     seatConfiguration.splice(existingSeatIndex, 1);
-                    updateSeatVisual(seatGroup, null);
+                    updateSeatVisual(seatGroup, null); // Revert to default color
                 } else {
+                    // Update existing seat with the new selected ticket type
                     seatConfiguration[existingSeatIndex].price = selectedTicketType.price;
                     seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
                     seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
@@ -485,7 +450,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateSeatVisual(seatGroup, selectedTicketType);
                 }
             } else {
-                // Add new seat
+                // Seat does not exist, add it to the configuration
                 const newSeat = {
                     price: selectedTicketType.price,
                     seatId: seatId,
@@ -496,54 +461,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 seatConfiguration.push(newSeat);
                 updateSeatVisual(seatGroup, selectedTicketType);
             }
+
+            // Update the hidden input field with the JSON data
+            seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+            console.log('Current Seat Configuration:', seatConfiguration); // For debugging
         });
-
-        seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
     });
 
-    // Initial rendering of mapped seats
-    seatConfiguration.forEach(configuredSeat => {
-        const seatGroup = document.getElementById(configuredSeat.seatId);
-        if (seatGroup) {
-            const correspondingTicketType = ticketTypes.find(
-                type => type.type_id === configuredSeat.type_id
-            );
-            if (correspondingTicketType) {
-                updateSeatVisual(seatGroup, correspondingTicketType);
-            } else if (configuredSeat.status === 'unavailable') {
-                const unavailableType = ticketTypes.find(type => type.isUnavailable);
-                updateSeatVisual(seatGroup, unavailableType);
-            }
-            seatGroup.style.cursor = 'pointer';
-
-            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
-                seatGroup.style.cursor = 'not-allowed';
-            }
-        }
-    });
-
-    // CSS for selection and hover effects
+    // Optional: Add some basic CSS for hover effect on seats
     const style = document.createElement('style');
     style.innerHTML = `
         .clickable-seat {
             cursor: pointer;
         }
         .clickable-seat:hover {
-            opacity: 0.8;
+            opacity: 0.8; /* Dim on hover */
             transition: opacity 0.2s ease-in-out;
         }
+        /* Optional: Styles for locked seats */
         .seat-status-locked {
             cursor: not-allowed !important;
-            filter: grayscale(50%);
-        }
-        .seat-map-container {
-            position: relative;
-            user-select: none;
+            filter: grayscale(50%); /* Example: make them a bit desaturated */
         }
     `;
     document.head.appendChild(style);
 
     // Initial population of the hidden input field
     seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+    console.log('Initial Seat Configuration:', seatConfiguration);
 });
 </script>
