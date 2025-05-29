@@ -491,3 +491,80 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Initial Seat Configuration:', seatConfiguration);
 });
 </script>
+
+
+<script>
+  const svg = document.getElementById("mySvg");
+  let selectionRect = null;
+  let startX, startY;
+
+  svg.addEventListener("mousedown", (e) => {
+    const pt = getSVGPoint(e);
+    startX = pt.x;
+    startY = pt.y;
+
+    selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    selectionRect.setAttribute("x", startX);
+    selectionRect.setAttribute("y", startY);
+    selectionRect.setAttribute("width", 0);
+    selectionRect.setAttribute("height", 0);
+    selectionRect.setAttribute("fill", "rgba(0, 0, 255, 0.3)");
+    selectionRect.setAttribute("stroke", "blue");
+    selectionRect.setAttribute("stroke-dasharray", "4");
+    selectionRect.setAttribute("id", "selectionBox");
+    svg.appendChild(selectionRect);
+
+    svg.addEventListener("mousemove", onMouseMove);
+    svg.addEventListener("mouseup", onMouseUp);
+  });
+
+  function onMouseMove(e) {
+    const pt = getSVGPoint(e);
+    const x = Math.min(pt.x, startX);
+    const y = Math.min(pt.y, startY);
+    const width = Math.abs(pt.x - startX);
+    const height = Math.abs(pt.y - startY);
+    selectionRect.setAttribute("x", x);
+    selectionRect.setAttribute("y", y);
+    selectionRect.setAttribute("width", width);
+    selectionRect.setAttribute("height", height);
+  }
+
+  function onMouseUp(e) {
+    const rectBox = selectionRect.getBBox();
+    const selectedIds = [];
+
+    // Check for intersection with other elements
+    const elements = Array.from(svg.children).filter(el => el.id && el.id !== "selectionBox");
+    elements.forEach(el => {
+      const bbox = el.getBBox();
+      if (rectsIntersect(rectBox, bbox)) {
+        selectedIds.push(el.id);
+      }
+    });
+
+    console.log("Selected Element IDs:", selectedIds);
+
+    svg.removeChild(selectionRect);
+    selectionRect = null;
+
+    svg.removeEventListener("mousemove", onMouseMove);
+    svg.removeEventListener("mouseup", onMouseUp);
+  }
+
+  function getSVGPoint(event) {
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function rectsIntersect(a, b) {
+    return !(
+      a.x + a.width < b.x ||
+      a.x > b.x + b.width ||
+      a.y + a.height < b.y ||
+      a.y > b.y + b.height
+    );
+  }
+</script>
