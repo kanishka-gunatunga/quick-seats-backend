@@ -508,7 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
     selectionRect.setAttribute("y", startY);
     selectionRect.setAttribute("width", 0);
     selectionRect.setAttribute("height", 0);
-    selectionRect.setAttribute("fill", "rgba(0, 0, 255, 0.3)");
+    selectionRect.setAttribute("fill", "rgba(0, 0, 255, 0.2)");
     selectionRect.setAttribute("stroke", "blue");
     selectionRect.setAttribute("stroke-dasharray", "4");
     selectionRect.setAttribute("id", "selectionBox");
@@ -534,16 +534,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const rectBox = selectionRect.getBBox();
     const selectedIds = [];
 
-    // Check for intersection with other elements
-    const elements = Array.from(svg.children).filter(el => el.id && el.id !== "selectionBox");
-    elements.forEach(el => {
-      const bbox = el.getBBox();
-      if (rectsIntersect(rectBox, bbox)) {
-        selectedIds.push(el.id);
+    // Find all seat groups
+    const seatGroups = svg.querySelectorAll("g.seat-group");
+
+    seatGroups.forEach(group => {
+      const groupBBox = group.getBBox();
+      if (rectsIntersect(rectBox, groupBBox)) {
+        selectedIds.push(group.id);
       }
     });
 
-    console.log("Selected Element IDs:", selectedIds);
+    console.log("Selected seat groups:", selectedIds);
 
     svg.removeChild(selectionRect);
     selectionRect = null;
