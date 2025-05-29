@@ -192,32 +192,29 @@ height: auto;
                                     <button type="submit" class="btn btn-primary">Update</button>
                                 </form>
                             </div>
-                           <div class="tab-pane " id="profile1">
+                            <div class="tab-pane " id="profile1">
                                 <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
-                                    <div class="row align-items-end"> <%- /* Added a row for better alignment */ %>
-                                        <div class="col-md-4 mb-3 mt-3">
-                                            <label class="form-label">Assign Ticket Type</label>
-                                            <select class="form-control" id="ticket-type-select" data-width="100%">
-                                                <option value="">Select Ticket Type</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-4 mb-3 mt-3"> <%- /* Added column for the new button */ %>
-                                            <button type="button" id="assign-to-selected-btn" class="btn btn-info">Assign to Selected</button>
-                                        </div>
-                                    </div>
+                                 <div class="col-md-4 mb-3 mt-3">
+                                    <label class="form-label">Assign Ticket Type</label>
+                                    <select class="form-control" id="ticket-type-select" data-width="100%">
+                                         <option value="">Select Ticket Type</option>
+                                    </select>
 
-                                    <% if (enrichedEvent.location == "BMICH") { %>
-                                        <%- include('../seat-maps/bmich.ejs') %>
-                                    <% } %>
-                                    <% if (enrichedEvent.location == "Nelum Pokuna") { %>
-                                        <%- include('../seat-maps/nelum.ejs') %>
-                                    <% } %>
-                                    <% if (enrichedEvent.location == "Musaeus College") { %>
-                                        <%- include('../seat-maps/musaeus.ejs') %>
-                                    <% } %>
-                                    
-                                    <input type="hidden" name="seat_configuration" id="seat_configuration" >    
-                                    <button type="submit" class="btn btn-primary mt-4">Save Seat Configuration</button>
+                                </div>   
+                                <% if (enrichedEvent.location ==  "BMICH") { %>
+                                    <%- include('../seat-maps/bmich.ejs') %>
+                                <% } %>
+                                <% if (enrichedEvent.location ==  "Nelum Pokuna") { %>
+                                    <%- include('../seat-maps/nelum.ejs') %>
+                                <% } %>
+                                 <% if (enrichedEvent.location ==  "Musaeus College") { %>
+                                    <%- include('../seat-maps/musaeus.ejs') %>
+                                <% } %>
+                             
+
+                                   
+                                    <input type="hidden" name="seat_configuration" id="seat_configuration" >   
+                                    <button type="submit" class="btn btn-primary mt-4">Save</button>
                                 </form>
                             </div>
                            
@@ -318,12 +315,12 @@ const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
 document.addEventListener('DOMContentLoaded', () => {
-    const definedTicketTypes = [ // Renamed to avoid conflict with the global 'ticketTypes'
-        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' }, // Black color for unavailable
-        ...seatTicketTypes.map(tt => ({...tt, type_id: tt.type_id || tt.ticketTypeId})) // Ensure type_id consistency
+    const definedTicketTypes = [
+        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' },
+        ...seatTicketTypes.map(tt => ({...tt, type_id: tt.type_id || tt.ticketTypeId}))
     ];
 
-    const seatConfiguration = mapedSeats.map(seat => {
+    let seatConfiguration = mapedSeats.map(seat => { // Made it 'let' to allow reassignment if needed, though direct modification is current practice
         const ticketType = definedTicketTypes.find(type => type.type_id === seat.type_id);
         const color = ticketType ? ticketType.color : '#C4C4C4';
         const status = seat.status || (ticketType && ticketType.isUnavailable ? 'unavailable' : 'available');
@@ -331,27 +328,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let selectedTicketType = null;
-    let selectedSeatsGroup = new Set(); // To store IDs of currently highlighted seats
+    let selectedSeatsGroup = new Set();
 
     const ticketTypeSelect = document.getElementById('ticket-type-select');
     const seatConfigurationInput = document.getElementById('seat_configuration');
-    const seats = document.querySelectorAll('.seat-group');
+    const allSeatGroupsOnPage = document.querySelectorAll('.seat-group'); // All potential seat groups
     const assignToSelectedBtn = document.getElementById('assign-to-selected-btn');
 
+    // --- Marquee Selection Variables ---
+    let isDragging = false;
+    let marqueeRectDiv = null;
+    let dragStartX, dragStartY;
+    let svgSeatMapContainer = null; // This will be the SVG element
+    let wasDragOperation = false; // Flag to distinguish click from drag
+
+    // Function to initialize marquee selection elements and listeners
+    function initializeMarqueeSelection() {
+        svgSeatMapContainer = document.querySelector('#profile1 svg'); // Find the main SVG for the seat map
+
+        if (!svgSeatMapContainer) {
+            console.warn('Seat map SVG container not found. Marquee selection will be disabled.');
+            return;
+        }
+
+        // Ensure the parent of the SVG can act as a positioning context for the marquee div
+        if (svgSeatMapContainer.parentElement) {
+            svgSeatMapContainer.parentElement.style.position = 'relative';
+        }
+
+        marqueeRectDiv = document.createElement('div');
+        marqueeRectDiv.className = 'marquee-selection-visual'; // Apply CSS class
+        marqueeRectDiv.style.display = 'none'; // Initially hidden
+        (svgSeatMapContainer.parentElement || document.body).appendChild(marqueeRectDiv);
+
+        svgSeatMapContainer.addEventListener('mousedown', handleSvgMouseDown);
+    }
+
     // Populate the ticket type dropdown
-    // Add a "Clear Assignment" option explicitly if desired, or handle via "Select Ticket Type" (value="")
     const clearOption = document.createElement('option');
-    clearOption.value = ""; // Empty value for clearing
+    clearOption.value = "";
     clearOption.textContent = "Clear Assignment / Set to Default";
     ticketTypeSelect.appendChild(clearOption);
 
     definedTicketTypes.forEach((type) => {
         const option = document.createElement('option');
-        option.value = JSON.stringify(type); // Store the whole object
+        option.value = JSON.stringify(type);
         option.textContent = type.ticketTypeName;
         if (type.color) {
-            option.style.backgroundColor = type.color; // Visual cue for type color
-            // Basic contrast for text in dropdown
+            option.style.backgroundColor = type.color;
             const hex = type.color.replace('#', '');
             const r = parseInt(hex.substring(0, 2), 16);
             const g = parseInt(hex.substring(2, 4), 16);
@@ -362,49 +386,30 @@ document.addEventListener('DOMContentLoaded', () => {
         ticketTypeSelect.appendChild(option);
     });
 
-    // Event listener for ticket type selection
     ticketTypeSelect.addEventListener('change', (event) => {
         if (event.target.value) {
             selectedTicketType = JSON.parse(event.target.value);
-            console.log('Selected Ticket Type for Assignment:', selectedTicketType);
         } else {
-            selectedTicketType = null; // Represents "Clear Assignment" or no selection
-            console.log('Selected "Clear Assignment" or no type selected.');
+            selectedTicketType = null;
         }
+        console.log('Selected Ticket Type for Assignment:', selectedTicketType || 'Clear/None');
     });
 
-    // Function to update the visual state of a seat
     function updateSeatVisual(seatGroup, ticketType) {
-        const seatElements = seatGroup.querySelectorAll('path, circle, rect'); // More generic
-        if (ticketType && ticketType.color) {
-            seatElements.forEach(element => {
-                element.style.fill = ticketType.color;
-            });
-        } else {
-            // Default color (original gray) or for "Clear Assignment"
-            seatElements.forEach(element => {
-                element.style.fill = '#C4C4C4';
-            });
-        }
+        const seatElements = seatGroup.querySelectorAll('path, circle, rect');
+        const fillColor = (ticketType && ticketType.color) ? ticketType.color : '#C4C4C4';
+        seatElements.forEach(element => {
+            element.style.fill = fillColor;
+        });
     }
 
-    // --- Initial Rendering of Mapped Seats ---
     seatConfiguration.forEach(configuredSeat => {
         const seatGroup = document.getElementById(configuredSeat.seatId);
         if (seatGroup) {
-            const correspondingTicketType = definedTicketTypes.find(
-                type => type.type_id === configuredSeat.type_id
-            );
-            if (correspondingTicketType) {
-                updateSeatVisual(seatGroup, correspondingTicketType);
-            } else if (configuredSeat.status === 'unavailable') {
-                const unavailableType = definedTicketTypes.find(type => type.isUnavailable);
-                updateSeatVisual(seatGroup, unavailableType);
-            } else {
-                updateSeatVisual(seatGroup, null); // Default grey if no type and not unavailable
-            }
+            const correspondingTicketType = definedTicketTypes.find(type => type.type_id === configuredSeat.type_id);
+            updateSeatVisual(seatGroup, correspondingTicketType || (configuredSeat.status === 'unavailable' ? definedTicketTypes.find(t => t.isUnavailable) : null));
             
-            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
+            if (['booked', 'issued', 'pending'].includes(configuredSeat.status)) {
                 seatGroup.style.cursor = 'not-allowed';
                 seatGroup.classList.add('seat-status-locked');
             } else {
@@ -414,17 +419,146 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Event listener for seat clicks (for selection)
-    seats.forEach((seatGroup) => {
-        seatGroup.addEventListener('click', () => {
+    // --- Mouse Event Handlers for Marquee Selection ---
+    function handleSvgMouseDown(event) {
+        // Only start drag if mousedown is on the SVG itself, not on a seat (unless specific condition)
+        if (event.target !== svgSeatMapContainer && !event.target.closest('svg')) {
+             // If the target is not the SVG background itself (e.g. it's a seat path),
+             // let the seat's click handler manage it primarily for single clicks.
+             // Drag will only start if mouse moves significantly.
+        }
+
+        event.preventDefault();
+        wasDragOperation = false; // Reset flag
+        isDragging = true;
+        
+        const svgRect = svgSeatMapContainer.getBoundingClientRect();
+        // For marquee div, coordinates are relative to its offset parent.
+        // We use clientX/Y and then adjust.
+        dragStartX = event.clientX;
+        dragStartY = event.clientY;
+
+        const marqueeParent = marqueeRectDiv.offsetParent || document.body;
+        const parentRect = marqueeParent.getBoundingClientRect();
+
+        marqueeRectDiv.style.left = `${dragStartX - parentRect.left}px`;
+        marqueeRectDiv.style.top = `${dragStartY - parentRect.top}px`;
+        marqueeRectDiv.style.width = '0px';
+        marqueeRectDiv.style.height = '0px';
+        marqueeRectDiv.style.display = 'block';
+
+        document.addEventListener('mousemove', handleDocumentMouseMove);
+        document.addEventListener('mouseup', handleDocumentMouseUp);
+    }
+
+    function handleDocumentMouseMove(event) {
+        if (!isDragging) return;
+        event.preventDefault();
+        wasDragOperation = true; // Mark that a drag occurred
+
+        let currentX = event.clientX;
+        let currentY = event.clientY;
+        
+        const marqueeParent = marqueeRectDiv.offsetParent || document.body;
+        const parentRect = marqueeParent.getBoundingClientRect();
+
+        let newLeft = Math.min(dragStartX, currentX) - parentRect.left;
+        let newTop = Math.min(dragStartY, currentY) - parentRect.top;
+        let newWidth = Math.abs(currentX - dragStartX);
+        let newHeight = Math.abs(currentY - dragStartY);
+
+        marqueeRectDiv.style.left = `${newLeft}px`;
+        marqueeRectDiv.style.top = `${newTop}px`;
+        marqueeRectDiv.style.width = `${newWidth}px`;
+        marqueeRectDiv.style.height = `${newHeight}px`;
+    }
+
+    function handleDocumentMouseUp(event) {
+        if (!isDragging) return;
+        isDragging = false;
+        marqueeRectDiv.style.display = 'none';
+        document.removeEventListener('mousemove', handleDocumentMouseMove);
+        document.removeEventListener('mouseup', handleDocumentMouseUp);
+
+        // Only process as marquee selection if it was a true drag, not a click
+        if (!wasDragOperation || (parseFloat(marqueeRectDiv.style.width) < 10 && parseFloat(marqueeRectDiv.style.height) < 10)) {
+             // If it wasn't a significant drag, let the click handler for individual seats take over.
+             // wasDragOperation will be false if mousemove didn't happen.
+            return;
+        }
+        
+        const marqueeVisualFinalRect = marqueeRectDiv.getBoundingClientRect(); // Page coordinates
+
+        const newlySelectedByMarquee = new Set();
+        allSeatGroupsOnPage.forEach(seatGroup => {
+            // Check if the seat is within the currently active SVG map (important if multiple maps could exist in DOM hidden)
+            if (!svgSeatMapContainer || !svgSeatMapContainer.contains(seatGroup)) {
+                return;
+            }
+
+            const seatId = seatGroup.id;
+            const seatRect = seatGroup.getBoundingClientRect(); // Page coordinates
+
+            const intersects = !(
+                seatRect.right < marqueeVisualFinalRect.left ||
+                seatRect.left > marqueeVisualFinalRect.right ||
+                seatRect.bottom < marqueeVisualFinalRect.top ||
+                seatRect.top > marqueeVisualFinalRect.bottom
+            );
+
+            if (intersects) {
+                const configuredSeat = seatConfiguration.find(s => s.seatId === seatId);
+                const currentStatus = configuredSeat ? configuredSeat.status : 'available';
+                if (!['booked', 'issued', 'pending'].includes(currentStatus)) {
+                    newlySelectedByMarquee.add(seatId);
+                }
+            }
+        });
+
+        if (!event.shiftKey) { // If Shift is not held, marquee replaces current selection
+            selectedSeatsGroup.forEach(seatId => {
+                if (!newlySelectedByMarquee.has(seatId)) {
+                    document.getElementById(seatId)?.classList.remove('seat-highlighted');
+                }
+            });
+            selectedSeatsGroup.clear();
+        }
+
+        newlySelectedByMarquee.forEach(seatId => {
+            selectedSeatsGroup.add(seatId); // Set handles duplicates
+            document.getElementById(seatId)?.classList.add('seat-highlighted');
+        });
+        console.log('Selected seats (marquee):', Array.from(selectedSeatsGroup));
+    }
+
+
+    // Event listener for individual seat clicks (for selection toggle)
+    allSeatGroupsOnPage.forEach((seatGroup) => {
+        seatGroup.addEventListener('click', (event) => {
+            if (wasDragOperation) { // If a drag just completed, don't process this as a click
+                return;
+            }
+            // Ensure the clicked seat is part of the active SVG map
+            if (svgSeatMapContainer && !svgSeatMapContainer.contains(seatGroup)) {
+                return;
+            }
+
             const seatId = seatGroup.id;
             const configuredSeat = seatConfiguration.find(s => s.seatId === seatId);
             const currentStatus = configuredSeat ? configuredSeat.status : null;
 
-            if (currentStatus === 'booked' || currentStatus === 'issued' || currentStatus === 'pending') {
+            if (['booked', 'issued', 'pending'].includes(currentStatus)) {
                 alert(`This seat is already ${currentStatus} and cannot be modified.`);
                 return;
             }
+
+            if (!event.shiftKey && !selectedSeatsGroup.has(seatId) && selectedSeatsGroup.size > 0) {
+                 // If not holding shift, and clicking a new seat, and there are existing selections,
+                 // clear previous selection (standard behavior for non-additive selection)
+                selectedSeatsGroup.forEach(id => document.getElementById(id)?.classList.remove('seat-highlighted'));
+                selectedSeatsGroup.clear();
+            }
+
 
             if (selectedSeatsGroup.has(seatId)) {
                 selectedSeatsGroup.delete(seatId);
@@ -433,87 +567,70 @@ document.addEventListener('DOMContentLoaded', () => {
                 selectedSeatsGroup.add(seatId);
                 seatGroup.classList.add('seat-highlighted');
             }
-            console.log('Currently selected seats:', Array.from(selectedSeatsGroup));
+            console.log('Selected seats (click):', Array.from(selectedSeatsGroup));
         });
     });
 
-    // Event listener for "Assign to Selected" button
+    // Event listener for "Assign to Selected" button (largely unchanged)
     assignToSelectedBtn.addEventListener('click', () => {
         if (selectedSeatsGroup.size === 0) {
             alert('Please select one or more seats first.');
             return;
         }
 
-        // Case 1: "Clear Assignment" is selected from dropdown (selectedTicketType is null due to empty value)
-        if (selectedTicketType === null && ticketTypeSelect.value === "") {
-            selectedSeatsGroup.forEach(seatId => {
-                const seatGroup = document.getElementById(seatId);
-                if (!seatGroup) return;
+        const isClearingAssignment = selectedTicketType === null && ticketTypeSelect.value === "";
 
-                const existingSeatIndex = seatConfiguration.findIndex(s => s.seatId === seatId);
+        if (!isClearingAssignment && !selectedTicketType) {
+            alert('Please select a valid ticket type from the dropdown to assign, or choose "Clear Assignment".');
+            return;
+        }
+
+        selectedSeatsGroup.forEach(seatId => {
+            const seatGroup = document.getElementById(seatId);
+            if (!seatGroup) return;
+
+            let existingSeatIndex = seatConfiguration.findIndex(s => s.seatId === seatId);
+            
+            if (existingSeatIndex > -1 && ['booked', 'issued', 'pending'].includes(seatConfiguration[existingSeatIndex].status)) {
+                console.warn(`Seat ${seatId} is ${seatConfiguration[existingSeatIndex].status}, cannot change.`);
+                // Optionally remove highlight even if not changed:
+                // seatGroup.classList.remove('seat-highlighted');
+                return; 
+            }
+
+            if (isClearingAssignment) {
                 if (existingSeatIndex > -1) {
-                     // Check status again before modifying
-                    if (['booked', 'issued', 'pending'].includes(seatConfiguration[existingSeatIndex].status)) {
-                        console.warn(`Seat ${seatId} is ${seatConfiguration[existingSeatIndex].status}, cannot clear.`);
-                        return; // Skip locked seats
-                    }
-                    seatConfiguration.splice(existingSeatIndex, 1); // Remove from config makes it default
+                    seatConfiguration.splice(existingSeatIndex, 1); 
                 }
-                updateSeatVisual(seatGroup, null); // Revert to default visual
-                seatGroup.classList.remove('seat-highlighted');
-            });
-        } 
-        // Case 2: A specific ticket type is selected
-        else if (selectedTicketType) {
-            selectedSeatsGroup.forEach(seatId => {
-                const seatGroup = document.getElementById(seatId);
-                if (!seatGroup) return;
-
-                let existingSeatIndex = seatConfiguration.findIndex(s => s.seatId === seatId);
-                
-                // Check status again before modifying
-                if (existingSeatIndex > -1 && ['booked', 'issued', 'pending'].includes(seatConfiguration[existingSeatIndex].status)) {
-                    console.warn(`Seat ${seatId} is ${seatConfiguration[existingSeatIndex].status}, cannot assign new type.`);
-                    seatGroup.classList.remove('seat-highlighted'); // Still remove highlight
-                    return; // Skip locked seats
-                }
-
+                updateSeatVisual(seatGroup, null);
+            } else { // Assigning a specific ticket type
                 const newSeatData = {
                     price: selectedTicketType.price,
                     seatId: seatId,
                     status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
                     type_id: selectedTicketType.type_id,
                     ticketTypeName: selectedTicketType.ticketTypeName,
-                    color: selectedTicketType.color // Store color for consistency
+                    color: selectedTicketType.color
                 };
-
                 if (existingSeatIndex > -1) {
                     seatConfiguration[existingSeatIndex] = { ...seatConfiguration[existingSeatIndex], ...newSeatData };
                 } else {
                     seatConfiguration.push(newSeatData);
                 }
                 updateSeatVisual(seatGroup, selectedTicketType);
-                seatGroup.classList.remove('seat-highlighted');
-            });
-        } 
-        // Case 3: No valid ticket type or clear option is chosen from dropdown
-        else {
-            alert('Please select a ticket type from the dropdown to assign, or choose "Clear Assignment".');
-            return;
-        }
+            }
+            seatGroup.classList.remove('seat-highlighted'); // Remove highlight after processing
+        });
 
-        // Update the hidden input and clear selection
         seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
         console.log('Updated Seat Configuration:', seatConfiguration);
-        selectedSeatsGroup.clear(); // Clear the set of selected seat IDs
+        selectedSeatsGroup.clear();
     });
+    
+    initializeMarqueeSelection(); // Call to set up marquee listeners and div
 
-    // Add CSS for hover and highlighting effects
     const style = document.createElement('style');
     style.innerHTML = `
-        .clickable-seat {
-            /* cursor: pointer; (already being set) */
-        }
         .clickable-seat:not(.seat-status-locked):hover path,
         .clickable-seat:not(.seat-status-locked):hover circle,
         .clickable-seat:not(.seat-status-locked):hover rect {
@@ -522,17 +639,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         .seat-status-locked {
             cursor: not-allowed !important;
-            /* filter: grayscale(50%); Consider if this is visually good with colored booked seats */
         }
         .seat-highlighted path, .seat-highlighted circle, .seat-highlighted rect {
-            stroke: #007bff; /* Blue outline for highlight */
-            stroke-width: 2px; /* Adjust for visibility */
-            stroke-dasharray: 3, 2; /* Optional: dashed line for highlight */
+            stroke: #005cbf; /* Darker Blue stroke for highlight */
+            stroke-width: 2.5px; /* Made slightly thicker */
+            stroke-linejoin: round; 
+        }
+        .marquee-selection-visual { /* Style for the marquee rectangle */
+            position: absolute;
+            border: 1px dashed #007bff;
+            background-color: rgba(0, 123, 255, 0.15);
+            pointer-events: none; /* Important: so it doesn't capture mouse events itself */
+            z-index: 1000; /* Ensure it's on top */
         }
     `;
     document.head.appendChild(style);
 
-    // Initial population of the hidden input field
     seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
     console.log('Initial Seat Configuration:', seatConfiguration);
 });
