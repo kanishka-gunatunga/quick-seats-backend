@@ -193,30 +193,33 @@ height: auto;
                                 </form>
                             </div>
                             <div class="tab-pane " id="profile1">
-                                <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
-                                 <div class="col-md-4 mb-3 mt-3">
-                                    <label class="form-label">Assign Ticket Type</label>
-                                    <select class="form-control" id="ticket-type-select" data-width="100%">
-                                         <option value="">Select Ticket Type</option>
-                                    </select>
+    <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
+        <div class="row align-items-end"> <%- /* Added a row for better alignment */ %>
+            <div class="col-md-4 mb-3 mt-3">
+                <label class="form-label">Assign Ticket Type</label>
+                <select class="form-control" id="ticket-type-select" data-width="100%">
+                    <option value="">Select Ticket Type</option>
+                </select>
+            </div>
+            <div class="col-md-4 mb-3 mt-3"> <%- /* Added column for the new button */ %>
+                <button type="button" id="assign-to-selected-btn" class="btn btn-info">Assign to Selected</button>
+            </div>
+        </div>
 
-                                </div>   
-                                <% if (enrichedEvent.location ==  "BMICH") { %>
-                                    <%- include('../seat-maps/bmich.ejs') %>
-                                <% } %>
-                                <% if (enrichedEvent.location ==  "Nelum Pokuna") { %>
-                                    <%- include('../seat-maps/nelum.ejs') %>
-                                <% } %>
-                                 <% if (enrichedEvent.location ==  "Musaeus College") { %>
-                                    <%- include('../seat-maps/musaeus.ejs') %>
-                                <% } %>
-                             
-
-                                   
-                                    <input type="hidden" name="seat_configuration" id="seat_configuration" >   
-                                    <button type="submit" class="btn btn-primary mt-4">Save</button>
-                                </form>
-                            </div>
+        <% if (enrichedEvent.location == "BMICH") { %>
+            <%- include('../seat-maps/bmich.ejs') %>
+        <% } %>
+        <% if (enrichedEvent.location == "Nelum Pokuna") { %>
+            <%- include('../seat-maps/nelum.ejs') %>
+        <% } %>
+        <% if (enrichedEvent.location == "Musaeus College") { %>
+            <%- include('../seat-maps/musaeus.ejs') %>
+        <% } %>
+        
+        <input type="hidden" name="seat_configuration" id="seat_configuration" >    
+        <button type="submit" class="btn btn-primary mt-4">Save Seat Configuration</button>
+    </form>
+</div>
                            
                         </div>
 
