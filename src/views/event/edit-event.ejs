@@ -193,30 +193,30 @@ height: auto;
                                 </form>
                             </div>
                             <div class="tab-pane " id="profile1">
-    <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
-        <div class="col-md-4 mb-3 mt-3">
-            <label class="form-label">Assign Ticket Type</label>
-            <select class="form-control" id="ticket-type-select" data-width="100%">
-                <option value="">Select Ticket Type</option>
-            </select>
-        </div>
+                                <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
+                                 <div class="col-md-4 mb-3 mt-3">
+                                    <label class="form-label">Assign Ticket Type</label>
+                                    <select class="form-control" id="ticket-type-select" data-width="100%">
+                                         <option value="">Select Ticket Type</option>
+                                    </select>
 
-        <div class="seat-map-container" style="position: relative; overflow: hidden;">
-            <% if (enrichedEvent.location == "BMICH") { %>
-                <%- include('../seat-maps/bmich.ejs') %>
-            <% } %>
-            <% if (enrichedEvent.location == "Nelum Pokuna") { %>
-                <%- include('../seat-maps/nelum.ejs') %>
-            <% } %>
-            <% if (enrichedEvent.location == "Musaeus College") { %>
-                <%- include('../seat-maps/musaeus.ejs') %>
-            <% } %>
-        </div>
+                                </div>   
+                                <% if (enrichedEvent.location ==  "BMICH") { %>
+                                    <%- include('../seat-maps/bmich.ejs') %>
+                                <% } %>
+                                <% if (enrichedEvent.location ==  "Nelum Pokuna") { %>
+                                    <%- include('../seat-maps/nelum.ejs') %>
+                                <% } %>
+                                 <% if (enrichedEvent.location ==  "Musaeus College") { %>
+                                    <%- include('../seat-maps/musaeus.ejs') %>
+                                <% } %>
+                             
 
-        <input type="hidden" name="seat_configuration" id="seat_configuration">
-        <button type="submit" class="btn btn-primary mt-4">Save</button>
-    </form>
-</div>
+                                   
+                                    <input type="hidden" name="seat_configuration" id="seat_configuration" >   
+                                    <button type="submit" class="btn btn-primary mt-4">Save</button>
+                                </form>
+                            </div>
                            
                         </div>
 
@@ -316,7 +316,7 @@ const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %
 
 document.addEventListener('DOMContentLoaded', () => {
     const ticketTypes = [
-        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' }, // Black color for unavailable
+        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000' },
         ...seatTicketTypes
     ];
 
@@ -324,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ticketType = ticketTypes.find(type => type.type_id === seat.type_id);
         const color = ticketType ? ticketType.color : '#C4C4C4';
         const status = seat.status || (ticketType && ticketType.isUnavailable ? 'unavailable' : 'available');
+        
         return {
             ...seat,
             color: color,
@@ -332,27 +333,26 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     let selectedTicketType = null;
+    let isSelecting = false;
+    let selectionStart = { x: 0, y: 0 };
+    let selectionEnd = { x: 0, y: 0 };
+    let selectionBox = null;
+    const selectedSeats = new Set();
 
     const ticketTypeSelect = document.getElementById('ticket-type-select');
     const seatConfigurationInput = document.getElementById('seat_configuration');
-    const seats = document.querySelectorAll('.seat-group'); // All seat SVG groups
+    const seats = document.querySelectorAll('.seat-group');
+    const seatMapContainer = document.querySelector('.seat-map-container') || document.body;
 
-    // Get the container for the seat map (assuming it's a div wrapping the SVG)
-    // You'll need to make sure your seat map SVG is inside a div with an ID
-    const seatMapContainer = document.querySelector('.seat-map-container'); // You need to add this class/id to your SVG parent div
-
-    // Create the selection rectangle element
-    const selectionRect = document.createElement('div');
-    selectionRect.style.position = 'absolute';
-    selectionRect.style.border = '1px dashed #007bff';
-    selectionRect.style.backgroundColor = 'rgba(0, 123, 255, 0.2)';
-    selectionRect.style.display = 'none'; // Hidden initially
-    selectionRect.style.pointerEvents = 'none'; // Allows clicks to pass through to elements below
-    document.body.appendChild(selectionRect);
-
-    let isSelecting = false;
-    let startX, startY;
-    let currentSelectedSeats = new Set(); // To store IDs of seats currently highlighted by the selection rectangle
+    // Create selection box element
+    selectionBox = document.createElement('div');
+    selectionBox.style.position = 'absolute';
+    selectionBox.style.border = '2px dashed #3498db';
+    selectionBox.style.backgroundColor = 'rgba(52, 152, 219, 0.2)';
+    selectionBox.style.pointerEvents = 'none';
+    selectionBox.style.display = 'none';
+    selectionBox.style.zIndex = '1000';
+    seatMapContainer.appendChild(selectionBox);
 
     // Populate the ticket type dropdown
     ticketTypes.forEach((type) => {
@@ -366,10 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ticketTypeSelect.addEventListener('change', (event) => {
         if (event.target.value) {
             selectedTicketType = JSON.parse(event.target.value);
-            console.log('Selected Ticket Type:', selectedTicketType);
         } else {
             selectedTicketType = null;
-            console.log('No ticket type selected. Please select a ticket type.');
         }
     });
 
@@ -382,57 +380,128 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         } else {
             seatPaths.forEach(path => {
-                path.style.fill = '#C4C4C4'; // Original gray
+                path.style.fill = '#C4C4C4';
             });
         }
     }
 
-    // Function to apply the selected ticket type to a single seat
-    function applyTicketTypeToSeat(seatId) {
-        const seatGroup = document.getElementById(seatId);
-        if (!seatGroup) return;
+    // Function to get seat elements in selection area
+    function getSeatsInSelection() {
+        const seatsInSelection = [];
+        const rect = {
+            left: Math.min(selectionStart.x, selectionEnd.x),
+            top: Math.min(selectionStart.y, selectionEnd.y),
+            right: Math.max(selectionStart.x, selectionEnd.x),
+            bottom: Math.max(selectionStart.y, selectionEnd.y)
+        };
 
+        seats.forEach(seat => {
+            const seatRect = seat.getBoundingClientRect();
+            const seatCenter = {
+                x: seatRect.left + seatRect.width / 2,
+                y: seatRect.top + seatRect.height / 2
+            };
+
+            if (seatCenter.x >= rect.left && seatCenter.x <= rect.right &&
+                seatCenter.y >= rect.top && seatCenter.y <= rect.bottom) {
+                seatsInSelection.push(seat);
+            }
+        });
+
+        return seatsInSelection;
+    }
+
+    // Mouse down event - start selection
+    seatMapContainer.addEventListener('mousedown', (e) => {
         if (!selectedTicketType) {
             alert('Please select a ticket type first from the dropdown!');
             return;
         }
 
-        const existingSeatIndex = seatConfiguration.findIndex((seat) => seat.seatId === seatId);
-        const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
+        isSelecting = true;
+        selectionStart = {
+            x: e.clientX,
+            y: e.clientY
+        };
+        selectionEnd = { ...selectionStart };
 
-        if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
-            // alert(`Seat ${seatId} is already ${currentSeatStatus} and cannot be changed.`); // Maybe too many alerts for multi-selection
-            return; // Skip locked seats
-        }
+        selectionBox.style.left = `${selectionStart.x}px`;
+        selectionBox.style.top = `${selectionStart.y}px`;
+        selectionBox.style.width = '0';
+        selectionBox.style.height = '0';
+        selectionBox.style.display = 'block';
+    });
 
-        if (existingSeatIndex > -1) {
-            if (selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].status === 'unavailable' ||
-                (!selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].type_id === selectedTicketType.type_id)
-            ) {
-                seatConfiguration.splice(existingSeatIndex, 1);
-                updateSeatVisual(seatGroup, null); // Revert to default color
+    // Mouse move event - update selection box
+    seatMapContainer.addEventListener('mousemove', (e) => {
+        if (!isSelecting) return;
+
+        selectionEnd = {
+            x: e.clientX,
+            y: e.clientY
+        };
+
+        const left = Math.min(selectionStart.x, selectionEnd.x);
+        const top = Math.min(selectionStart.y, selectionEnd.y);
+        const width = Math.abs(selectionEnd.x - selectionStart.x);
+        const height = Math.abs(selectionEnd.y - selectionStart.y);
+
+        selectionBox.style.left = `${left}px`;
+        selectionBox.style.top = `${top}px`;
+        selectionBox.style.width = `${width}px`;
+        selectionBox.style.height = `${height}px`;
+    });
+
+    // Mouse up event - finalize selection
+    seatMapContainer.addEventListener('mouseup', (e) => {
+        if (!isSelecting) return;
+        isSelecting = false;
+        selectionBox.style.display = 'none';
+
+        const selectedSeatGroups = getSeatsInSelection();
+        
+        selectedSeatGroups.forEach(seatGroup => {
+            const seatId = seatGroup.id;
+            const existingSeatIndex = seatConfiguration.findIndex((seat) => seat.seatId === seatId);
+            const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
+
+            // Skip if seat is booked/issued/pending
+            if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
+                return;
+            }
+
+            if (existingSeatIndex > -1) {
+                // Update existing seat
+                if (selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].status === 'unavailable' ||
+                    (!selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].type_id === selectedTicketType.type_id)
+                ) {
+                    seatConfiguration.splice(existingSeatIndex, 1);
+                    updateSeatVisual(seatGroup, null);
+                } else {
+                    seatConfiguration[existingSeatIndex].price = selectedTicketType.price;
+                    seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
+                    seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
+                    seatConfiguration[existingSeatIndex].status = selectedTicketType.isUnavailable ? 'unavailable' : 'available';
+                    updateSeatVisual(seatGroup, selectedTicketType);
+                }
             } else {
-                seatConfiguration[existingSeatIndex].price = selectedTicketType.price;
-                seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
-                seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
-                seatConfiguration[existingSeatIndex].status = selectedTicketType.isUnavailable ? 'unavailable' : 'available';
+                // Add new seat
+                const newSeat = {
+                    price: selectedTicketType.price,
+                    seatId: seatId,
+                    status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
+                    type_id: selectedTicketType.type_id,
+                    ticketTypeName: selectedTicketType.ticketTypeName,
+                };
+                seatConfiguration.push(newSeat);
                 updateSeatVisual(seatGroup, selectedTicketType);
             }
-        } else {
-            const newSeat = {
-                price: selectedTicketType.price,
-                seatId: seatId,
-                status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
-                type_id: selectedTicketType.type_id,
-                ticketTypeName: selectedTicketType.ticketTypeName,
-            };
-            seatConfiguration.push(newSeat);
-            updateSeatVisual(seatGroup, selectedTicketType);
-        }
-    }
+        });
 
+        seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+    });
 
-    // --- Initial Rendering of Mapped Seats ---
+    // Initial rendering of mapped seats
     seatConfiguration.forEach(configuredSeat => {
         const seatGroup = document.getElementById(configuredSeat.seatId);
         if (seatGroup) {
@@ -449,158 +518,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
                 seatGroup.style.cursor = 'not-allowed';
-                seatGroup.classList.add('seat-status-locked'); // Add class for styling locked seats
             }
         }
     });
 
-
-    // Event listener for single seat clicks (still useful for individual changes)
-    seats.forEach((seatGroup) => {
-        // Only add click listener if not a locked seat
-        if (!seatGroup.classList.contains('seat-status-locked')) {
-            seatGroup.classList.add('clickable-seat');
-            seatGroup.addEventListener('click', () => {
-                const seatId = seatGroup.id;
-                applyTicketTypeToSeat(seatId);
-                seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
-                console.log('Current Seat Configuration (single click):', seatConfiguration);
-            });
-        }
-    });
-
-    // --- Marquee Selection Logic ---
-
-    // Get the bounding box of the seat map container to calculate relative positions
-    let containerRect;
-    if (seatMapContainer) {
-        containerRect = seatMapContainer.getBoundingClientRect();
-    } else {
-        console.warn("Seat map container with class 'seat-map-container' not found. Marquee selection might not work as expected.");
-    }
-
-    document.addEventListener('mousedown', (e) => {
-        // Check if the click is within the seat map container and not on a dropdown or button
-        if (seatMapContainer && seatMapContainer.contains(e.target) && e.button === 0) { // Left mouse button
-            isSelecting = true;
-            startX = e.clientX;
-            startY = e.clientY;
-
-            selectionRect.style.left = startX + 'px';
-            selectionRect.style.top = startY + 'px';
-            selectionRect.style.width = '0';
-            selectionRect.style.height = '0';
-            selectionRect.style.display = 'block';
-
-            currentSelectedSeats.clear();
-            // Remove highlight from any previously highlighted seats
-            document.querySelectorAll('.seat-highlight').forEach(seat => {
-                seat.classList.remove('seat-highlight');
-            });
-        }
-    });
-
-    document.addEventListener('mousemove', (e) => {
-        if (!isSelecting) return;
-
-        const currentX = e.clientX;
-        const currentY = e.clientY;
-
-        const width = currentX - startX;
-        const height = currentY - startY;
-
-        selectionRect.style.left = (Math.min(startX, currentX)) + 'px';
-        selectionRect.style.top = (Math.min(startY, currentY)) + 'px';
-        selectionRect.style.width = (Math.abs(width)) + 'px';
-        selectionRect.style.height = (Math.abs(height)) + 'px';
-
-        const rectBounds = selectionRect.getBoundingClientRect();
-
-        // Iterate over all seats and check for intersection
-        seats.forEach(seatGroup => {
-            // Skip locked seats from being highlighted
-            if (seatGroup.classList.contains('seat-status-locked')) {
-                return;
-            }
-
-            const seatBounds = seatGroup.getBoundingClientRect();
-
-            // Check for intersection
-            if (
-                rectBounds.left < seatBounds.right &&
-                rectBounds.right > seatBounds.left &&
-                rectBounds.top < seatBounds.bottom &&
-                rectBounds.bottom > seatBounds.top
-            ) {
-                if (!currentSelectedSeats.has(seatGroup.id)) {
-                    currentSelectedSeats.add(seatGroup.id);
-                    seatGroup.classList.add('seat-highlight'); // Add a highlight class
-                }
-            } else {
-                if (currentSelectedSeats.has(seatGroup.id)) {
-                    currentSelectedSeats.delete(seatGroup.id);
-                    seatGroup.classList.remove('seat-highlight'); // Remove highlight
-                }
-            }
-        });
-    });
-
-    document.addEventListener('mouseup', () => {
-        if (!isSelecting) return;
-        isSelecting = false;
-        selectionRect.style.display = 'none'; // Hide the selection rectangle
-
-        if (!selectedTicketType) {
-            alert('Please select a ticket type first from the dropdown to apply changes.');
-            // Clear highlights if no ticket type was selected
-            document.querySelectorAll('.seat-highlight').forEach(seat => {
-                seat.classList.remove('seat-highlight');
-            });
-            currentSelectedSeats.clear();
-            return;
-        }
-
-        // Apply the selected ticket type to all seats that were in the selection area
-        currentSelectedSeats.forEach(seatId => {
-            applyTicketTypeToSeat(seatId);
-        });
-
-        // Clear highlight from all seats after selection is applied
-        document.querySelectorAll('.seat-highlight').forEach(seat => {
-            seat.classList.remove('seat-highlight');
-        });
-        currentSelectedSeats.clear();
-
-        // Update the hidden input field after batch processing
-        seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
-        console.log('Current Seat Configuration (marquee selection):', seatConfiguration);
-    });
-
-
-    // Optional: Add some basic CSS for hover effect on seats and selection highlight
+    // CSS for selection and hover effects
     const style = document.createElement('style');
     style.innerHTML = `
         .clickable-seat {
             cursor: pointer;
         }
         .clickable-seat:hover {
-            opacity: 0.8; /* Dim on hover */
+            opacity: 0.8;
             transition: opacity 0.2s ease-in-out;
         }
         .seat-status-locked {
             cursor: not-allowed !important;
-            filter: grayscale(50%); /* Example: make them a bit desaturated */
+            filter: grayscale(50%);
         }
-        .seat-highlight path {
-            stroke: #007bff; /* Highlight border */
-            stroke-width: 2px;
-            box-shadow: 0 0 5px rgba(0, 123, 255, 0.5); /* Optional subtle glow */
+        .seat-map-container {
+            position: relative;
+            user-select: none;
         }
     `;
     document.head.appendChild(style);
 
     // Initial population of the hidden input field
     seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
-    console.log('Initial Seat Configuration:', seatConfiguration);
 });
 </script>
