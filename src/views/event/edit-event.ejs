@@ -201,6 +201,7 @@ height: auto;
                                     </select>
 
                                 </div>   
+                                <div class="text-center mt-2 mb-2"><p class="text-muted left-user-info">When configuring ticket select each by clicking them or use the mouse to highlight a area.</p></div>
                                 <% if (enrichedEvent.location ==  "BMICH") { %>
                                     <%- include('../seat-maps/bmich.ejs') %>
                                 <% } %>
@@ -595,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const ticketTypeSelect = document.getElementById('ticket-type-select');
     const seatConfigurationInput = document.getElementById('seat_configuration');
     const seats = document.querySelectorAll('.seat-group');
-    const svg = document.getElementById("mySvg");
+    const svg = document.getElementById("seat-map-svg");
 
     // Populate the ticket type dropdown
     ticketTypes.forEach((type) => {
