@@ -634,10 +634,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function applyTicketTypeToSeat(seatId) {
         const seatGroup = document.getElementById(seatId);
 
-        if (!selectedTicketType) {
-            alert('Please select a ticket type first from the dropdown!');
-            return;
-        }
+        // This check is removed here because it's now handled before starting the selection loop
+        // if (!selectedTicketType) {
+        //     alert('Please select a ticket type first from the dropdown!');
+        //     return;
+        // }
 
         if (!seatGroup) {
             console.warn(`Seat group with ID ${seatId} not found.`);
@@ -649,7 +650,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // --- Logic to prevent changing booked/issued seats ---
         if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
-            // alert(`This seat is already ${currentSeatStatus} and cannot be changed.`); // Removed alert for multi-selection
             return; // Skip this seat if it's booked/issued/pending
         }
 
@@ -711,6 +711,10 @@ document.addEventListener('DOMContentLoaded', () => {
     seats.forEach((seatGroup) => {
         seatGroup.classList.add('clickable-seat');
         seatGroup.addEventListener('click', () => {
+            if (!selectedTicketType) {
+                alert('Please select a ticket type first from the dropdown!');
+                return;
+            }
             applyTicketTypeToSeat(seatGroup.id);
             console.log('Current Seat Configuration:', seatConfiguration); // For debugging
         });
@@ -725,6 +729,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Only start dragging if the click is on the SVG itself, not on a seat group
         if (e.target.closest('.seat-group')) {
             return;
+        }
+
+        if (!selectedTicketType) {
+            alert('Please select a ticket type first from the dropdown before selecting an area!');
+            return; // Prevent drag if no ticket type is selected
         }
 
         isDragging = true;
