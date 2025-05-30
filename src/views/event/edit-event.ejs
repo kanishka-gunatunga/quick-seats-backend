@@ -679,6 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
                 type_id: selectedTicketType.type_id,
                 ticketTypeName: selectedTicketType.ticketTypeName,
+                color : selectedTicketType.color ?? '#C4C4C4',
             };
             seatConfiguration.push(newSeat);
             updateSeatVisual(seatGroup, selectedTicketType);
