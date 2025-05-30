@@ -668,6 +668,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
                 seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
                 seatConfiguration[existingSeatIndex].status = selectedTicketType.isUnavailable ? 'unavailable' : 'available';
+                seatConfiguration[existingSeatIndex].color = selectedTicketType.color ?? '#C4C4C4';
                 updateSeatVisual(seatGroup, selectedTicketType);
             }
         } else {
