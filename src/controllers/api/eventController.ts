@@ -272,3 +272,24 @@ export const getEventDetails = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+export const getEventSeats = async (req: Request, res: Response) => {
+  try {
+    const id = Number(req.params.id);
+
+    const event = await prisma.event.findFirst({
+      where: { id },
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+
+  
+    return res.json(event.seats);
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
