@@ -419,14 +419,14 @@ export const updateEventSeats = async (req: Request, res: Response) => {
     const {
       seat_configuration
     } = result.data;
-
+    console.log(seat_configuration);
     await prisma.event.update({
       where: { id: eventId },
       data: {
         seats:seat_configuration,
       },
     });
-
+    
     req.session.success = 'Seats updated successfully!';
     req.session.formData = {}; 
     req.session.validationErrors = {};
