@@ -359,299 +359,318 @@ height: auto;
             <%- include('../layouts/footer.ejs') %>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Assuming these elements exist elsewhere in your HTML.
-        // If not, you might need to add them or remove these lines if they're not used.
-        const customerSelect = document.getElementById('customerSelect');
-        const firstNameField = document.getElementById('firstName');
-        const lastNameField = document.getElementById('lastName');
-        const emailField = document.getElementById('emailField');
-        const contactNumberField = document.getElementById('contactNumber');
-        const nicPassportField = document.getElementById('nicPassport');
+   document.addEventListener('DOMContentLoaded', function() {
+    // Selectors for elements on the page
+    const customerSelect = document.getElementById('customerSelect');
+    const firstNameField = document.getElementById('firstName');
+    const lastNameField = document.getElementById('lastName');
+    const emailField = document.getElementById('emailField');
+    const contactNumberField = document.getElementById('contactNumber');
+    const nicPassportField = document.getElementById('nicPassport');
 
-        const eventSelect = document.getElementById('eventSelect');
-        const seatMapContainer = document.getElementById('seatMapContainer');
-        const selectedSeatsInput = document.getElementById('selectedSeatsInput'); // The hidden input for selected seats
+    const eventSelect = document.getElementById('eventSelect');
+    const seatMapContainer = document.getElementById('seatMapContainer');
+    const selectedSeatsInput = document.getElementById('selectedSeatsInput'); // The hidden input for selected seats
 
-        let currentSeatsData = {}; // Object to quickly look up seat data by ID { "A1": {status: "booked", ...}, "A2": {...} }
-        let selectedSeatsForBooking = []; // Array to hold the IDs of seats selected by the admin for the current booking
+    let currentSeatsData = {}; // Object to quickly look up seat data by ID { "A1": {status: "booked", ...}, "A2": {...} }
+    let selectedSeatsForBooking = []; // Array to hold the IDs of seats selected by the admin for the current booking
 
-        // Helper function to clear customer fields
-        function clearCustomerFields() {
-            if (firstNameField) firstNameField.value = '';
-            if (lastNameField) lastNameField.value = '';
-            if (emailField) emailField.value = '';
-            if (contactNumberField) contactNumberField.value = '';
-            if (nicPassportField) nicPassportField.value = '';
-        }
+    // Helper function to clear customer fields
+    function clearCustomerFields() {
+        if (firstNameField) firstNameField.value = '';
+        if (lastNameField) lastNameField.value = '';
+        if (emailField) emailField.value = '';
+        if (contactNumberField) contactNumberField.value = '';
+        if (nicPassportField) nicPassportField.value = '';
+    }
 
-        // Customer selection logic (remains unchanged)
-        // This assumes jQuery is loaded if $(customerSelect).on is used
-        if (customerSelect) { // Check if element exists before attaching listener
-            $(customerSelect).on('change', async function() {
-                const selectedCustomerId = this.value;
-                if (selectedCustomerId === 'guest' || selectedCustomerId === '') { // Added empty string for "Select..." option
-                    clearCustomerFields();
-                    return;
-                }
-                try {
-                    const response = await fetch(`/customer-details/${selectedCustomerId}`);
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                    const data = await response.json();
-                    if (data && data.userDetails) {
-                        if (firstNameField) firstNameField.value = data.userDetails.first_name || '';
-                        if (lastNameField) lastNameField.value = data.userDetails.last_name || '';
-                        if (emailField) emailField.value = data.email || '';
-                        if (contactNumberField) contactNumberField.value = data.userDetails.contact_number || '';
-                        if (nicPassportField) nicPassportField.value = data.userDetails.nic_passport || '';
-                    } else {
-                        console.warn("Customer or userDetails not found, clearing fields.");
-                        clearCustomerFields();
-                    }
-                } catch (error) {
-                    console.error('Failed to fetch customer details:', error);
-                    clearCustomerFields();
-                }
-            });
-        }
-
-
-        // Function to update the visual state of a seat
-        function updateSeatVisual(seatGroup, status) {
-            const seatPaths = seatGroup.querySelectorAll('path');
-            let fillColor = '#C4C4C4'; // Default available/unselected gray
-
-            // Determine fill color based on status
-            switch (status) {
-                case 'booked':
-                case 'issued':
-                case 'pending':
-                    fillColor = '#FF0000'; // Red for occupied/reserved
-                    break;
-                case 'unavailable':
-                    fillColor = '#000000'; // Black for explicitly unavailable
-                    break;
-                case 'selected':
-                    fillColor = '#FFD700'; // Gold for admin-selected
-                    break;
-                case 'available':
-                default:
-                    fillColor = '#C4C4C4'; // Gray for available
-            }
-
-            seatPaths.forEach(path => {
-                path.style.fill = fillColor;
-            });
-
-            // Remove existing status classes and add new one
-            seatGroup.classList.remove('seat-status-available', 'seat-status-selected', 'seat-status-booked', 'seat-status-issued', 'seat-status-pending', 'seat-status-unavailable');
-            seatGroup.classList.add(`seat-status-${status}`);
-        }
-
-        // Function to handle seat click for selection/deselection
-        function toggleSeatSelection(seatId) {
-            const seatGroup = document.getElementById(seatId);
-            if (!seatGroup) {
-                console.warn(`Seat group with ID ${seatId} not found in SVG.`);
+    // Customer selection logic
+    // This assumes jQuery is loaded if $(customerSelect).on is used.
+    // If not, use native addEventListener: customerSelect.addEventListener('change', async function() { ... });
+    if (customerSelect) { // Check if element exists before attaching listener
+        $(customerSelect).on('change', async function() {
+            const selectedCustomerId = this.value;
+            if (selectedCustomerId === 'guest' || selectedCustomerId === '') { // Added empty string for "Select..." option
+                clearCustomerFields();
                 return;
             }
-
-            // Get the current status from our `currentSeatsData` map
-            const seatInfo = currentSeatsData[seatId];
-            // IMPORTANT: If currentSeatsData is empty (meaning no seats assigned from backend),
-            // or if the specific seatId is not found in the backend data, it should NOT be available.
-            const seatStatus = seatInfo ? seatInfo.status : 'unavailable'; // Default to 'unavailable' if seat not found in backend data
-
-            // Only allow selection if the seat is explicitly 'available' in the backend data
-            if (seatStatus !== 'available') {
-                console.log(`Seat ${seatId} is ${seatStatus} and cannot be selected.`);
-                return;
-            }
-
-            const indexInSelected = selectedSeatsForBooking.indexOf(seatId);
-
-            if (indexInSelected > -1) {
-                // Seat is already selected by admin, deselect it
-                selectedSeatsForBooking.splice(indexInSelected, 1);
-                // Revert visual to its original 'available' state
-                updateSeatVisual(seatGroup, 'available');
-            } else {
-                // Seat is not selected, select it
-                selectedSeatsForBooking.push(seatId);
-                updateSeatVisual(seatGroup, 'selected'); // Set to 'selected' state
-            }
-
-            selectedSeatsInput.value = JSON.stringify(selectedSeatsForBooking);
-            console.log('Current Selected Seat IDs:', selectedSeatsForBooking);
-        }
-
-        // Event listener for event selection change
-        // This assumes jQuery is loaded if $(eventSelect).on is used
-        $(eventSelect).on('change', async function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const location = selectedOption.dataset.location;
-            const seatsDataString = selectedOption.dataset.seats; // Get the seats data string
-            const eventId = this.value;
-
-            // Clear previously selected seats and the input field
-            selectedSeatsForBooking = [];
-            selectedSeatsInput.value = JSON.stringify([]);
-            seatMapContainer.innerHTML = ''; // Clear previous SVG
-
-            if (!eventId || !location) {
-                console.warn("No event selected or no location data for selected event.");
-                seatMapContainer.innerHTML = '<p class="text-muted">Select an event to load the seat map.</p>';
-                currentSeatsData = {}; // Ensure currentSeatsData is empty if no event selected
-                return;
-            }
-
-            // --- IMPORTANT DEBUGGING LOGS ---
-            console.log('1. Raw seatsDataString from data-attribute:', seatsDataString);
-
-            let rawSeats = [];
-            if (seatsDataString) {
-                try {
-                    rawSeats = JSON.parse(seatsDataString);
-                    console.log('2. rawSeats after JSON.parse:', rawSeats, 'Type:', typeof rawSeats, 'Is Array:', Array.isArray(rawSeats));
-
-                    if (!Array.isArray(rawSeats)) {
-                        console.error("ERROR: Parsed seats data is NOT an array. Resetting to empty array.");
-                        rawSeats = []; // Defensive reset if parsing yields non-array
-                    }
-                } catch (e) {
-                    console.error("Error parsing seatsDataString. This likely means the data-seats attribute is malformed JSON.", e, "Original string:", seatsDataString);
-                    rawSeats = []; // Fallback to empty array if JSON.parse fails
-                }
-            } else {
-                console.log("seatsDataString is empty or null, initializing rawSeats as empty array.");
-            }
-
-            // If rawSeats is empty, currentSeatsData will also be empty.
-            // This ensures that any seat in the SVG not explicitly present in rawSeats will default to 'unavailable'.
-            currentSeatsData = rawSeats.reduce((acc, seat) => {
-                // Ensure 'seat' object is valid before accessing properties
-                if (seat && typeof seat.seatId === 'string') {
-                    acc[seat.seatId] = { status: seat.status || 'available' }; // Default to 'available' if status is missing in backend data
-                } else {
-                    console.warn("Skipping invalid seat entry:", seat);
-                }
-                return acc;
-            }, {});
-
-            console.log('4. currentSeatsData after reduce (based on backend data):', currentSeatsData);
-
-
-            // Construct the URL to the static SVG file
-            let svgFileName = '';
-            switch (location) {
-                case 'BMICH': svgFileName = 'bmich.svg'; break;
-                case 'Nelum Pokuna': svgFileName = 'nelum.svg'; break;
-                case 'Musaeus College': svgFileName = 'musaeus.svg'; break;
-                case 'Bishop College': svgFileName = 'bishop.svg'; break; // Corrected spelling to match your example
-                default:
-                    console.warn("No SVG file mapping found for this location:", location);
-                    seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
-                    return;
-            }
-            const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
-
             try {
-                const response = await fetch(svgPath);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
+                const response = await fetch(`/customer-details/${selectedCustomerId}`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const data = await response.json();
+                if (data && data.userDetails) {
+                    if (firstNameField) firstNameField.value = data.userDetails.first_name || '';
+                    if (lastNameField) lastNameField.value = data.userDetails.last_name || '';
+                    if (emailField) emailField.value = data.email || '';
+                    if (contactNumberField) contactNumberField.value = data.userDetails.contact_number || '';
+                    if (nicPassportField) nicPassportField.value = data.userDetails.nic_passport || '';
+                } else {
+                    console.warn("Customer or userDetails not found, clearing fields.");
+                    clearCustomerFields();
                 }
-                const svgContent = await response.text();
-                seatMapContainer.innerHTML = svgContent; // Inject the SVG
-
-                // After SVG is injected, iterate through its seat groups and apply initial colors/cursors
-                // Use a slight delay to ensure the SVG elements are fully parsed and available in the DOM
-                setTimeout(() => {
-                    const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
-                    if (seatsInSvg.length === 0) {
-                        console.warn("No elements with class 'seat-group' found in the loaded SVG.");
-                        // Display a message or visual cue if no seats found in SVG
-                        seatMapContainer.innerHTML += '<p class="text-info">No individual seat groups found in the SVG map.</p>';
-                        return; // Exit if no seat groups are found
-                    }
-
-                    seatsInSvg.forEach(seatGroup => {
-                        const seatId = seatGroup.id;
-                        if (!seatId) {
-                            console.warn("Skipping seat group without an ID:", seatGroup);
-                            return; // Skip if a seat group doesn't have an ID
-                        }
-
-                        const seatInfo = currentSeatsData[seatId];
-                        // IMPORTANT: The initial status of seats in the SVG
-                        // If no seatInfo from backend data, it's 'unavailable'
-                        const status = seatInfo ? seatInfo.status : 'unavailable'; // Defaults to 'unavailable' if seat not provided by backend
-
-                        updateSeatVisual(seatGroup, status);
-
-                        // Only add click listener if the seat is 'available' based on backend data
-                        if (status === 'available') {
-                            seatGroup.style.cursor = 'pointer';
-                            seatGroup.classList.add('clickable-seat');
-                            seatGroup.addEventListener('click', () => {
-                                toggleSeatSelection(seatId);
-                            });
-                        } else {
-                            seatGroup.style.cursor = 'not-allowed';
-                            seatGroup.classList.remove('clickable-seat');
-                            // No click listener for unavailable/booked/etc. seats
-                        }
-                    });
-                    console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
-                }, 100); // Increased delay slightly to ensure DOM readiness
             } catch (error) {
-                console.error('Failed to load SVG or apply seat states:', error);
-                seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
-            }
-        });
-
-        // Initial load logic for customer and event selection
-        // Check if customerSelect exists before trying to access its value
-        if (customerSelect) {
-            if (customerSelect.value && customerSelect.value !== 'guest') {
-                $(customerSelect).trigger('change');
-            } else {
+                console.error('Failed to fetch customer details:', error);
                 clearCustomerFields();
             }
-        } else {
-            console.warn("Customer select element not found.");
+        });
+    }
+
+
+    // Function to update the visual state of a seat in the SVG
+    function updateSeatVisual(seatGroup, status) {
+        const seatPaths = seatGroup.querySelectorAll('path');
+        let fillColor = '#C4C4C4'; // Default available/unselected gray
+
+        // Determine fill color based on status
+        switch (status) {
+            case 'booked':
+            case 'issued':
+            case 'pending':
+                fillColor = '#FF0000'; // Red for occupied/reserved
+                break;
+            case 'unavailable':
+                fillColor = '#000000'; // Black for explicitly unavailable
+                break;
+            case 'selected':
+                fillColor = '#FFD700'; // Gold for admin-selected
+                break;
+            case 'available':
+            default:
+                fillColor = '#C4C4C4'; // Gray for available
         }
 
+        seatPaths.forEach(path => {
+            path.style.fill = fillColor;
+        });
 
-        // Trigger event select change on page load if an event is pre-selected
-        // Also check if an event is actually selected (not "Select....")
+        // Remove existing status classes and add new one for CSS styling
+        seatGroup.classList.remove(
+            'seat-status-available', 'seat-status-selected',
+            'seat-status-booked', 'seat-status-issued',
+            'seat-status-pending', 'seat-status-unavailable'
+        );
+        seatGroup.classList.add(`seat-status-${status}`);
+    }
+
+    // Function to handle seat click for selection/deselection
+    function toggleSeatSelection(seatId) {
+        const seatGroup = document.getElementById(seatId);
+        if (!seatGroup) {
+            console.warn(`Seat group with ID ${seatId} not found in SVG.`);
+            return;
+        }
+
+        // Get the current status from our `currentSeatsData` map (based on backend data)
+        const seatInfo = currentSeatsData[seatId];
+        // IMPORTANT: If currentSeatsData is empty (meaning no seats assigned from backend),
+        // or if the specific seatId is not found in the backend data, it should NOT be available.
+        const seatStatus = seatInfo ? seatInfo.status : 'unavailable'; // Default to 'unavailable' if seat not found in backend data
+
+        // Only allow selection if the seat is explicitly 'available' in the backend data
+        if (seatStatus !== 'available') {
+            console.log(`Seat ${seatId} is ${seatStatus} and cannot be selected.`);
+            return;
+        }
+
+        const indexInSelected = selectedSeatsForBooking.indexOf(seatId);
+
+        if (indexInSelected > -1) {
+            // Seat is already selected by admin, deselect it
+            selectedSeatsForBooking.splice(indexInSelected, 1);
+            // Revert visual to its original 'available' state
+            updateSeatVisual(seatGroup, 'available');
+        } else {
+            // Seat is not selected, select it
+            selectedSeatsForBooking.push(seatId);
+            updateSeatVisual(seatGroup, 'selected'); // Set to 'selected' state
+        }
+
+        selectedSeatsInput.value = JSON.stringify(selectedSeatsForBooking);
+        console.log('Current Selected Seat IDs:', selectedSeatsForBooking);
+    }
+
+    // Event listener for event selection change
+    // This assumes jQuery is loaded if $(eventSelect).on is used.
+    // If not, use native addEventListener: eventSelect.addEventListener('change', async function() { ... });
+    $(eventSelect).on('change', async function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const location = selectedOption.dataset.location;
+        const seatsDataString = selectedOption.dataset.seats; // Get the seats data string from data-attribute
+        const eventId = this.value;
+
+        // Clear previously selected seats and the input field
+        selectedSeatsForBooking = [];
+        selectedSeatsInput.value = JSON.stringify([]);
+        seatMapContainer.innerHTML = ''; // Clear previous SVG map
+
+        if (!eventId || !location) {
+            console.warn("No event selected or no location data for selected event.");
+            seatMapContainer.innerHTML = '<p class="text-muted">Select an event to load the seat map.</p>';
+            currentSeatsData = {}; // Ensure currentSeatsData is empty if no event selected
+            return;
+        }
+
+        // --- IMPORTANT DEBUGGING LOGS AND FIX ---
+        console.log('1. Raw seatsDataString from data-attribute:', seatsDataString);
+
+        let rawSeats = [];
+        if (seatsDataString) {
+            try {
+                // Attempt to parse the string into a JavaScript value
+                const parsedData = JSON.parse(seatsDataString);
+
+                console.log('2. parsedData after JSON.parse:', parsedData);
+                // Explicitly log the type and array status of the parsed result to debug
+                console.log('   Type of parsedData:', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
+
+                // --- FIX: Assign to rawSeats ONLY if it's an actual array ---
+                if (Array.isArray(parsedData)) {
+                    rawSeats = parsedData;
+                } else {
+                    // This block will now catch cases where JSON.parse doesn't throw an error,
+                    // but the result isn't an array (e.g., parsing "null", "true", "false", or a number string).
+                    console.error("ERROR: JSON.parse did not yield an array. Resetting rawSeats to empty array. Actual parsed value:", parsedData);
+                    rawSeats = []; // Defensive reset if parsing yields a non-array
+                }
+            } catch (e) {
+                // This catch block handles cases where JSON.parse throws an error (e.g., invalid JSON format).
+                console.error("Error parsing seatsDataString. This likely means the data-seats attribute is malformed JSON.", e, "Original string:", seatsDataString);
+                rawSeats = []; // Fallback to empty array if JSON.parse fails
+            }
+        } else {
+            console.log("seatsDataString is empty or null, initializing rawSeats as empty array.");
+        }
+
+        // Reduce the rawSeats array into an object for quicker lookup by seatId
+        // If rawSeats is empty, currentSeatsData will also be empty.
+        // This ensures that any seat in the SVG not explicitly present in rawSeats will default to 'unavailable'.
+        currentSeatsData = rawSeats.reduce((acc, seat) => {
+            // Ensure 'seat' object is valid and has a string 'seatId' before accessing properties
+            if (seat && typeof seat.seatId === 'string') {
+                // Default seat status to 'available' if 'status' property is missing from backend data
+                acc[seat.seatId] = { status: seat.status || 'available' }; 
+            } else {
+                console.warn("Skipping invalid seat entry in rawSeats:", seat);
+            }
+            return acc;
+        }, {});
+
+        console.log('4. currentSeatsData after reduce (based on backend data):', currentSeatsData);
+
+
+        // Determine which SVG file to load based on the location
+        let svgFileName = '';
+        switch (location) {
+            case 'BMICH': svgFileName = 'bmich.svg'; break;
+            case 'Nelum Pokuna': svgFileName = 'nelum.svg'; break;
+            case 'Musaeus College': svgFileName = 'musaeus.svg'; break;
+            case 'Bishop College': svgFileName = 'bishop.svg'; break; // Corrected spelling to match your example
+            default:
+                console.warn("No SVG file mapping found for this location:", location);
+                seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
+                return;
+        }
+        const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
+
+        try {
+            const response = await fetch(svgPath);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
+            }
+            const svgContent = await response.text();
+            seatMapContainer.innerHTML = svgContent; // Inject the SVG into the container
+
+            // After SVG is injected, iterate through its seat groups and apply initial colors/cursors
+            // Use a slight delay to ensure the SVG elements are fully parsed and available in the DOM
+            setTimeout(() => {
+                const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
+                if (seatsInSvg.length === 0) {
+                    console.warn("No elements with class 'seat-group' found in the loaded SVG. Ensure your SVG seats have class='seat-group' and a unique ID.");
+                    // Display a message or visual cue if no seats found in SVG
+                    seatMapContainer.innerHTML += '<p class="text-info">No individual seat groups found in the SVG map. Check SVG structure.</p>';
+                    return; // Exit if no seat groups are found
+                }
+
+                seatsInSvg.forEach(seatGroup => {
+                    const seatId = seatGroup.id;
+                    if (!seatId) {
+                        console.warn("Skipping seat group without an ID:", seatGroup);
+                        return; // Skip if a seat group doesn't have an ID (crucial for mapping)
+                    }
+
+                    const seatInfo = currentSeatsData[seatId];
+                    // IMPORTANT: The initial status of seats in the SVG
+                    // If no seatInfo from backend data, it's 'unavailable' by default.
+                    const status = seatInfo ? seatInfo.status : 'unavailable'; // Defaults to 'unavailable' if seat not provided by backend
+
+                    updateSeatVisual(seatGroup, status); // Apply initial color/style
+
+                    // Only add click listener if the seat is 'available' based on backend data
+                    if (status === 'available') {
+                        seatGroup.style.cursor = 'pointer';
+                        seatGroup.classList.add('clickable-seat'); // Add a class for CSS cursor
+                        seatGroup.addEventListener('click', () => {
+                            toggleSeatSelection(seatId);
+                        });
+                    } else {
+                        seatGroup.style.cursor = 'not-allowed';
+                        seatGroup.classList.remove('clickable-seat'); // Remove clickable class
+                        // No click listener for unavailable/booked/etc. seats
+                    }
+                });
+                console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
+            }, 100); // Increased delay slightly to ensure DOM readiness, especially for large SVGs
+        } catch (error) {
+            console.error('Failed to load SVG or apply seat states:', error);
+            seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
+        }
+    });
+
+    // Initial load logic for customer and event selection
+    // Check if customerSelect exists before trying to access its value
+    if (customerSelect) {
+        if (customerSelect.value && customerSelect.value !== 'guest' && customerSelect.value !== '') { // Also check for empty string
+            $(customerSelect).trigger('change'); // Trigger change if a customer is pre-selected
+        } else {
+            clearCustomerFields();
+        }
+    } else {
+        console.warn("Customer select element not found (ID: customerSelect).");
+    }
+
+    // Trigger event select change on page load if an event is pre-selected
+    if (eventSelect) { // Check if eventSelect exists
         if (eventSelect.value) {
             $(eventSelect).trigger('change');
         }
+    } else {
+        console.warn("Event select element not found (ID: eventSelect).");
+    }
 
-        // Inject CSS for seat styling
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .seat-group > path {
-                transition: fill 0.2s ease-in-out; /* Smooth color changes */
-            }
-            .clickable-seat:hover > path { /* Apply hover to paths within clickable groups */
-                opacity: 0.8; /* Dim on hover */
-            }
-            /* Styles for non-clickable/occupied seats */
-            .seat-status-booked > path,
-            .seat-status-issued > path,
-            .seat-status-pending > path,
-            .seat-status-unavailable > path {
-                cursor: not-allowed !important;
-                filter: grayscale(50%); /* Desaturate non-selectable seats */
-            }
-            /* Style for admin-selected seats */
-            .seat-status-selected > path {
-                stroke: #333;
-                stroke-width: 2;
-            }
-            /* Default fill for available seats is handled in JS updateSeatVisual function */
-        `;
-        document.head.appendChild(style);
-    });
+    // Inject CSS for seat styling
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .seat-group > path {
+            transition: fill 0.2s ease-in-out; /* Smooth color changes */
+        }
+        .clickable-seat:hover > path { /* Apply hover to paths within clickable groups */
+            opacity: 0.8; /* Dim on hover */
+        }
+        /* Styles for non-clickable/occupied seats */
+        .seat-status-booked > path,
+        .seat-status-issued > path,
+        .seat-status-pending > path,
+        .seat-status-unavailable > path {
+            cursor: not-allowed !important;
+            filter: grayscale(50%); /* Desaturate non-selectable seats */
+        }
+        /* Style for admin-selected seats */
+        .seat-status-selected > path {
+            stroke: #333;
+            stroke-width: 2;
+        }
+        /* Default fill for available seats is handled in JS updateSeatVisual function */
+    `;
+    document.head.appendChild(style);
+});
 </script>
