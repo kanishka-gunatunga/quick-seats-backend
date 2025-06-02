@@ -418,43 +418,50 @@
         }
 
 
-        $(eventSelect).on('change', async function() {
+         $(eventSelect).on('change', async function() {
             const selectedOption = this.options[this.selectedIndex];
-            const location = selectedOption.dataset.location;
+            const location = selectedOption.dataset.location; // e.g., "BMICH", "Nelum Pokuna"
             console.log("Selected Event Location:", location);
 
-            seatMapContainer.innerHTML = ''; 
+            seatMapContainer.innerHTML = ''; // Clear previous SVG
 
             if (location) {
-                let svgPath = '';
+                let svgFileName = '';
+                // Map the location string to its corresponding SVG filename
+                // Make sure these match the actual filenames in src/public/seat-maps/
                 switch (location) {
                     case 'BMICH':
-                        svgPath = '../../seat-maps/bmich.ejs';
+                        svgFileName = 'seat-map-svgs/bmich.svg';
                         break;
                     case 'Nelum Pokuna':
-                        svgPath = '../../seat-maps/nelum.ejs';
+                        svgFileName = 'seat-map-svgs/nelum.svg';
                         break;
                     case 'Musaeus College':
-                        svgPath = '../../seat-maps/musaeus.ejs';
+                        svgFileName = 'seat-map-svgs/musaeus.svg';
                         break;
                     case 'Bishop Collage':
-                        svgPath = '../../seat-maps/bishop.ejs';
+                        svgFileName = 'seat-map-svgs/bishop.svg';
                         break;
                     default:
-                        console.warn("No SVG found for this location:", location);
-                        return;
+                        console.warn("No SVG file mapping found for this location:", location);
+                        return; // Exit if no matching SVG
                 }
+
+                // Construct the URL to the static SVG file
+                // The leading '/' is crucial as it tells the browser to look from the root of your domain.
+                const svgPath = `/seat-maps/${svgFileName}`;
 
                 try {
                     const response = await fetch(svgPath);
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        // If the file is not found (404) or other HTTP error
+                        throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
                     }
-                    const svgContent = await response.text();
-                    seatMapContainer.innerHTML = svgContent;
+                    const svgContent = await response.text(); // Get the SVG content as plain text
+                    seatMapContainer.innerHTML = svgContent; // Inject the SVG text into the div
                 } catch (error) {
                     console.error('Failed to load SVG:', error);
-                    seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map.</p>';
+                    seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
                 }
             }
         });
