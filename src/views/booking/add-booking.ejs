@@ -386,6 +386,12 @@
 
                 console.log("Fetched customer data:", data);
                 console.log("Email value from data:", data.email);
+                if (emailField) { // Ensure the element exists
+    emailField.value = data.email || '';
+    console.log("Value set on emailField:", emailField.value); // Verify value after setting
+} else {
+    console.error("Error: emailField element not found!");
+}
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
