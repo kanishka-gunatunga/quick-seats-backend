@@ -54,16 +54,24 @@
             font-size: 0.9em;
             color: #777;
         }
+        .contact-info {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #555;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Hello <%= first_name %>,</h2>
-        <p>Thank you for your recent booking! Here are your QR tickets for the event. Please keep this email safe as it contains your entry tickets.</p>
+        <h2>Booking Confirmation</h2>
+        <p>Hey <b><%= first_name %>,</b> Thank you for your recent booking! Here are your QR tickets for the event. Please keep this email safe as it contains your entry tickets.</p>
         <p>If you have any questions, feel free to contact us.</p>
-
+        <hr>
+        <p><b>Event : </b><%= event_name %></p>
+        <p><b>Booked Seats : </b><%= booked_seats_details %></p>
         <div class="qr-section">
-            <h3>Your Tickets:</h3>
+            <h4>QR Codes:</h4>
             <% qrCodes.forEach((qr, index) => { %>
                 <div class="qr-item">
                     <p><strong><%= qr.ticketTypeName %></strong> - <%= qr.count %> ticket(s)</p>
@@ -72,8 +80,12 @@
             <% }); %>
         </div>
         <p>We look forward to seeing you at the event!</p>
+        <div class="contact-info">
+            <p>For support, contact us at: <a href="mailto:info@quickseats.lk">info@quickseats.lk</a> or call us at 011121451242</p>
+            <p>Read our <a href="#" target="_blank">Privacy Policy</a></p>
+        </div>
         <div class="footer">
-            <p>&copy; <%= new Date().getFullYear() %> Your Event Company. All rights reserved.</p>
+            <p>&copy; <%= new Date().getFullYear() %> Quick Tickets. All rights reserved.</p>
         </div>
     </div>
 </body>

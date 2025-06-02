@@ -51,6 +51,7 @@ export const checkout = async (req: Request, res: Response) => {
         const event = await prisma.event.findUnique({
             where: { id: parseInt(event_id) },
             select: {
+                name: true,
                 seats: true,
             },
         });
@@ -59,8 +60,6 @@ export const checkout = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
 
-
-        // IMPORTANT: Parse the JSON string from the database
         const eventSeats: Seat[] = typeof event.seats === 'string'
         ? JSON.parse(event.seats)
         : event.seats;
@@ -70,7 +69,7 @@ export const checkout = async (req: Request, res: Response) => {
         let subTotal = 0;
 
         for (const seatId of seat_ids) {
-            // Ensure seatId is treated consistently as a string for map keys if it can be number or string
+
             const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
 
             if (!foundSeat) {
@@ -162,12 +161,17 @@ export const checkout = async (req: Request, res: Response) => {
                 cid: `qr${index}@event.com`,
             });
         });
+        const booked_seats_details = Object.keys(groupedSeats).map(ticketTypeName => {
+            const seats = groupedSeats[ticketTypeName];
+            return `${ticketTypeName}: ${seats.join(', ')}`;
+        }).join('; ');
         const templatePath = path.join(__dirname, '../../views/email-templates/qr-template.ejs');
         const qrEmailHtml = await ejs.renderFile(templatePath, {
             first_name: first_name,
+            event_name: event.name,
+            booked_seats_details: booked_seats_details,
             qrCodes: qrCodes,
         });
-
         await transporter.sendMail({
             from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
             to: email,
