@@ -512,7 +512,7 @@ height: auto;
                     seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
                     return;
             }
-            const svgPath = `/seat-maps/${svgFileName}`;
+            const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
 
             try {
                 const response = await fetch(svgPath);
