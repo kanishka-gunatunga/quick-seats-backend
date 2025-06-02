@@ -294,9 +294,13 @@ export const editEventGet = async (req: Request, res: Response) => {
   }
 };
 
+const galleryFileEntrySchema = z.object({
+  url: z.string().url(),
+  type: z.enum(['image', 'video']),
+});
+
 export const editEventPost = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);
-
   const schema = z.object({
     name: z.string().min(1, 'Name is required'),
     start_date_time: z.string().min(1, 'Start date and time is required'),
@@ -314,13 +318,16 @@ export const editEventPost = async (req: Request, res: Response) => {
       price: z.string().min(1, 'Ticket price is required'),
       count: z.string().optional(),
     })).optional().default([]),
+    existing_gallery_media: z.array(galleryFileEntrySchema).optional().default([]),
   });
 
-  const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
-  const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
+
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const bannerImageFile = files?.banner_image?.[0];
+  const featuredImageFile = files?.featured_image?.[0];
+  const newGalleryFiles = files?.gallery_files || [];
 
   try {
-
     const result = schema.safeParse(req.body);
 
     if (!result.success) {
@@ -328,9 +335,8 @@ export const editEventPost = async (req: Request, res: Response) => {
       req.session.error = 'Please fix the errors below.';
       req.session.formData = req.body;
       req.session.validationErrors = errors;
-      return res.redirect(`/event/edit/${eventId}`); 
+      return res.redirect(`/event/edit/${eventId}`);
     }
-
 
     const {
       name,
@@ -342,11 +348,18 @@ export const editEventPost = async (req: Request, res: Response) => {
       location,
       artists,
       tickets,
+      existing_gallery_media 
     } = result.data;
 
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
-      select: { banner_image: true, featured_image: true, slug: true, name: true },
+      select: {
+        banner_image: true,
+        featured_image: true,
+        slug: true,
+        name: true,
+        gallery_media: true
+      },
     });
 
     if (!existingEvent) {
@@ -356,18 +369,28 @@ export const editEventPost = async (req: Request, res: Response) => {
 
     let bannerImageUrl: string | null = existingEvent.banner_image;
     let featuredImageUrl: string | null = existingEvent.featured_image;
+    let currentGalleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media;
 
     if (bannerImageFile) {
-
+      if (!bannerImageFile.mimetype.startsWith('image/')) {
+        req.session.error = 'Banner image must be an image file.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, banner_image: ['Banner image must be an image file.'] };
+        return res.redirect(`/event/edit/${eventId}`);
+      }
       const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
         access: 'public',
         addRandomSuffix: true,
       });
       bannerImageUrl = url;
     }
-
     if (featuredImageFile) {
-  
+      if (!featuredImageFile.mimetype.startsWith('image/')) {
+        req.session.error = 'Featured image must be an image file.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, featured_image: ['Featured image must be an image file.'] };
+        return res.redirect(`/event/edit/${eventId}`);
+      }
       const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
         access: 'public',
         addRandomSuffix: true,
@@ -375,33 +398,46 @@ export const editEventPost = async (req: Request, res: Response) => {
       featuredImageUrl = url;
     }
 
-    let uniqueSlug = existingEvent.slug;
+    for (const file of newGalleryFiles) {
+      let mediaType: 'image' | 'video' | undefined;
+      if (file.mimetype.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (file.mimetype.startsWith('video/')) {
+        mediaType = 'video';
+      } else {
+        req.session.error = 'All gallery files must be image or video files.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, gallery_files: ['All gallery files must be image or video files.'] };
+        return res.redirect(`/event/edit/${eventId}`);
+      }
 
+      const { url } = await put(file.originalname, file.buffer, {
+        access: 'public',
+        addRandomSuffix: true,
+      });
+      currentGalleryMedia.push({ url, type: mediaType }); 
+    }
+
+    let uniqueSlug = existingEvent.slug;
     if (name !== existingEvent.name) {
       let baseSlug = slugify(name, { lower: true, strict: true });
       let suffix = 1;
-
       while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
         uniqueSlug = `${baseSlug}-${suffix++}`;
       }
     }
-
-
     const ticketDetailsJson = tickets.map((ticket: { type_id: string; price: string; count?: string }) => ({
       ticketTypeId: Number(ticket.type_id),
-      price: Number(ticket.price),  
+      price: Number(ticket.price),
       ticketCount: ticket.count ? Number(ticket.count) : null,
     }));
-
-
-    const artistIdsJson = artists.map(Number);
 
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
       data: {
         name,
         slug: uniqueSlug,
-        start_date_time: new Date(start_date_time), 
+        start_date_time: new Date(start_date_time),
         end_date_time: new Date(end_date_time),
         description: discription,
         policy: policy,
@@ -409,19 +445,19 @@ export const editEventPost = async (req: Request, res: Response) => {
         location,
         banner_image: bannerImageUrl,
         featured_image: featuredImageUrl,
+        gallery_media: currentGalleryMedia,
         ticket_details: ticketDetailsJson,
-        artist_details: artistIdsJson,
+        artist_details: artists,
       },
     });
 
     req.session.success = 'Event updated successfully!';
-    req.session.formData = {}; 
+    req.session.formData = {};
     req.session.validationErrors = {};
     return res.redirect(`/event/edit/${updatedEvent.id}`);
   } catch (err) {
     console.error('Error updating event:', err);
     req.session.error = 'An unexpected error occurred while updating the event.';
-
     req.session.formData = req.body;
     return res.redirect(`/event/edit/${eventId}`);
   }
