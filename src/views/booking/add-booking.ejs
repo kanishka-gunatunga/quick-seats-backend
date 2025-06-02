@@ -50,7 +50,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Email</label>
-                                                            <input type="email" class="form-control" name="email" id="email" value="<%= formData?.email || '' %>">
+                                                            <input type="text" class="form-control" name="email" id="email" value="<%= formData?.email || '' %>">
                                                             <% if (validationErrors?.email) { %>
                                                                 <small class="text-danger"><%= validationErrors.email[0] %></small>
                                                             <% } %>
@@ -395,7 +395,7 @@
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
-                    emailField.value = data.email || '';
+                    emailField.value = data.email || 'asdasdad';
                     contactNumberField.value = data.userDetails.contact_number || '';
                     nicPassportField.value = data.userDetails.nic_passport || '';
 
