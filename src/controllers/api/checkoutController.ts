@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import QRCode from 'qrcode';
 import transporter from '../../services/mailTransporter';
+import ejs from 'ejs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 interface Seat {
@@ -152,25 +154,19 @@ export const checkout = async (req: Request, res: Response) => {
             },
         });
         const attachments: any[] = [];
-        const qrEmailHtml = `
-            <h2>Hi ${first_name},</h2>
-            <p>Here are your QR tickets for the event:</p>
-            ${qrCodes.map((qr, index) => {
-                const cid = `qr${index}@event.com`;
-                attachments.push({
-                    filename: `ticket-${qr.ticketTypeName}-${index + 1}.png`,
-                    content: qr.qrCodeData.split("base64,")[1],
-                    encoding: 'base64',
-                    cid,
-                });
-                return `
-                    <div>
-                        <p><strong>${qr.ticketTypeName}</strong> - ${qr.count} ticket(s)</p>
-                        <img src="cid:${cid}" alt="QR Code for ${qr.ticketTypeName}" />
-                    </div>`;
-            }).join('')}
-            <p>Thank you for booking!</p>
-        `;
+        qrCodes.forEach((qr, index) => {
+            attachments.push({
+                filename: `ticket-${qr.ticketTypeName}-${index + 1}.png`,
+                content: qr.qrCodeData.split("base64,")[1],
+                encoding: 'base64',
+                cid: `qr${index}@event.com`,
+            });
+        });
+        const templatePath = path.join(__dirname, '../../email-templates/qr-template.ejs');
+        const qrEmailHtml = await ejs.renderFile(templatePath, {
+            first_name: first_name,
+            qrCodes: qrCodes,
+        });
 
         await transporter.sendMail({
             from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
