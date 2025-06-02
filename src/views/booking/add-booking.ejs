@@ -335,7 +335,7 @@ height: auto;
                                                             <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>
-                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>" data-seats="<%= event.seats %>"><%= event.name %></option>
+                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>" data-seats="<%= JSON.stringify(event.seats || []) %>"><%= event.name %></option>
                                                                     <% }); %>
                                                             </select>
                                                             <% if (validationErrors?.event) { %>
@@ -358,8 +358,7 @@ height: auto;
             </div>
             <%- include('../layouts/footer.ejs') %>
 
-
-           <script>
+<script>
     document.addEventListener('DOMContentLoaded', function() {
         const customerSelect = document.getElementById('customerSelect');
         const firstNameField = document.getElementById('firstName');
@@ -367,46 +366,40 @@ height: auto;
         const emailField = document.getElementById('emailField');
         const contactNumberField = document.getElementById('contactNumber');
         const nicPassportField = document.getElementById('nicPassport');
-        const countryField = document.getElementById('country'); 
 
         const eventSelect = document.getElementById('eventSelect');
         const seatMapContainer = document.getElementById('seatMapContainer');
+        const selectedSeatsInput = document.getElementById('selectedSeatsInput'); // The hidden input for selected seats
 
+        let currentSeatsData = {}; // Object to quickly look up seat data by ID { "A1": {status: "booked", ...}, "A2": {...} }
+        let selectedSeatsForBooking = []; // Array to hold the IDs of seats selected by the admin for the current booking
+
+        // Helper function to clear customer fields
         function clearCustomerFields() {
             firstNameField.value = '';
             lastNameField.value = '';
             emailField.value = '';
             contactNumberField.value = '';
             nicPassportField.value = '';
-            $(countryField).val('').trigger('change'); 
         }
 
-        $(customerSelect).on('change', async function() { 
+        // Customer selection logic (remains unchanged)
+        $(customerSelect).on('change', async function() {
             const selectedCustomerId = this.value;
-            console.log("Selected Customer ID (from Select2 change):", selectedCustomerId);
-
             if (selectedCustomerId === 'guest') {
                 clearCustomerFields();
                 return;
             }
-
             try {
                 const response = await fetch(`/customer-details/${selectedCustomerId}`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
-
-                console.log("Fetched customer data:", data);
-                console.log("Email value from data:", data.email);
-
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
                     emailField.value = data.email || '';
                     contactNumberField.value = data.userDetails.contact_number || '';
                     nicPassportField.value = data.userDetails.nic_passport || '';
-
                 } else {
                     console.warn("Customer or userDetails not found, clearing fields.");
                     clearCustomerFields();
@@ -417,63 +410,183 @@ height: auto;
             }
         });
 
-        if (customerSelect.value && customerSelect.value !== 'guest') {
-            $(customerSelect).trigger('change');
-        } else {
-            clearCustomerFields(); 
+        // Function to update the visual state of a seat
+        function updateSeatVisual(seatGroup, status) {
+            const seatPaths = seatGroup.querySelectorAll('path');
+            let fillColor = '#C4C4C4'; // Default available/unselected gray
+
+            // Determine fill color based on status
+            switch (status) {
+                case 'booked':
+                case 'issued':
+                case 'pending':
+                    fillColor = '#FF0000'; // Red for occupied/reserved
+                    break;
+                case 'unavailable':
+                    fillColor = '#000000'; // Black for explicitly unavailable
+                    break;
+                case 'selected':
+                    fillColor = '#FFD700'; // Gold for admin-selected
+                    break;
+                case 'available':
+                default:
+                    fillColor = '#C4C4C4'; // Gray for available
+            }
+
+            seatPaths.forEach(path => {
+                path.style.fill = fillColor;
+            });
+
+            // Remove existing status classes and add new one
+            seatGroup.classList.remove('seat-status-available', 'seat-status-selected', 'seat-status-booked', 'seat-status-issued', 'seat-status-pending', 'seat-status-unavailable');
+            seatGroup.classList.add(`seat-status-${status}`);
         }
 
+        // Function to handle seat click for selection/deselection
+        function toggleSeatSelection(seatId) {
+            const seatGroup = document.getElementById(seatId);
+            if (!seatGroup) {
+                console.warn(`Seat group with ID ${seatId} not found.`);
+                return;
+            }
 
-         $(eventSelect).on('change', async function() {
+            // Get the current status from our `currentSeatsData` map
+            const seatStatus = currentSeatsData[seatId]?.status;
+
+            // Only allow selection if the seat is 'available'
+            if (seatStatus !== 'available') {
+                console.log(`Seat ${seatId} is ${seatStatus} and cannot be selected.`);
+                return;
+            }
+
+            const indexInSelected = selectedSeatsForBooking.indexOf(seatId);
+
+            if (indexInSelected > -1) {
+                // Seat is already selected by admin, deselect it
+                selectedSeatsForBooking.splice(indexInSelected, 1);
+                // Revert visual to its original 'available' state
+                updateSeatVisual(seatGroup, 'available');
+            } else {
+                // Seat is not selected, select it
+                selectedSeatsForBooking.push(seatId);
+                updateSeatVisual(seatGroup, 'selected'); // Set to 'selected' state
+            }
+
+            // Update the hidden input field with the array of selected seat IDs
+            selectedSeatsInput.value = JSON.stringify(selectedSeatsForBooking);
+            console.log('Current Selected Seat IDs:', selectedSeatsForBooking);
+        }
+
+        // Event listener for event selection change
+        $(eventSelect).on('change', async function() {
             const selectedOption = this.options[this.selectedIndex];
-            const location = selectedOption.dataset.location; // e.g., "BMICH", "Nelum Pokuna"
-            console.log("Selected Event Location:", location);
+            const location = selectedOption.dataset.location;
+            const seatsDataString = selectedOption.dataset.seats; // Get the seats data string
 
+            // Clear previously selected seats and the input field
+            selectedSeatsForBooking = [];
+            selectedSeatsInput.value = JSON.stringify([]);
             seatMapContainer.innerHTML = ''; // Clear previous SVG
 
-            if (location) {
-                let svgFileName = '';
-                // Map the location string to its corresponding SVG filename
-                // Make sure these match the actual filenames in src/public/seat-maps/
-                switch (location) {
-                    case 'BMICH':
-                        svgFileName = 'bmich.svg';
-                        break;
-                    case 'Nelum Pokuna':
-                        svgFileName = 'nelum.svg';
-                        break;
-                    case 'Musaeus College':
-                        svgFileName = 'musaeus.svg';
-                        break;
-                    case 'Bishop Collage':
-                        svgFileName = 'bishop.svg';
-                        break;
-                    default:
-                        console.warn("No SVG file mapping found for this location:", location);
-                        return; // Exit if no matching SVG
-                }
+            if (!location) {
+                console.warn("No location data for selected event.");
+                return;
+            }
 
-                // Construct the URL to the static SVG file
-                // The leading '/' is crucial as it tells the browser to look from the root of your domain.
-                const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
+            // Parse the raw seats data and populate our quick lookup map
+            const rawSeats = seatsDataString ? JSON.parse(seatsDataString) : [];
+            currentSeatsData = rawSeats.reduce((acc, seat) => {
+                acc[seat.seatId] = { status: seat.status || 'available' }; // Default to 'available' if status is missing
+                return acc;
+            }, {});
 
-                try {
-                    const response = await fetch(svgPath);
-                    if (!response.ok) {
-                        // If the file is not found (404) or other HTTP error
-                        throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
-                    }
-                    const svgContent = await response.text(); // Get the SVG content as plain text
-                    seatMapContainer.innerHTML = svgContent; // Inject the SVG text into the div
-                } catch (error) {
-                    console.error('Failed to load SVG:', error);
-                    seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
-                }
+            // Construct the URL to the static SVG file
+            let svgFileName = '';
+            switch (location) {
+                case 'BMICH': svgFileName = 'bmich.svg'; break;
+                case 'Nelum Pokuna': svgFileName = 'nelum-pokuna.svg'; break;
+                case 'Musaeus College': svgFileName = 'musaeus-college.svg'; break;
+                case 'Bishop Collage': svgFileName = 'bishop-college.svg'; break; // Corrected spelling
+                default:
+                    console.warn("No SVG file mapping found for this location:", location);
+                    seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
+                    return;
+            }
+            const svgPath = `/seat-maps/${svgFileName}`;
+
+            try {
+                const response = await fetch(svgPath);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
+                const svgContent = await response.text();
+                seatMapContainer.innerHTML = svgContent; // Inject the SVG
+
+                // After SVG is injected, iterate through its seat groups and apply initial colors/cursors
+                setTimeout(() => { // Small delay to ensure SVG is fully rendered in DOM
+                    const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
+                    seatsInSvg.forEach(seatGroup => {
+                        const seatId = seatGroup.id;
+                        const seatInfo = currentSeatsData[seatId];
+                        const status = seatInfo ? seatInfo.status : 'available'; // Default to 'available'
+
+                        // Apply visual based on status
+                        updateSeatVisual(seatGroup, status);
+
+                        // Set cursor and add/remove clickable class
+                        if (status === 'available') {
+                            seatGroup.style.cursor = 'pointer';
+                            seatGroup.classList.add('clickable-seat');
+                        } else {
+                            seatGroup.style.cursor = 'not-allowed';
+                            seatGroup.classList.remove('clickable-seat');
+                        }
+
+                        // Attach click listener for selection
+                        seatGroup.addEventListener('click', () => {
+                            toggleSeatSelection(seatId);
+                        });
+                    });
+                    console.log('Seat map and initial states rendered successfully.');
+                }, 50);
+            } catch (error) {
+                console.error('Failed to load SVG or apply seat states:', error);
+                seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
             }
         });
 
+        // Initial load logic for customer and event selection
+        if (customerSelect.value && customerSelect.value !== 'guest') {
+            $(customerSelect).trigger('change');
+        } else {
+            clearCustomerFields();
+        }
+
+        // Trigger event select change on page load if an event is pre-selected
         if (eventSelect.value) {
             $(eventSelect).trigger('change');
         }
+
+        // Inject CSS for seat styling
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .seat-group > path {
+                transition: fill 0.2s ease-in-out; /* Smooth color changes */
+            }
+            .clickable-seat:hover > path { /* Apply hover to paths within clickable groups */
+                opacity: 0.8; /* Dim on hover */
+            }
+            .seat-status-booked > path,
+            .seat-status-issued > path,
+            .seat-status-pending > path,
+            .seat-status-unavailable > path {
+                cursor: not-allowed !important;
+                filter: grayscale(50%); /* Desaturate non-selectable seats */
+            }
+            .seat-status-selected > path {
+                stroke: #333; /* Add a border to selected seats */
+                stroke-width: 2;
+            }
+            /* Default fill for available seats is handled in JS updateSeatVisual function */
+        `;
+        document.head.appendChild(style);
     });
 </script>
