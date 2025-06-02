@@ -5,10 +5,10 @@ import { loginGet, loginPost, dashboard,logout } from '../../controllers/admin/u
 import { addAdminGet, addAdminPost, admins, activateAdmin, deactivateAdmin ,editAdminGet, editAdminPost } from '../../controllers/admin/adminController';
 import { addArtistGet, addArtistPost, artists, activateArtist, deactivateArtist ,editArtistGet, editArtistPost} from '../../controllers/admin/artistController';
 import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, deactivateTicketType ,editTicketTypeGet, editTicketTypePost} from '../../controllers/admin/ticketTypeController';
-import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia,
-addBookingGet } from '../../controllers/admin/eventController';
+import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia} from '../../controllers/admin/eventController';
 import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
 import { orderReport } from '../../controllers/admin/reportController';
+import { addBookingGet,getCustomerDetails } from '../../controllers/admin/bookingController';
 
 const router = express.Router();
 
@@ -64,8 +64,10 @@ router.post('/event/edit/:id',upload.fields([{ name: 'banner_image', maxCount: 1
 router.get('/events', isAdminLoggedIn, events);
 router.post('/event/update-event-seats/:id', isAdminLoggedIn, updateEventSeats);
 router.get('/event/delete/:id/gallery', deleteGalleryMedia);
-router.get('/add-booking', isAdminLoggedIn, addBookingGet);
 
+//Booking Management
+router.get('/add-booking', isAdminLoggedIn, addBookingGet);
+router.get('/customer-details/:id', getCustomerDetails);
 
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);

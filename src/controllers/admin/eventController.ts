@@ -555,27 +555,3 @@ export const deleteGalleryMedia = async (req: Request, res: Response) => {
     return res.redirect(`/event/edit/${eventId}`);
   }
 };
-
-export const addBookingGet = async (req: Request, res: Response) => {
-  const error = req.session.error;
-  const success = req.session.success;
-  const formData = req.session.formData || {};
-  const validationErrors = req.session.validationErrors || {};
-
-  const events = await prisma.event.findMany({where: { status:'active' } });
-  const customers = await prisma.userDetails.findMany({});
-
-  req.session.error = undefined;
-  req.session.success = undefined;
-  req.session.formData = undefined;
-  req.session.validationErrors = undefined;
-
-  res.render('event/add-booking', {
-    error,
-    success,
-    formData,
-    validationErrors,
-    events,
-    customers,
-  });
-};
