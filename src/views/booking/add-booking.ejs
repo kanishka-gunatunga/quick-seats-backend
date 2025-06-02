@@ -357,7 +357,7 @@
         const emailField = document.getElementById('email');
         const contactNumberField = document.getElementById('contactNumber');
         const nicPassportField = document.getElementById('nicPassport');
-        const countryField = document.getElementById('country'); // Assuming you added id="country" to your country select
+        const countryField = document.getElementById('country'); 
 
         function clearCustomerFields() {
             firstNameField.value = '';
@@ -365,30 +365,15 @@
             emailField.value = '';
             contactNumberField.value = '';
             nicPassportField.value = '';
-            // For Select2, if you want to clear its visual state
-            $(countryField).val('').trigger('change'); // Use jQuery for Select2
+            $(countryField).val('').trigger('change'); 
         }
 
-        // Initialize Select2 if it's not already initialized globally
-        // This is crucial. If your layout/header.ejs includes jQuery and Select2 setup,
-        // this might be redundant, but it's good practice to ensure it.
-        // $(customerSelect).select2();
-        // $(countryField).select2(); // Also for country if you want it enabled/disabled correctly
-
-        // Listen for Select2's custom 'change' event
-        $(customerSelect).on('change', async function() { // <--- CHANGE IS HERE
+        $(customerSelect).on('change', async function() { 
             const selectedCustomerId = this.value;
             console.log("Selected Customer ID (from Select2 change):", selectedCustomerId);
 
             if (selectedCustomerId === 'guest') {
                 clearCustomerFields();
-                // Ensure fields are enabled for guest and Select2 is enabled
-                firstNameField.disabled = false;
-                lastNameField.disabled = false;
-                emailField.disabled = false;
-                contactNumberField.disabled = false;
-                nicPassportField.disabled = false;
-                $(countryField).prop('disabled', false).trigger('change'); // Enable Select2 for country
                 return;
             }
 
@@ -404,58 +389,24 @@
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
-                    emailField.value = data.userDetails.email || '';
+                    emailField.value = data.email || '';
                     contactNumberField.value = data.userDetails.contact_number || '';
                     nicPassportField.value = data.userDetails.nic_passport || '';
-
-                    // Set country value using Select2's programmatic way
-                    $(countryField).val(data.userDetails.country || '').trigger('change');
-
-                    // Disable fields for selected customers
-                    firstNameField.disabled = true;
-                    lastNameField.disabled = true;
-                    emailField.disabled = true;
-                    contactNumberField.disabled = true;
-                    nicPassportField.disabled = true;
-                    $(countryField).prop('disabled', true).trigger('change'); // Disable Select2 for country
 
                 } else {
                     console.warn("Customer or userDetails not found, clearing fields.");
                     clearCustomerFields();
-                    firstNameField.disabled = false;
-                    lastNameField.disabled = false;
-                    emailField.disabled = false;
-                    contactNumberField.disabled = false;
-                    nicPassportField.disabled = false;
-                    $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
                 }
             } catch (error) {
                 console.error('Failed to fetch customer details:', error);
                 clearCustomerFields();
-                firstNameField.disabled = false;
-                lastNameField.disabled = false;
-                emailField.disabled = false;
-                contactNumberField.disabled = false;
-                nicPassportField.disabled = false;
-                $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
             }
         });
 
-        // Initial load logic: check formData to pre-fill or enable fields
-        // This also needs to be compatible with Select2.
-        // If formData.customer is already set and not 'guest', trigger the change
         if (customerSelect.value && customerSelect.value !== 'guest') {
-            // Trigger Select2's change event programmatically
             $(customerSelect).trigger('change');
         } else {
-            // If formData is empty or 'guest' is selected initially, ensure fields are enabled
-            clearCustomerFields(); // Clear any pre-filled formData values if guest selected or no customer
-            firstNameField.disabled = false;
-            lastNameField.disabled = false;
-            emailField.disabled = false;
-            contactNumberField.disabled = false;
-            nicPassportField.disabled = false;
-            $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
+            clearCustomerFields(); 
         }
     });
 </script>
