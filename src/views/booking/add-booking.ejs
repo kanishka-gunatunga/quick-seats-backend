@@ -431,16 +431,16 @@
                 // Make sure these match the actual filenames in src/public/seat-maps/
                 switch (location) {
                     case 'BMICH':
-                        svgFileName = 'seat-map-svgs/bmich.svg';
+                        svgFileName = 'bmich.svg';
                         break;
                     case 'Nelum Pokuna':
-                        svgFileName = 'seat-map-svgs/nelum.svg';
+                        svgFileName = 'nelum.svg';
                         break;
                     case 'Musaeus College':
-                        svgFileName = 'seat-map-svgs/musaeus.svg';
+                        svgFileName = 'musaeus.svg';
                         break;
                     case 'Bishop Collage':
-                        svgFileName = 'seat-map-svgs/bishop.svg';
+                        svgFileName = 'bishop.svg';
                         break;
                     default:
                         console.warn("No SVG file mapping found for this location:", location);
@@ -449,7 +449,7 @@
 
                 // Construct the URL to the static SVG file
                 // The leading '/' is crucial as it tells the browser to look from the root of your domain.
-                const svgPath = `/seat-maps/${svgFileName}`;
+                const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
 
                 try {
                     const response = await fetch(svgPath);
