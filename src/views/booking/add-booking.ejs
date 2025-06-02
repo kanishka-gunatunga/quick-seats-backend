@@ -335,7 +335,7 @@ height: auto;
                                                             <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>
-                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>" data-seats="<%= JSON.stringify(event.seats || []) %>"><%= event.name %></option>
+                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>"  data-seats="<%= JSON.stringify(event.seats || []) %>"><%= event.name %></option>
                                                                     <% }); %>
                                                             </select>
                                                             <% if (validationErrors?.event) { %>
@@ -360,12 +360,12 @@ height: auto;
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const customerSelect = document.getElementById('customerSelect');
-        const firstNameField = document.getElementById('firstName');
-        const lastNameField = document.getElementById('lastName');
-        const emailField = document.getElementById('emailField');
-        const contactNumberField = document.getElementById('contactNumber');
-        const nicPassportField = document.getElementById('nicPassport');
+        const customerSelect = document.getElementById('customerSelect'); // Assuming this exists elsewhere
+        const firstNameField = document.getElementById('firstName'); // Assuming this exists elsewhere
+        const lastNameField = document.getElementById('lastName'); // Assuming this exists elsewhere
+        const emailField = document.getElementById('emailField'); // Assuming this exists elsewhere
+        const contactNumberField = document.getElementById('contactNumber'); // Assuming this exists elsewhere
+        const nicPassportField = document.getElementById('nicPassport'); // Assuming this exists elsewhere
 
         const eventSelect = document.getElementById('eventSelect');
         const seatMapContainer = document.getElementById('seatMapContainer');
@@ -384,31 +384,35 @@ height: auto;
         }
 
         // Customer selection logic (remains unchanged)
-        $(customerSelect).on('change', async function() {
-            const selectedCustomerId = this.value;
-            if (selectedCustomerId === 'guest') {
-                clearCustomerFields();
-                return;
-            }
-            try {
-                const response = await fetch(`/customer-details/${selectedCustomerId}`);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                const data = await response.json();
-                if (data && data.userDetails) {
-                    firstNameField.value = data.userDetails.first_name || '';
-                    lastNameField.value = data.userDetails.last_name || '';
-                    emailField.value = data.email || '';
-                    contactNumberField.value = data.userDetails.contact_number || '';
-                    nicPassportField.value = data.userDetails.nic_passport || '';
-                } else {
-                    console.warn("Customer or userDetails not found, clearing fields.");
+        // This assumes jQuery is loaded if $(customerSelect).on is used
+        if (customerSelect) { // Check if element exists before attaching listener
+            $(customerSelect).on('change', async function() {
+                const selectedCustomerId = this.value;
+                if (selectedCustomerId === 'guest' || selectedCustomerId === '') { // Added empty string for "Select..." option
+                    clearCustomerFields();
+                    return;
+                }
+                try {
+                    const response = await fetch(`/customer-details/${selectedCustomerId}`);
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    const data = await response.json();
+                    if (data && data.userDetails) {
+                        firstNameField.value = data.userDetails.first_name || '';
+                        lastNameField.value = data.userDetails.last_name || '';
+                        emailField.value = data.email || '';
+                        contactNumberField.value = data.userDetails.contact_number || '';
+                        nicPassportField.value = data.userDetails.nic_passport || '';
+                    } else {
+                        console.warn("Customer or userDetails not found, clearing fields.");
+                        clearCustomerFields();
+                    }
+                } catch (error) {
+                    console.error('Failed to fetch customer details:', error);
                     clearCustomerFields();
                 }
-            } catch (error) {
-                console.error('Failed to fetch customer details:', error);
-                clearCustomerFields();
-            }
-        });
+            });
+        }
+
 
         // Function to update the visual state of a seat
         function updateSeatVisual(seatGroup, status) {
@@ -446,14 +450,15 @@ height: auto;
         function toggleSeatSelection(seatId) {
             const seatGroup = document.getElementById(seatId);
             if (!seatGroup) {
-                console.warn(`Seat group with ID ${seatId} not found.`);
+                console.warn(`Seat group with ID ${seatId} not found in SVG.`);
                 return;
             }
 
             // Get the current status from our `currentSeatsData` map
-            const seatStatus = currentSeatsData[seatId]?.status;
+            const seatInfo = currentSeatsData[seatId];
+            const seatStatus = seatInfo ? seatInfo.status : 'available'; // Default to 'available' if not found in data
 
-            // Only allow selection if the seat is 'available'
+            // Only allow selection if the seat is 'available' in its original state
             if (seatStatus !== 'available') {
                 console.log(`Seat ${seatId} is ${seatStatus} and cannot be selected.`);
                 return;
@@ -478,28 +483,61 @@ height: auto;
         }
 
         // Event listener for event selection change
+        // This assumes jQuery is loaded if $(eventSelect).on is used
         $(eventSelect).on('change', async function() {
             const selectedOption = this.options[this.selectedIndex];
             const location = selectedOption.dataset.location;
             const seatsDataString = selectedOption.dataset.seats; // Get the seats data string
+            const eventId = this.value;
 
             // Clear previously selected seats and the input field
             selectedSeatsForBooking = [];
             selectedSeatsInput.value = JSON.stringify([]);
             seatMapContainer.innerHTML = ''; // Clear previous SVG
 
-            if (!location) {
-                console.warn("No location data for selected event.");
+            if (!eventId || !location) {
+                console.warn("No event selected or no location data for selected event.");
+                seatMapContainer.innerHTML = '<p class="text-muted">Select an event to load the seat map.</p>';
                 return;
             }
 
-            // Parse the raw seats data and populate our quick lookup map
-            const rawSeats = seatsDataString ? JSON.parse(seatsDataString) : [];
-            console.log(rawSeats);
+            // --- IMPORTANT DEBUGGING LOGS ---
+            console.log('1. Raw seatsDataString from data-attribute:', seatsDataString);
+
+            let rawSeats = [];
+            if (seatsDataString) {
+                try {
+                    rawSeats = JSON.parse(seatsDataString);
+                    console.log('2. rawSeats after JSON.parse:', rawSeats, 'Type:', typeof rawSeats, 'Is Array:', Array.isArray(rawSeats));
+
+                    if (!Array.isArray(rawSeats)) {
+                        console.error("ERROR: Parsed seats data is NOT an array. Resetting to empty array.");
+                        rawSeats = []; // Defensive reset if parsing yields non-array
+                    }
+                } catch (e) {
+                    console.error("Error parsing seatsDataString. This likely means the data-seats attribute is malformed JSON.", e, "Original string:", seatsDataString);
+                    rawSeats = []; // Fallback to empty array if JSON.parse fails
+                }
+            } else {
+                console.log("seatsDataString is empty or null, initializing rawSeats as empty array.");
+            }
+
+            // --- Check rawSeats just before reduce ---
+            console.log('3. rawSeats just before reduce:', rawSeats, 'Type:', typeof rawSeats, 'Is Array:', Array.isArray(rawSeats));
+
+            // Populate our quick lookup map
             currentSeatsData = rawSeats.reduce((acc, seat) => {
-                acc[seat.seatId] = { status: seat.status || 'available' }; // Default to 'available' if status is missing
+                // Ensure 'seat' object is valid before accessing properties
+                if (seat && typeof seat.seatId === 'string') {
+                    acc[seat.seatId] = { status: seat.status || 'available' }; // Default to 'available' if status is missing
+                } else {
+                    console.warn("Skipping invalid seat entry:", seat);
+                }
                 return acc;
             }, {});
+
+            console.log('4. currentSeatsData after reduce:', currentSeatsData);
+
 
             // Construct the URL to the static SVG file
             let svgFileName = '';
@@ -507,7 +545,7 @@ height: auto;
                 case 'BMICH': svgFileName = 'bmich.svg'; break;
                 case 'Nelum Pokuna': svgFileName = 'nelum.svg'; break;
                 case 'Musaeus College': svgFileName = 'musaeus.svg'; break;
-                case 'Bishop Collage': svgFileName = 'bishop.svg'; break; // Corrected spelling
+                case 'Bishop College': svgFileName = 'bishop.svg'; break; // Corrected spelling to match your example
                 default:
                     console.warn("No SVG file mapping found for this location:", location);
                     seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
@@ -517,15 +555,28 @@ height: auto;
 
             try {
                 const response = await fetch(svgPath);
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status} for ${svgPath}`);
+                }
                 const svgContent = await response.text();
                 seatMapContainer.innerHTML = svgContent; // Inject the SVG
 
                 // After SVG is injected, iterate through its seat groups and apply initial colors/cursors
-                setTimeout(() => { // Small delay to ensure SVG is fully rendered in DOM
+                // Use a slight delay to ensure the SVG elements are fully parsed and available in the DOM
+                setTimeout(() => {
                     const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
+                    if (seatsInSvg.length === 0) {
+                        console.warn("No elements with class 'seat-group' found in the loaded SVG.");
+                        return; // Exit if no seat groups are found
+                    }
+
                     seatsInSvg.forEach(seatGroup => {
                         const seatId = seatGroup.id;
+                        if (!seatId) {
+                            console.warn("Skipping seat group without an ID:", seatGroup);
+                            return; // Skip if a seat group doesn't have an ID
+                        }
+
                         const seatInfo = currentSeatsData[seatId];
                         const status = seatInfo ? seatInfo.status : 'available'; // Default to 'available'
 
@@ -546,8 +597,8 @@ height: auto;
                             toggleSeatSelection(seatId);
                         });
                     });
-                    console.log('Seat map and initial states rendered successfully.');
-                }, 50);
+                    console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
+                }, 100); // Increased delay slightly to ensure DOM readiness
             } catch (error) {
                 console.error('Failed to load SVG or apply seat states:', error);
                 seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
@@ -555,13 +606,22 @@ height: auto;
         });
 
         // Initial load logic for customer and event selection
-        if (customerSelect.value && customerSelect.value !== 'guest') {
-            $(customerSelect).trigger('change');
+        // Check if customerSelect exists before trying to access its value
+        if (customerSelect) {
+            if (customerSelect.value && customerSelect.value !== 'guest') {
+                $(customerSelect).trigger('change');
+            } else {
+                clearCustomerFields();
+            }
         } else {
-            clearCustomerFields();
+            console.warn("Customer select element not found.");
+            // Consider clearing fields if they exist, even without a customer select
+            // clearCustomerFields();
         }
 
+
         // Trigger event select change on page load if an event is pre-selected
+        // Also check if an event is actually selected (not "Select....")
         if (eventSelect.value) {
             $(eventSelect).trigger('change');
         }
@@ -575,6 +635,7 @@ height: auto;
             .clickable-seat:hover > path { /* Apply hover to paths within clickable groups */
                 opacity: 0.8; /* Dim on hover */
             }
+            /* Styles for non-clickable/occupied seats */
             .seat-status-booked > path,
             .seat-status-issued > path,
             .seat-status-pending > path,
@@ -582,6 +643,7 @@ height: auto;
                 cursor: not-allowed !important;
                 filter: grayscale(50%); /* Desaturate non-selectable seats */
             }
+            /* Style for admin-selected seats */
             .seat-status-selected > path {
                 stroke: #333; /* Add a border to selected seats */
                 stroke-width: 2;
