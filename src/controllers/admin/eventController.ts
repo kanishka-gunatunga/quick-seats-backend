@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 import { put } from '@vercel/blob';
 import upload from '../../middlewares/upload';
+import { del } from '@vercel/blob';
 
 const prisma = new PrismaClient();
 
@@ -426,7 +427,7 @@ export const editEventPost = async (req: Request, res: Response) => {
       ticketCount: ticket.count ? Number(ticket.count) : null,
     }));
 
-    const artistIdsForDb = artists.map(Number); // Ensure artists are numbers if stored as such
+  
 
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
@@ -443,7 +444,7 @@ export const editEventPost = async (req: Request, res: Response) => {
         featured_image: featuredImageUrl,
         gallery_media: galleryMedia, // Update gallery media with combined existing and new
         ticket_details: ticketDetailsForDb,
-        artist_details: artistIdsForDb,
+        artist_details: artists,
       },
     });
 
@@ -500,6 +501,57 @@ export const updateEventSeats = async (req: Request, res: Response) => {
     req.session.error = 'An unexpected error occurred while updating the seats.';
 
     req.session.formData = req.body;
+    return res.redirect(`/event/edit/${eventId}`);
+  }
+};
+
+
+export const deleteGalleryMedia = async (req: Request, res: Response) => {
+  const eventId = Number(req.params.id);
+  const urlToDelete = req.query.url as string;
+
+  if (!urlToDelete) {
+    req.session.error = 'Media URL is missing for deletion.';
+    return res.redirect(`/event/edit/${eventId}`);
+  }
+
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { gallery_media: true },
+    });
+
+    if (!event) {
+      req.session.error = 'Event not found.';
+      return res.redirect('/events');
+    }
+    const currentGalleryMedia = Array.isArray(event.gallery_media) ? (event.gallery_media as { url: string }[]) : [];
+    const updatedGalleryMedia = currentGalleryMedia.filter(media => media.url !== urlToDelete);
+
+     if (updatedGalleryMedia.length === currentGalleryMedia.length) {
+      req.session.error = 'Gallery item not found in event or already removed.';
+      return res.redirect(`/event/edit/${eventId}`);
+    }
+
+    await prisma.event.update({
+      where: { id: eventId },
+      data: {
+        gallery_media: updatedGalleryMedia,
+      },
+    });
+
+    try {
+      await del(urlToDelete);
+      console.log(`Successfully deleted blob: ${urlToDelete}`);
+    } catch (blobErr) {
+      console.error(`Failed to delete blob from Vercel Blob: ${urlToDelete}`, blobErr);
+    }
+
+    req.session.success = 'Gallery item deleted successfully!';
+    return res.redirect(`/event/edit/${eventId}`);
+  } catch (err) {
+    console.error('Error deleting gallery media:', err);
+    req.session.error = 'An unexpected error occurred while deleting the gallery item.';
     return res.redirect(`/event/edit/${eventId}`);
   }
 };
