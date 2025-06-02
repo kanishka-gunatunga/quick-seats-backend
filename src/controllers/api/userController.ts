@@ -65,6 +65,18 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
+    const templatePath = path.join(__dirname, '../../email-templates/register-success-template.ejs');
+
+    const emailHtml = await ejs.renderFile(templatePath, {
+        first_name: first_name,
+    });
+
+    await transporter.sendMail({
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'Welcome to Quick Tickets!',
+        html: emailHtml,
+    });
     return res.status(201).json({ message: 'User registered successfully' });
   } catch (err) {
     console.error('Registration error:', err);
