@@ -59,7 +59,7 @@ router.post('/add-event',upload.fields([{ name: 'banner_image', maxCount: 1 },{ 
 router.get('/event/activate/:id', isAdminLoggedIn, activateEvent);
 router.get('/event/deactivate/:id', isAdminLoggedIn, deactivateEvent);
 router.get('/event/edit/:id', isAdminLoggedIn, editEventGet);
-router.post('/event/edit/:id',upload.fields([{ name: 'banner_image', maxCount: 1 },{ name: 'featured_image', maxCount: 1 },]), isAdminLoggedIn, editEventPost);
+router.post('/event/edit/:id',upload.fields([{ name: 'banner_image', maxCount: 1 },{ name: 'featured_image', maxCount: 1 },{ name: 'gallery_files', maxCount: 10 }]), isAdminLoggedIn, editEventPost);
 router.get('/events', isAdminLoggedIn, events);
 router.post('/event/update-event-seats/:id', isAdminLoggedIn, updateEventSeats);
 

@@ -141,6 +141,13 @@ height: auto;
                                                 <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
                                             <% } %>
                                         </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Gallery Files</label>
+                                            <input type="file" class="form-control" name="gallery_files" multiple>
+                                            <% if (validationErrors?.gallery_files) { %>
+                                                <small class="text-danger"><%= validationErrors.gallery_files[0] %></small>
+                                            <% } %>
+                                        </div>
                                         <div class="col-md-12 mb-3">
                                             <h4 class="header-title">Set Ticket Prices</h4>
                                             <div id="ticket-container">
