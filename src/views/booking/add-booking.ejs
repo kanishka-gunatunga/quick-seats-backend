@@ -349,7 +349,7 @@
             <%- include('../layouts/footer.ejs') %>
 
 
-            <script>
+           <script>
     document.addEventListener('DOMContentLoaded', function() {
         const customerSelect = document.getElementById('customerSelect');
         const firstNameField = document.getElementById('firstName');
@@ -357,7 +357,7 @@
         const emailField = document.getElementById('email');
         const contactNumberField = document.getElementById('contactNumber');
         const nicPassportField = document.getElementById('nicPassport');
-        const countryField = document.getElementById('country');
+        const countryField = document.getElementById('country'); // Assuming you added id="country" to your country select
 
         function clearCustomerFields() {
             firstNameField.value = '';
@@ -365,25 +365,30 @@
             emailField.value = '';
             contactNumberField.value = '';
             nicPassportField.value = '';
-            // For select2, you might need to trigger a change or use specific API methods
-            // Simple reset for regular select:
-            countryField.value = '';
-            // If using select2, you might need:
-            // $(countryField).val('').trigger('change');
+            // For Select2, if you want to clear its visual state
+            $(countryField).val('').trigger('change'); // Use jQuery for Select2
         }
 
-        customerSelect.addEventListener('change', async function() {
+        // Initialize Select2 if it's not already initialized globally
+        // This is crucial. If your layout/header.ejs includes jQuery and Select2 setup,
+        // this might be redundant, but it's good practice to ensure it.
+        // $(customerSelect).select2();
+        // $(countryField).select2(); // Also for country if you want it enabled/disabled correctly
+
+        // Listen for Select2's custom 'change' event
+        $(customerSelect).on('change', async function() { // <--- CHANGE IS HERE
             const selectedCustomerId = this.value;
-            console.log(selectedCustomerId);
+            console.log("Selected Customer ID (from Select2 change):", selectedCustomerId);
+
             if (selectedCustomerId === 'guest') {
                 clearCustomerFields();
-                // Optionally disable fields for guest if they shouldn't be edited
-                firstNameField.disabled = false; // Enable if they can type for guest
+                // Ensure fields are enabled for guest and Select2 is enabled
+                firstNameField.disabled = false;
                 lastNameField.disabled = false;
                 emailField.disabled = false;
                 contactNumberField.disabled = false;
                 nicPassportField.disabled = false;
-                countryField.disabled = false;
+                $(countryField).prop('disabled', false).trigger('change'); // Enable Select2 for country
                 return;
             }
 
@@ -392,66 +397,65 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
-                const customer = await response.json();
-                console.log(customer);
-                if (customer) {
-                    firstNameField.value = customer.first_name || '';
-                    lastNameField.value = customer.last_name || ''; // Corrected field name from 'first_name' to 'last_name'
-                    emailField.value = customer.email || '';
-                    contactNumberField.value = customer.contact_number || '';
-                    nicPassportField.value = customer.nic_passport || '';
-                    // Set country. For select2, if it's already initialized, this might not work
-                    // You might need to update select2 programmatically if the country is dynamically set
-                    countryField.value = customer.country || '';
-                    // If using select2, and the country value isn't setting correctly,
-                    // you might need to use its specific method:
-                    // $(countryField).val(customer.country || '').trigger('change');
+                const data = await response.json();
 
-                    // Optionally disable fields for non-guest customers if their details shouldn't be edited
+                console.log("Fetched customer data:", data);
+
+                if (data && data.userDetails) {
+                    firstNameField.value = data.userDetails.first_name || '';
+                    lastNameField.value = data.userDetails.last_name || '';
+                    emailField.value = data.userDetails.email || '';
+                    contactNumberField.value = data.userDetails.contact_number || '';
+                    nicPassportField.value = data.userDetails.nic_passport || '';
+
+                    // Set country value using Select2's programmatic way
+                    $(countryField).val(data.userDetails.country || '').trigger('change');
+
+                    // Disable fields for selected customers
                     firstNameField.disabled = true;
                     lastNameField.disabled = true;
                     emailField.disabled = true;
                     contactNumberField.disabled = true;
                     nicPassportField.disabled = true;
-                    countryField.disabled = true;
+                    $(countryField).prop('disabled', true).trigger('change'); // Disable Select2 for country
 
                 } else {
-                    // If customer is not found, clear fields and allow editing
+                    console.warn("Customer or userDetails not found, clearing fields.");
                     clearCustomerFields();
                     firstNameField.disabled = false;
                     lastNameField.disabled = false;
                     emailField.disabled = false;
                     contactNumberField.disabled = false;
                     nicPassportField.disabled = false;
-                    countryField.disabled = false;
+                    $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
                 }
             } catch (error) {
                 console.error('Failed to fetch customer details:', error);
-                // On error, clear fields and allow editing
                 clearCustomerFields();
                 firstNameField.disabled = false;
                 lastNameField.disabled = false;
                 emailField.disabled = false;
                 contactNumberField.disabled = false;
                 nicPassportField.disabled = false;
-                countryField.disabled = false;
+                $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
             }
         });
 
-        // Initialize fields based on initial formData if a customer was previously selected
-        if (customerSelect.value !== 'guest' && customerSelect.value !== '') {
-            // Trigger change event programmatically to load details if formData has a selected customer
-            customerSelect.dispatchEvent(new Event('change'));
+        // Initial load logic: check formData to pre-fill or enable fields
+        // This also needs to be compatible with Select2.
+        // If formData.customer is already set and not 'guest', trigger the change
+        if (customerSelect.value && customerSelect.value !== 'guest') {
+            // Trigger Select2's change event programmatically
+            $(customerSelect).trigger('change');
         } else {
             // If formData is empty or 'guest' is selected initially, ensure fields are enabled
-            clearCustomerFields();
+            clearCustomerFields(); // Clear any pre-filled formData values if guest selected or no customer
             firstNameField.disabled = false;
             lastNameField.disabled = false;
             emailField.disabled = false;
             contactNumberField.disabled = false;
             nicPassportField.disabled = false;
-            countryField.disabled = false;
+            $(countryField).prop('disabled', false).trigger('change'); // Ensure Select2 is enabled
         }
-
     });
 </script>
