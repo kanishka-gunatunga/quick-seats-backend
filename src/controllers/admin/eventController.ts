@@ -32,10 +32,6 @@ export const addEventGet = async (req: Request, res: Response) => {
   });
 };
 
-const galleryFileSchema = z.object({
-  url: z.string().url(),
-  type: z.enum(['image', 'video']),
-});
 export const addEventPost = async (req: Request, res: Response) => {
 
   const schema = z.object({
@@ -184,20 +180,7 @@ export const addEventPost = async (req: Request, res: Response) => {
   }
 };
 
-export const events = async (req: Request, res: Response) => {
-  const events = await prisma.event.findMany({ });
 
-  const error = req.session.error;
-  const success = req.session.success;
-  req.session.error = undefined;
-  req.session.success = undefined;
-
-  res.render('event/events', {
-    error,
-    success,
-    events,
-  });
-};
 export const activateEvent = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
   try {
@@ -293,15 +276,9 @@ export const editEventGet = async (req: Request, res: Response) => {
     return res.redirect('/events'); 
   }
 };
-
-const galleryFileEntrySchema = z.object({
-  url: z.string().url(),
-  type: z.enum(['image', 'video']),
-});
 export const editEventPost = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);
 
-  // Zod schema for validation
   const schema = z.object({
     name: z.string().min(1, 'Name is required'),
     start_date_time: z.string().min(1, 'Start date and time is required'),
@@ -319,15 +296,17 @@ export const editEventPost = async (req: Request, res: Response) => {
       price: z.string().min(1, 'Ticket price is required'),
       count: z.string().optional(),
     })).optional().default([]),
-    // This is the new field to capture existing gallery media from hidden inputs
-    existing_gallery_media: z.array(galleryFileEntrySchema).optional().default([]),
+    // Add validation for existing_gallery_media
+    existing_gallery_media: z.array(z.object({
+      url: z.string().url(),
+      type: z.union([z.literal('image'), z.literal('video')]),
+    })).optional().default([]),
   });
 
-  // Extract uploaded files from req.files
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   const bannerImageFile = files?.banner_image?.[0];
   const featuredImageFile = files?.featured_image?.[0];
-  const newGalleryFiles = files?.new_gallery_files || []; // <--- Renamed to match HTML
+  const newGalleryFiles = files?.gallery_files || []; // New gallery files being uploaded
 
   try {
     const result = schema.safeParse(req.body);
@@ -350,19 +329,12 @@ export const editEventPost = async (req: Request, res: Response) => {
       location,
       artists,
       tickets,
-      existing_gallery_media // <--- Capture the existing media that was sent back
+      existing_gallery_media, // Get existing gallery media from form
     } = result.data;
 
-    // Fetch the existing event to get current image URLs and gallery media
     const existingEvent = await prisma.event.findUnique({
       where: { id: eventId },
-      select: {
-        banner_image: true,
-        featured_image: true,
-        slug: true,
-        name: true,
-        gallery_media: true // Select existing gallery media from DB (optional, but good for fallback)
-      },
+      select: { banner_image: true, featured_image: true, slug: true, name: true, gallery_media: true },
     });
 
     if (!existingEvent) {
@@ -372,13 +344,9 @@ export const editEventPost = async (req: Request, res: Response) => {
 
     let bannerImageUrl: string | null = existingEvent.banner_image;
     let featuredImageUrl: string | null = existingEvent.featured_image;
+    let galleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media; // Initialize with existing media
 
-    // Initialize the gallery media array with the items that were *kept* by the user
-    // (i.e., those sent back via hidden inputs).
-    let updatedGalleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media;
-
-
-    // --- Handle Banner Image Upload ---
+    // Handle banner image upload
     if (bannerImageFile) {
       if (!bannerImageFile.mimetype.startsWith('image/')) {
         req.session.error = 'Banner image must be an image file.';
@@ -393,7 +361,7 @@ export const editEventPost = async (req: Request, res: Response) => {
       bannerImageUrl = url;
     }
 
-    // --- Handle Featured Image Upload ---
+    // Handle featured image upload
     if (featuredImageFile) {
       if (!featuredImageFile.mimetype.startsWith('image/')) {
         req.session.error = 'Featured image must be an image file.';
@@ -408,7 +376,7 @@ export const editEventPost = async (req: Request, res: Response) => {
       featuredImageUrl = url;
     }
 
-    // --- Handle New Gallery Files Upload and Append ---
+    // Handle new gallery file uploads
     for (const file of newGalleryFiles) {
       let mediaType: 'image' | 'video' | undefined;
       if (file.mimetype.startsWith('image/')) {
@@ -416,9 +384,9 @@ export const editEventPost = async (req: Request, res: Response) => {
       } else if (file.mimetype.startsWith('video/')) {
         mediaType = 'video';
       } else {
-        req.session.error = 'All gallery files must be image or video files.';
+        req.session.error = 'All new gallery files must be image or video files.';
         req.session.formData = req.body;
-        req.session.validationErrors = { ...req.session.validationErrors, new_gallery_files: ['All gallery files must be image or video files.'] };
+        req.session.validationErrors = { ...req.session.validationErrors, gallery_files: ['All new gallery files must be image or video files.'] };
         return res.redirect(`/event/edit/${eventId}`);
       }
 
@@ -426,29 +394,26 @@ export const editEventPost = async (req: Request, res: Response) => {
         access: 'public',
         addRandomSuffix: true,
       });
-      updatedGalleryMedia.push({ url, type: mediaType }); // Add new files to the array
+      galleryMedia.push({ url, type: mediaType });
     }
 
-    // Generate a unique slug only if the name has changed
     let uniqueSlug = existingEvent.slug;
     if (name !== existingEvent.name) {
       let baseSlug = slugify(name, { lower: true, strict: true });
       let suffix = 1;
-      // Ensure the new slug is unique and doesn't conflict with other events (excluding the current one)
       while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
         uniqueSlug = `${baseSlug}-${suffix++}`;
       }
     }
 
-    // Prepare ticket details for Prisma
-    const ticketDetailsJson = tickets.map((ticket: { type_id: string; price: string; count?: string }) => ({
+    const ticketDetailsForDb = tickets.map((ticket) => ({
       ticketTypeId: Number(ticket.type_id),
       price: Number(ticket.price),
       ticketCount: ticket.count ? Number(ticket.count) : null,
     }));
 
-   
-    // Update the event in the database
+    const artistIdsForDb = artists.map(Number); // Ensure artists are numbers if stored as such
+
     const updatedEvent = await prisma.event.update({
       where: { id: eventId },
       data: {
@@ -462,9 +427,9 @@ export const editEventPost = async (req: Request, res: Response) => {
         location,
         banner_image: bannerImageUrl,
         featured_image: featuredImageUrl,
-        gallery_media: updatedGalleryMedia, // Save the combined array
-        ticket_details: ticketDetailsJson,
-        artist_details: artists,
+        gallery_media: galleryMedia, // Update gallery media with combined existing and new
+        ticket_details: ticketDetailsForDb,
+        artist_details: artistIdsForDb,
       },
     });
 
@@ -479,7 +444,6 @@ export const editEventPost = async (req: Request, res: Response) => {
     return res.redirect(`/event/edit/${eventId}`);
   }
 };
-
 
 export const updateEventSeats = async (req: Request, res: Response) => {
   const eventId = Number(req.params.id);

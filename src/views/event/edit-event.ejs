@@ -33,191 +33,192 @@ height: auto;
                             <div class="tab-pane show active" id="home1">
                                 <form class="mt-4" method="POST" action="/event/edit/<%= enrichedEvent.id %>" enctype="multipart/form-data">
                                     <% if (success) { %>
-                                        <div class="alert alert-success"><%= success %></div>
+                                    <div class="alert alert-success"><%= success %></div>
                                     <% } %>
                                     <% if (error) { %>
-                                        <div class="alert alert-danger"><%= error %></div>
+                                    <div class="alert alert-danger"><%= error %></div>
                                     <% } %>
 
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Name</label>
-                                            <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
-                                            <% if (validationErrors?.name) { %>
-                                                <small class="text-danger"><%= validationErrors.name[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
+                                        <% if (validationErrors?.name) { %>
+                                        <small class="text-danger"><%= validationErrors.name[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Start Date Time</label>
-                                            <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
-                                            <% if (validationErrors?.start_date_time) { %>
-                                                <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Start Date Time</label>
+                                        <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                        <% if (validationErrors?.start_date_time) { %>
+                                        <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">End Date Time</label>
-                                            <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
-                                            <% if (validationErrors?.end_date_time) { %>
-                                                <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">End Date Time</label>
+                                        <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
+                                        <% if (validationErrors?.end_date_time) { %>
+                                        <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Description</label>
-                                            <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
-                                            <% if (validationErrors?.discription) { %>
-                                                <small class="text-danger"><%= validationErrors.discription[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Description</label>
+                                        <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
+                                        <% if (validationErrors?.discription) { %>
+                                        <small class="text-danger"><%= validationErrors.discription[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                            <label class="form-label">Ticket Policy</label>
-                                            <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
-                                            <% if (validationErrors?.policy) { %>
-                                                <small class="text-danger"><%= validationErrors.policy[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Ticket Policy</label>
+                                        <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
+                                        <% if (validationErrors?.policy) { %>
+                                        <small class="text-danger"><%= validationErrors.policy[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Organized By</label>
-                                            <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
-                                            <% if (validationErrors?.organized_by) { %>
-                                                <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Organized By</label>
+                                        <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
+                                        <% if (validationErrors?.organized_by) { %>
+                                        <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Location</label>
-                                            <select class="form-control" data-toggle="select2" name="location" data-width="100%">
-                                                <option value="BMICH" <%= (formData?.location || enrichedEvent.location) === 'BMICH' ? 'selected' : '' %>BMICH</option>
-                                                <option value="Nelum Pokuna" <%= (formData?.location || enrichedEvent.location) === 'Nelum Pokuna' ? 'selected' : '' %>Nelum Pokuna</option>
-                                                <option value="Musaeus College" <%= (formData?.location || enrichedEvent.location) === 'Musaeus College' ? 'selected' : '' %>Musaeus College</option>
-                                                <option value="Bishop Collage" <%= (formData?.location || enrichedEvent.location) === 'Bishop Collage' ? 'selected' : '' %>Bishop Collage</option>
-                                            </select>
-                                            <% if (validationErrors?.location) { %>
-                                                <small class="text-danger"><%= validationErrors.location[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Location</label>
+                                        <select class="form-control" data-toggle="select2" name="location" data-width="100%">
+                                            <option value="BMICH" <%= (formData?.location || enrichedEvent.location) === 'BMICH' ? 'selected' : '' %>BMICH</option>
+                                            <option value="Nelum Pokuna" <%= (formData?.location || enrichedEvent.location) === 'Nelum Pokuna' ? 'selected' : '' %>Nelum Pokuna</option>
+                                            <option value="Musaeus College" <%= (formData?.location || enrichedEvent.location) === 'Musaeus College' ? 'selected' : '' %>Musaeus College</option>
+                                            <option value="Bishop Collage" <%= (formData?.location || enrichedEvent.location) === 'Bishop Collage' ? 'selected' : '' %>Bishop Collage</option>
+                                        </select>
+                                        <% if (validationErrors?.location) { %>
+                                        <small class="text-danger"><%= validationErrors.location[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Artists</label>
-                                            <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
-                                                <% allArtists.forEach(artist => { %>
-                                                    <option value="<%= artist.id %>"
-                                                        <%
-                                                            // Check if the artist ID is in formData (after validation error)
-                                                            const isSelectedInFormData = formData?.artists && Array.isArray(formData.artists) && formData.artists.includes(artist.id.toString());
-                                                            // Check if the artist ID is in enrichedEvent.artist_details (from database)
-                                                            const isSelectedInEvent = enrichedEvent.artist_details && Array.isArray(enrichedEvent.artist_details) && enrichedEvent.artist_details.includes(artist.id);
-                                                            if (isSelectedInFormData || isSelectedInEvent) {
-                                                                %> selected <%
-                                                            }
-                                                        %>
-                                                    >
-                                                        <%= artist.name %>
-                                                    </option>
-                                                <% }); %>
-                                            </select>
-                                            <% if (validationErrors?.artists) { %>
-                                                <small class="text-danger"><%= validationErrors.artists[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Artists</label>
+                                        <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
+                                            <% allArtists.forEach(artist => { %>
+                                            <option value="<%= artist.id %>"
+                                            <%
+                                                                            // Check if the artist ID is in formData (after validation error)
+                                                                            const isSelectedInFormData = formData?.artists && Array.isArray(formData.artists) && formData.artists.includes(artist.id.toString());
+                                                                            // Check if the artist ID is in enrichedEvent.artist_details (from database)
+                                                                            const isSelectedInEvent = enrichedEvent.artist_details && Array.isArray(enrichedEvent.artist_details) && enrichedEvent.artist_details.includes(artist.id);
+                                                                            if (isSelectedInFormData || isSelectedInEvent) {
+                                                                            %> selected <%
+                                                                            }
+                                                                            %>
+                                            >
+                                            <%= artist.name %>
+                                            </option>
+                                            <% }); %>
+                                        </select>
+                                        <% if (validationErrors?.artists) { %>
+                                        <small class="text-danger"><%= validationErrors.artists[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Banner Image</label>
-                                            <input type="file" class="form-control" name="banner_image" accept="image/*">
-                                            <% if (enrichedEvent.banner_image) { %>
-                                                <div class="mt-2">
-                                                    <img src="<%= enrichedEvent.banner_image %>" alt="Banner Image" style="max-width: 150px; height: auto;">
-                                                </div>
-                                            <% } %>
-                                            <% if (validationErrors?.banner_image) { %>
-                                                <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Banner Image</label>
+                                        <input type="file" class="form-control" name="banner_image" accept="image/*">
+                                        <% if (enrichedEvent.banner_image) { %>
+                                        <div class="mt-2">
+                                            <img src="<%= enrichedEvent.banner_image %>" alt="Banner Image" style="max-width: 150px; height: auto;">
+                                        </div>
+                                        <% } %>
+                                        <% if (validationErrors?.banner_image) { %>
+                                        <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
+                                        <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                            <label class="form-label">Featured Image</label>
-                                            <input type="file" class="form-control" name="featured_image" accept="image/*">
-                                            <% if (enrichedEvent.featured_image) { %>
-                                                <div class="mt-2">
-                                                    <img src="<%= enrichedEvent.featured_image %>" alt="Featured Image" style="max-width: 150px; height: auto;">
-                                                </div>
-                                            <% } %>
-                                            <% if (validationErrors?.featured_image) { %>
-                                                <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
-                                            <% } %>
+                                        <label class="form-label">Featured Image</label>
+                                        <input type="file" class="form-control" name="featured_image" accept="image/*">
+                                        <% if (enrichedEvent.featured_image) { %>
+                                        <div class="mt-2">
+                                            <img src="<%= enrichedEvent.featured_image %>" alt="Featured Image" style="max-width: 150px; height: auto;">
                                         </div>
-                                       <div class="col-md-4 mb-3">
+                                        <% } %>
+                                        <% if (validationErrors?.featured_image) { %>
+                                        <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
+                                        <% } %>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
                                         <label class="form-label">Gallery Files</label>
                                         <input type="file" class="form-control" name="gallery_files" multiple accept="image/*,video/*">
                                         <% if (validationErrors?.gallery_files) { %>
-                                            <small class="text-danger"><%= validationErrors.gallery_files[0] %></small>
+                                        <small class="text-danger"><%= validationErrors.gallery_files[0] %></small>
                                         <% } %>
 
                                         <div class="mt-2" id="current-gallery-media">
                                             <% if (enrichedEvent.gallery_media && enrichedEvent.gallery_media.length > 0) { %>
-                                                <h6>Current Gallery:</h6>
-                                                <div class="row">
-                                                    <% enrichedEvent.gallery_media.forEach(media => { %>
-                                                        <div class="col-6 col-md-4 mb-2">
-                                                            <% if (media.type === 'image') { %>
-                                                                <img src="<%= media.url %>" alt="Gallery Image" class="img-fluid" style="max-height: 100px; object-fit: cover;">
-                                                            <% } else if (media.type === 'video') { %>
-                                                                <video src="<%= media.url %>" controls class="img-fluid" style="max-height: 100px; object-fit: cover;"></video>
-                                                            <% } %>
-                                                            <input type="hidden" name="existing_gallery_media[][url]" value="<%= media.url %>">
-                                                            <input type="hidden" name="existing_gallery_media[][type]" value="<%= media.type %>">
-                                                        </div>
-                                                    <% }); %>
-                                                </div>
+                                            <h6>Current Gallery:</h6>
+                                            <div class="row">
+                                            <% enrichedEvent.gallery_media.forEach((media, index) => { %>
+                                            <div class="col-6 col-md-4 mb-2 gallery-item" data-index="<%= index %>">
+                                                <% if (media.type === 'image') { %>
+                                                <img src="<%= media.url %>" alt="Gallery Image" class="img-fluid" style="max-height: 100px; object-fit: cover;">
+                                                <% } else if (media.type === 'video') { %>
+                                                <video src="<%= media.url %>" controls class="img-fluid" style="max-height: 100px; object-fit: cover;"></video>
+                                                <% } %>
+                                                <input type="hidden" name="existing_gallery_media[<%= index %>][url]" value="<%= media.url %>">
+                                                <input type="hidden" name="existing_gallery_media[<%= index %>][type]" value="<%= media.type %>">
+                                                <button type="button" class="btn btn-danger btn-sm mt-1 remove-gallery-item" data-url="<%= media.url %>" data-event-id="<%= enrichedEvent.id %>">Remove</button>
+                                            </div>
+                                            <% }); %>
+                                            </div>
                                             <% } %>
                                         </div>
-                                    </div>
+                                        </div>
                                         <div class="col-md-12 mb-3">
-                                            <h4 class="header-title">Set Ticket Prices</h4>
-                                            <div id="ticket-container">
-                                                <%
-                                                // Prioritize formData tickets if present (after validation error)
-                                                const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
-                                                %>
+                                        <h4 class="header-title">Set Ticket Prices</h4>
+                                        <div id="ticket-container">
+                                            <%
+                                                    // Prioritize formData tickets if present (after validation error)
+                                                    const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
+                                                    %>
 
-                                                <% if (ticketsToRender && ticketsToRender.length > 0) { %>
-                                                    <% ticketsToRender.forEach((ticket, index) => { %>
-                                                        <%
-                                                            // Determine if 'ticket' has 'type_id' (from formData) or 'ticketTypeId' (from enrichedEvent)
-                                                            const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
-                                                            const currentTicketPrice = ticket.price;
-                                                            const currentTicketCount = ticket.count || ticket.ticketCount;
-                                                            const currentTicketType = ticket_types.find(tt => tt.id === currentTicketTypeId);
-                                                            const currentHasCount = currentTicketType?.has_ticket_count;
-                                                        %>
-                                                        <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
-                                                            <div class="col-md-4">
-                                                                <label class="form-label">Ticket Type</label>
-                                                                <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
-                                                                    <option value="">Select a type</option>
-                                                                    <% ticket_types.forEach(tt => { %>
-                                                                        <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
-                                                                            <%= tt.name %>
-                                                                        </option>
-                                                                    <% }); %>
-                                                                </select>
-                                                            </div>
-                                                            <div class="col-md-3">
-                                                                <label class="form-label">Price</label>
-                                                                <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
-                                                            </div>
-                                                            <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
-                                                                <label class="form-label">Ticket Count</label>
-                                                                <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
-                                                            </div>
-                                                            <div class="col-md-2">
-                                                                <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
-                                                            </div>
-                                                        </div>
-                                                    <% }); %>
-                                                <% } %>
+                                            <% if (ticketsToRender && ticketsToRender.length > 0) { %>
+                                            <% ticketsToRender.forEach((ticket, index) => { %>
+                                            <%
+                                                                    // Determine if 'ticket' has 'type_id' (from formData) or 'ticketTypeId' (from enrichedEvent)
+                                                                    const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
+                                                                    const currentTicketPrice = ticket.price;
+                                                                    const currentTicketCount = ticket.count || ticket.ticketCount;
+                                                                    const currentTicketType = ticket_types.find(tt => tt.id === currentTicketTypeId);
+                                                                    const currentHasCount = currentTicketType?.has_ticket_count;
+                                                                    %>
+                                            <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Ticket Type</label>
+                                                <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
+                                                <option value="">Select a type</option>
+                                                <% ticket_types.forEach(tt => { %>
+                                                <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
+                                                    <%= tt.name %>
+                                                </option>
+                                                <% }); %>
+                                                </select>
                                             </div>
-                                            <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
+                                            <div class="col-md-3">
+                                                <label class="form-label">Price</label>
+                                                <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
+                                            </div>
+                                            <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
+                                                <label class="form-label">Ticket Count</label>
+                                                <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                                            </div>
+                                            </div>
+                                            <% }); %>
+                                            <% } %>
+                                        </div>
+                                        <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
                                         </div>
                                     </div>
 
                                     <button type="submit" class="btn btn-primary">Update</button>
-                                </form>
+                                    </form>
                             </div>
                             <div class="tab-pane " id="profile1">
                                 <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
