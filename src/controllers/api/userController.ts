@@ -4,6 +4,8 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import transporter from '../../services/mailTransporter';
+import ejs from 'ejs';
+import path from 'path';
 
 const JWT_SECRET = process.env.JWT_SECRET!;
 
@@ -397,11 +399,16 @@ export const forgotPassword = async (req: Request, res: Response) => {
 
     const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
+    const templatePath = path.join(__dirname, '../../views/email-templates/forgot-password-template.ejs');
+    const emailHtml = await ejs.renderFile(templatePath, {
+        otp: otp,
+    });
+
     await transporter.sendMail({
-      from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-      to: email,
-      subject: 'Password Reset OTP',
-      html: `<p>Your OTP for resetting your password is: <strong>${otp}</strong></p>`,
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'Password Reset OTP',
+        html: emailHtml,
     });
 
     await prisma.user.update({

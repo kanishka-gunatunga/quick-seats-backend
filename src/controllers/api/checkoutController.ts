@@ -165,6 +165,7 @@ export const checkout = async (req: Request, res: Response) => {
             const seats = groupedSeats[ticketTypeName];
             return `${ticketTypeName}: ${seats.join(', ')}`;
         }).join('; ');
+        
         const templatePath = path.join(__dirname, '../../views/email-templates/qr-template.ejs');
         const qrEmailHtml = await ejs.renderFile(templatePath, {
             first_name: first_name,
