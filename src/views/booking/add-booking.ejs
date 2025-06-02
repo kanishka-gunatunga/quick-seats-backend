@@ -21,14 +21,14 @@
                                                     <div class="row">
                                                         <div class="col-md-4 mb-3">
                                                         <label class="form-label">Customer</label>
-                                                        <select class="form-control" data-toggle="select2" name="csutomer" id="customerSelect" data-width="100%">
+                                                        <select class="form-control" data-toggle="select2" name="customer" id="customerSelect" data-width="100%">
                                                                 <option value="guest">Guest</option>
                                                                 <% customers.forEach(customer => { %>
                                                                     <option value="<%= customer.user_id %>" ><%= customer.first_name %> <%= customer.last_name %></option>
                                                                 <% }); %>
                                                         </select>
-                                                        <% if (validationErrors?.csutomer) { %>
-                                                            <small class="text-danger"><%= validationErrors.csutomer[0] %></small>
+                                                        <% if (validationErrors?.customer) { %>
+                                                            <small class="text-danger"><%= validationErrors.customer[0] %></small>
                                                         <% } %>
                                                         </div>
 
@@ -326,15 +326,19 @@
                                                         </div>
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Event</label>
-                                                            <select class="form-control" data-toggle="select2" name="csutomer" data-width="100%">
+                                                            <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>
-                                                                        <option value="<%= event.id %>" ><%= event.name %></option>
+                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>"><%= event.name %></option>
                                                                     <% }); %>
                                                             </select>
-                                                            <% if (validationErrors?.csutomer) { %>
-                                                                <small class="text-danger"><%= validationErrors.csutomer[0] %></small>
+                                                            <% if (validationErrors?.event) { %>
+                                                                <small class="text-danger"><%= validationErrors.event[0] %></small>
                                                             <% } %>
+                                                        </div>
+                                                        <div class="col-md-12">
+                                                            <div id="seatMapContainer" class="mt-4">
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -358,6 +362,9 @@
         const contactNumberField = document.getElementById('contactNumber');
         const nicPassportField = document.getElementById('nicPassport');
         const countryField = document.getElementById('country'); 
+
+        const eventSelect = document.getElementById('eventSelect');
+        const seatMapContainer = document.getElementById('seatMapContainer');
 
         function clearCustomerFields() {
             firstNameField.value = '';
@@ -408,6 +415,52 @@
             $(customerSelect).trigger('change');
         } else {
             clearCustomerFields(); 
+        }
+
+
+        $(eventSelect).on('change', async function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const location = selectedOption.dataset.location;
+            console.log("Selected Event Location:", location);
+
+            seatMapContainer.innerHTML = ''; 
+
+            if (location) {
+                let svgPath = '';
+                switch (location) {
+                    case 'BMICH':
+                        svgPath = '../seat-maps/bmich.ejs';
+                        break;
+                    case 'Nelum Pokuna':
+                        svgPath = '../seat-maps/nelum.ejs';
+                        break;
+                    case 'Musaeus College':
+                        svgPath = '../seat-maps/musaeus.ejs';
+                        break;
+                    case 'Bishop Collage':
+                        svgPath = '../seat-maps/bishop.ejs';
+                        break;
+                    default:
+                        console.warn("No SVG found for this location:", location);
+                        return;
+                }
+
+                try {
+                    const response = await fetch(svgPath);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const svgContent = await response.text();
+                    seatMapContainer.innerHTML = svgContent;
+                } catch (error) {
+                    console.error('Failed to load SVG:', error);
+                    seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map.</p>';
+                }
+            }
+        });
+
+        if (eventSelect.value) {
+            $(eventSelect).trigger('change');
         }
     });
 </script>
