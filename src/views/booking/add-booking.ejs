@@ -385,7 +385,7 @@
                 const data = await response.json();
 
                 console.log("Fetched customer data:", data);
-
+                console.log("Email value from data:", data.email);
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
