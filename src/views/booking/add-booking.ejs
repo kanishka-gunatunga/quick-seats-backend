@@ -374,7 +374,7 @@
 
         customerSelect.addEventListener('change', async function() {
             const selectedCustomerId = this.value;
-
+            console.log(selectedCustomerId);
             if (selectedCustomerId === 'guest') {
                 clearCustomerFields();
                 // Optionally disable fields for guest if they shouldn't be edited
@@ -393,7 +393,7 @@
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const customer = await response.json();
-
+                console.log(customer);
                 if (customer) {
                     firstNameField.value = customer.first_name || '';
                     lastNameField.value = customer.last_name || ''; // Corrected field name from 'first_name' to 'last_name'
