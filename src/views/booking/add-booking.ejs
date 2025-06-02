@@ -357,7 +357,6 @@ height: auto;
 
             </div>
             <%- include('../layouts/footer.ejs') %>
-
 <script>
    document.addEventListener('DOMContentLoaded', function() {
     // Selectors for elements on the page
@@ -395,6 +394,7 @@ height: auto;
                 return;
             }
             try {
+                // Using template literals for the URL
                 const response = await fetch(`/customer-details/${selectedCustomerId}`);
                 if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                 const data = await response.json();
@@ -460,7 +460,7 @@ height: auto;
             return;
         }
 
-        // Get the current status from our `currentSeatsData` map (based on backend data)
+        // Get the current status from our currentSeatsData map (based on backend data)
         const seatInfo = currentSeatsData[seatId];
         // IMPORTANT: If currentSeatsData is empty (meaning no seats assigned from backend),
         // or if the specific seatId is not found in the backend data, it should NOT be available.
@@ -495,7 +495,7 @@ height: auto;
     $(eventSelect).on('change', async function() {
         const selectedOption = this.options[this.selectedIndex];
         const location = selectedOption.dataset.location;
-        const seatsDataString = selectedOption.dataset.seats; // Get the seats data string from data-attribute
+        let seatsDataString = selectedOption.dataset.seats; // Get the seats data string from data-attribute
         const eventId = this.value;
 
         // Clear previously selected seats and the input field
@@ -516,20 +516,25 @@ height: auto;
         let rawSeats = [];
         if (seatsDataString) {
             try {
-                // Attempt to parse the string into a JavaScript value
-                const parsedData = JSON.parse(seatsDataString);
+                // First attempt to parse
+                let parsedData = JSON.parse(seatsDataString);
+                console.log('2. parsedData after first JSON.parse:', parsedData);
+                console.log('   Type of parsedData (first parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
 
-                console.log('2. parsedData after JSON.parse:', parsedData);
-                // Explicitly log the type and array status of the parsed result to debug
-                console.log('   Type of parsedData:', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
+                // Check if the result of the first parse is a string and try parsing again
+                // This handles cases where the data was double-stringified on the server
+                if (typeof parsedData === 'string' && parsedData.startsWith('[') && parsedData.endsWith(']')) {
+                    console.log('   Parsed data is a string, attempting second parse...');
+                    parsedData = JSON.parse(parsedData); // Try parsing again
+                    console.log('3. parsedData after second JSON.parse:', parsedData);
+                    console.log('   Type of parsedData (second parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
+                }
 
-                // --- FIX: Assign to rawSeats ONLY if it's an actual array ---
+                // Ensure the final parsed data is an array
                 if (Array.isArray(parsedData)) {
                     rawSeats = parsedData;
                 } else {
-                    // This block will now catch cases where JSON.parse doesn't throw an error,
-                    // but the result isn't an array (e.g., parsing "null", "true", "false", or a number string).
-                    console.error("ERROR: JSON.parse did not yield an array. Resetting rawSeats to empty array. Actual parsed value:", parsedData);
+                    console.error("ERROR: JSON.parse did not yield an array after all attempts. Resetting rawSeats to empty array. Actual parsed value:", parsedData);
                     rawSeats = []; // Defensive reset if parsing yields a non-array
                 }
             } catch (e) {
@@ -570,6 +575,7 @@ height: auto;
                 seatMapContainer.innerHTML = '<p class="text-danger">No seat map available for this location.</p>';
                 return;
         }
+        // Using template literals for the path
         const svgPath = `/assets/seat-map-svgs/${svgFileName}`;
 
         try {
@@ -629,7 +635,8 @@ height: auto;
     // Initial load logic for customer and event selection
     // Check if customerSelect exists before trying to access its value
     if (customerSelect) {
-        if (customerSelect.value && customerSelect.value !== 'guest' && customerSelect.value !== '') { // Also check for empty string
+        // Also check for empty string for the "Select..." option
+        if (customerSelect.value && customerSelect.value !== 'guest' && customerSelect.value !== '') { 
             $(customerSelect).trigger('change'); // Trigger change if a customer is pre-selected
         } else {
             clearCustomerFields();
