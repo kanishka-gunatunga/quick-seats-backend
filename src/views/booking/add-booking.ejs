@@ -1,4 +1,10 @@
 <%- include('../layouts/header.ejs') %>
+<style>
+svg{
+width: 100%;
+height: auto; 
+}
+</style>
 <div class="content-page">
                 <div class="content">
 
@@ -329,7 +335,7 @@
                                                             <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>
-                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>"><%= event.name %></option>
+                                                                        <option value="<%= event.id %>" data-location="<%= event.location %>" data-seats="<%= event.seats %>"><%= event.name %></option>
                                                                     <% }); %>
                                                             </select>
                                                             <% if (validationErrors?.event) { %>
