@@ -21,7 +21,7 @@
                                                     <div class="row">
                                                         <div class="col-md-4 mb-3">
                                                         <label class="form-label">Customer</label>
-                                                        <select class="form-control" data-toggle="select2" name="csutomer" data-width="100%">
+                                                        <select class="form-control" data-toggle="select2" name="csutomer" id="customerSelect" data-width="100%">
                                                                 <option value="guest">Guest</option>
                                                                 <% customers.forEach(customer => { %>
                                                                     <option value="<%= customer.user_id %>" ><%= customer.first_name %> <%= customer.last_name %></option>
@@ -34,7 +34,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">First Name</label>
-                                                            <input type="text" class="form-control" name="first_name" value="<%= formData?.first_name || '' %>">
+                                                            <input type="text" class="form-control" name="first_name" id="firstName" value="<%= formData?.first_name || '' %>">
                                                             <% if (validationErrors?.first_name) { %>
                                                                 <small class="text-danger"><%= validationErrors.first_name[0] %></small>
                                                             <% } %>
@@ -42,15 +42,15 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Last Name</label>
-                                                            <input type="text" class="form-control" name="first_name" value="<%= formData?.first_name || '' %>">
-                                                            <% if (validationErrors?.first_name) { %>
-                                                                <small class="text-danger"><%= validationErrors.first_name[0] %></small>
+                                                            <input type="text" class="form-control" name="last_name" id="lastName" value="<%= formData?.last_name || '' %>">
+                                                            <% if (validationErrors?.last_name) { %>
+                                                                <small class="text-danger"><%= validationErrors.last_name[0] %></small>
                                                             <% } %>
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Email</label>
-                                                            <input type="email" class="form-control" name="email" value="<%= formData?.email || '' %>">
+                                                            <input type="email" class="form-control" name="email" id="email" value="<%= formData?.email || '' %>">
                                                             <% if (validationErrors?.email) { %>
                                                                 <small class="text-danger"><%= validationErrors.email[0] %></small>
                                                             <% } %>
@@ -58,7 +58,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Contact Number</label>
-                                                            <input type="email" class="form-control" name="contact_number" value="<%= formData?.contact_number || '' %>">
+                                                            <input type="email" class="form-control" name="contact_number" id="contactNumber" value="<%= formData?.contact_number || '' %>">
                                                             <% if (validationErrors?.contact_number) { %>
                                                                 <small class="text-danger"><%= validationErrors.contact_number[0] %></small>
                                                             <% } %>
@@ -66,7 +66,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">NIC/Passport</label>
-                                                            <input type="email" class="form-control" name="nic_passport" value="<%= formData?.nic_passport || '' %>">
+                                                            <input type="email" class="form-control" name="nic_passport" id="nicPassport" value="<%= formData?.nic_passport || '' %>">
                                                             <% if (validationErrors?.nic_passport) { %>
                                                                 <small class="text-danger"><%= validationErrors.nic_passport[0] %></small>
                                                             <% } %>
@@ -74,7 +74,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Country</label>
-                                                            <select class="form-control" data-toggle="select2" name="country" data-width="100%">
+                                                            <select class="form-control" data-toggle="select2" name="country" id="country" data-width="100%">
                                                                 <option value="Afghanistan">Afghanistan</option>
                                                                 <option value="Åland Islands">Åland Islands</option>
                                                                 <option value="Albania">Albania</option>
@@ -347,3 +347,111 @@
 
             </div>
             <%- include('../layouts/footer.ejs') %>
+
+
+            <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const customerSelect = document.getElementById('customerSelect');
+        const firstNameField = document.getElementById('firstName');
+        const lastNameField = document.getElementById('lastName');
+        const emailField = document.getElementById('email');
+        const contactNumberField = document.getElementById('contactNumber');
+        const nicPassportField = document.getElementById('nicPassport');
+        const countryField = document.getElementById('country');
+
+        function clearCustomerFields() {
+            firstNameField.value = '';
+            lastNameField.value = '';
+            emailField.value = '';
+            contactNumberField.value = '';
+            nicPassportField.value = '';
+            // For select2, you might need to trigger a change or use specific API methods
+            // Simple reset for regular select:
+            countryField.value = '';
+            // If using select2, you might need:
+            // $(countryField).val('').trigger('change');
+        }
+
+        customerSelect.addEventListener('change', async function() {
+            const selectedCustomerId = this.value;
+
+            if (selectedCustomerId === 'guest') {
+                clearCustomerFields();
+                // Optionally disable fields for guest if they shouldn't be edited
+                firstNameField.disabled = false; // Enable if they can type for guest
+                lastNameField.disabled = false;
+                emailField.disabled = false;
+                contactNumberField.disabled = false;
+                nicPassportField.disabled = false;
+                countryField.disabled = false;
+                return;
+            }
+
+            try {
+                const response = await fetch(`/customer-details/${selectedCustomerId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const customer = await response.json();
+
+                if (customer) {
+                    firstNameField.value = customer.first_name || '';
+                    lastNameField.value = customer.last_name || ''; // Corrected field name from 'first_name' to 'last_name'
+                    emailField.value = customer.email || '';
+                    contactNumberField.value = customer.contact_number || '';
+                    nicPassportField.value = customer.nic_passport || '';
+                    // Set country. For select2, if it's already initialized, this might not work
+                    // You might need to update select2 programmatically if the country is dynamically set
+                    countryField.value = customer.country || '';
+                    // If using select2, and the country value isn't setting correctly,
+                    // you might need to use its specific method:
+                    // $(countryField).val(customer.country || '').trigger('change');
+
+                    // Optionally disable fields for non-guest customers if their details shouldn't be edited
+                    firstNameField.disabled = true;
+                    lastNameField.disabled = true;
+                    emailField.disabled = true;
+                    contactNumberField.disabled = true;
+                    nicPassportField.disabled = true;
+                    countryField.disabled = true;
+
+                } else {
+                    // If customer is not found, clear fields and allow editing
+                    clearCustomerFields();
+                    firstNameField.disabled = false;
+                    lastNameField.disabled = false;
+                    emailField.disabled = false;
+                    contactNumberField.disabled = false;
+                    nicPassportField.disabled = false;
+                    countryField.disabled = false;
+                }
+            } catch (error) {
+                console.error('Failed to fetch customer details:', error);
+                // On error, clear fields and allow editing
+                clearCustomerFields();
+                firstNameField.disabled = false;
+                lastNameField.disabled = false;
+                emailField.disabled = false;
+                contactNumberField.disabled = false;
+                nicPassportField.disabled = false;
+                countryField.disabled = false;
+            }
+        });
+
+        // Initialize fields based on initial formData if a customer was previously selected
+        if (customerSelect.value !== 'guest' && customerSelect.value !== '') {
+            // Trigger change event programmatically to load details if formData has a selected customer
+            customerSelect.dispatchEvent(new Event('change'));
+        } else {
+            // If formData is empty or 'guest' is selected initially, ensure fields are enabled
+            clearCustomerFields();
+            firstNameField.disabled = false;
+            lastNameField.disabled = false;
+            emailField.disabled = false;
+            contactNumberField.disabled = false;
+            nicPassportField.disabled = false;
+            countryField.disabled = false;
+        }
+
+    });
+</script>
