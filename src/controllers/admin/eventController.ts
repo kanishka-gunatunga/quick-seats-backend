@@ -32,10 +32,13 @@ export const addEventGet = async (req: Request, res: Response) => {
   });
 };
 
+const galleryFileSchema = z.object({
+  url: z.string().url(),
+  type: z.enum(['image', 'video']),
+});
 export const addEventPost = async (req: Request, res: Response) => {
-  
 
- const schema = z.object({
+  const schema = z.object({
     name: z.string().min(1, 'Name is required'),
     start_date_time: z.string().min(1, 'Start date and time is required'),
     end_date_time: z.string().min(1, 'End date and time is required'),
@@ -54,19 +57,18 @@ export const addEventPost = async (req: Request, res: Response) => {
     })).optional().default([]),
   });
 
-  const result = schema.safeParse(req.body);
 
-  
+  const result = schema.safeParse(req.body);
 
   if (!result.success) {
     const errors = result.error.flatten().fieldErrors;
     req.session.error = 'Please fix the errors below.';
     req.session.formData = req.body;
     req.session.validationErrors = errors;
-    return res.redirect('/add-event'); 
+    return res.redirect('/add-event');
   }
 
-   const {
+  const {
     name,
     start_date_time,
     end_date_time,
@@ -78,45 +80,78 @@ export const addEventPost = async (req: Request, res: Response) => {
     tickets,
   } = result.data;
 
-  const bannerImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.banner_image?.[0];
-  const featuredImageFile = (req.files as { [fieldname: string]: Express.Multer.File[] })?.featured_image?.[0];
+
+  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+  const bannerImageFile = files?.banner_image?.[0];
+  const featuredImageFile = files?.featured_image?.[0];
+  const galleryFiles = files?.gallery_files || [];
 
   let bannerImageUrl: string | null = null;
   let featuredImageUrl: string | null = null;
+  let galleryMedia: { url: string; type: 'image' | 'video' }[] = [];
 
   try {
 
-if (bannerImageFile) {
+    if (bannerImageFile) {
+      if (!bannerImageFile.mimetype.startsWith('image/')) {
+        req.session.error = 'Banner image must be an image file.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, banner_image: ['Banner image must be an image file.'] };
+        return res.redirect('/add-event');
+      }
       const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
-        access: 'public', 
+        access: 'public',
         addRandomSuffix: true,
       });
       bannerImageUrl = url;
-    }
+    } 
 
     if (featuredImageFile) {
+      if (!featuredImageFile.mimetype.startsWith('image/')) {
+        req.session.error = 'Featured image must be an image file.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, featured_image: ['Featured image must be an image file.'] };
+        return res.redirect('/add-event');
+      }
       const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
         access: 'public',
         addRandomSuffix: true,
       });
       featuredImageUrl = url;
+    } 
+
+    for (const file of galleryFiles) {
+      let mediaType: 'image' | 'video' | undefined;
+      if (file.mimetype.startsWith('image/')) {
+        mediaType = 'image';
+      } else if (file.mimetype.startsWith('video/')) {
+        mediaType = 'video';
+      } else {
+        req.session.error = 'All gallery files must be image or video files.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { ...req.session.validationErrors, gallery_files: ['All gallery files must be image or video files.'] };
+        return res.redirect('/add-event');
+      }
+
+      const { url } = await put(file.originalname, file.buffer, {
+        access: 'public',
+        addRandomSuffix: true,
+      });
+      galleryMedia.push({ url, type: mediaType });
     }
 
     let baseSlug = slugify(name, { lower: true, strict: true });
     let uniqueSlug = baseSlug;
     let suffix = 1;
-
     while (await prisma.event.findUnique({ where: { slug: uniqueSlug } })) {
       uniqueSlug = `${baseSlug}-${suffix++}`;
     }
 
-    const ticketDetailsJson = tickets.map((ticket: any) => ({
+    const ticketDetailsForDb = tickets.map((ticket: any) => ({
       ticketTypeId: parseInt(ticket.type_id, 10),
       price: parseFloat(ticket.price),
       ticketCount: ticket.count ? parseInt(ticket.count, 10) : null,
     }));
-
-    const artistIdsJson = artists;
 
     const event = await prisma.event.create({
       data: {
@@ -130,38 +165,23 @@ if (bannerImageFile) {
         location,
         banner_image: bannerImageUrl,
         featured_image: featuredImageUrl,
-        ticket_details: ticketDetailsJson,
-        artist_details: artistIdsJson,
+        gallery_media: galleryMedia,
+        ticket_details: ticketDetailsForDb,
+        artist_details: artists,
         status: 'active',
       },
     });
 
-
-    req.session.success = 'event added successfully!';
-    req.session.formData = {}; 
+    req.session.success = 'Event added successfully!';
+    req.session.formData = {};
     req.session.validationErrors = {};
-    return res.redirect(`/event/edit/${event.id}`); 
+    return res.redirect(`/event/edit/${event.id}`);
   } catch (err) {
     console.error('Error adding event:', err);
     req.session.error = 'An unexpected error occurred while adding the event.';
     req.session.formData = req.body;
-    return res.redirect('/add-event'); 
+    return res.redirect('/add-event');
   }
-};
-
-export const events = async (req: Request, res: Response) => {
-  const events = await prisma.event.findMany({ });
-
-  const error = req.session.error;
-  const success = req.session.success;
-  req.session.error = undefined;
-  req.session.success = undefined;
-
-  res.render('event/events', {
-    error,
-    success,
-    events,
-  });
 };
 
 
