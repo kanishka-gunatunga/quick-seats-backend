@@ -180,6 +180,20 @@ export const addEventPost = async (req: Request, res: Response) => {
   }
 };
 
+export const events = async (req: Request, res: Response) => {
+  const events = await prisma.event.findMany({ });
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  res.render('event/events', {
+    error,
+    success,
+    events,
+  });
+};
 
 export const activateEvent = async (req: Request, res: Response) => {
   const id = Number(req.params.id);
