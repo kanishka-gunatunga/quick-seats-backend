@@ -50,7 +50,7 @@
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Email</label>
-                                                            <input type="text" class="form-control" name="email" id="email" value="<%= formData?.email || '' %>">
+                                                            <input type="email" class="form-control" name="email" id="emailField" value="<%= formData?.email || '' %>">
                                                             <% if (validationErrors?.email) { %>
                                                                 <small class="text-danger"><%= validationErrors.email[0] %></small>
                                                             <% } %>
@@ -354,7 +354,7 @@
         const customerSelect = document.getElementById('customerSelect');
         const firstNameField = document.getElementById('firstName');
         const lastNameField = document.getElementById('lastName');
-        const emailField = document.getElementById('email');
+        const emailField = document.getElementById('emailField');
         const contactNumberField = document.getElementById('contactNumber');
         const nicPassportField = document.getElementById('nicPassport');
         const countryField = document.getElementById('country'); 
@@ -386,16 +386,11 @@
 
                 console.log("Fetched customer data:", data);
                 console.log("Email value from data:", data.email);
-                if (emailField) { // Ensure the element exists
-    emailField.value = data.email || '';
-    console.log("Value set on emailField:", emailField.value); // Verify value after setting
-} else {
-    console.error("Error: emailField element not found!");
-}
+
                 if (data && data.userDetails) {
                     firstNameField.value = data.userDetails.first_name || '';
                     lastNameField.value = data.userDetails.last_name || '';
-                    emailField.value = data.email || 'asdasdad';
+                    emailField.value = data.email || '';
                     contactNumberField.value = data.userDetails.contact_number || '';
                     nicPassportField.value = data.userDetails.nic_passport || '';
 
