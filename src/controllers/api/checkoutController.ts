@@ -162,7 +162,7 @@ export const checkout = async (req: Request, res: Response) => {
                 cid: `qr${index}@event.com`,
             });
         });
-        const templatePath = path.join(__dirname, '../../email-templates/qr-template.ejs');
+        const templatePath = path.join(__dirname, '../../views/email-templates/qr-template.ejs');
         const qrEmailHtml = await ejs.renderFile(templatePath, {
             first_name: first_name,
             qrCodes: qrCodes,
