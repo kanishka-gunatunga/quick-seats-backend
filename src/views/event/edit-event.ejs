@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Populate the ticket type dropdown
     ticketTypes.forEach((type) => {
-        if(!type.hasTicketCount){
+        if(!type.has_ticket_count){
             const option = document.createElement('option');
             option.value = JSON.stringify(type);
             option.textContent = type.ticketTypeName;
