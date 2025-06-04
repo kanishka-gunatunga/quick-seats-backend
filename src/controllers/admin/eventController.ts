@@ -169,7 +169,6 @@ export const addEventPost = async (req: Request, res: Response) => {
         while (await prisma.event.findUnique({ where: { slug: uniqueSlug } })) {
             uniqueSlug = `${baseSlug}-${suffix++}`;
         }
-
         const ticketDetailsForDb = tickets.map((ticket: any) => ({
             ticketTypeId: parseInt(ticket.type_id, 10),
             price: parseFloat(ticket.price),

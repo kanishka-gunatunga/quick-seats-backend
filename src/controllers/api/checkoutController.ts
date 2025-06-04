@@ -153,9 +153,19 @@ export const checkout = async (req: Request, res: Response) => {
             // Ensure bookedTicketCount is initialized if it's undefined or null
             currentTicketDetail.bookedTicketCount = (currentTicketDetail.bookedTicketCount || 0) + ticket.ticket_count;
             subTotal += currentTicketDetail.price * ticket.ticket_count;
+            const ticket_type = await prisma.ticketType.findUnique({
+                where: { id: parseInt(currentTicketDetail.ticketTypeId) },
+                select: {
+                    name: true
+                },
+            });
+            if (!ticket_type) {
 
+                console.warn(`TicketType with ID ${ticket.ticket_type_id} not found in database.`);
+                return res.status(400).json({ message: `Ticket type details not found for ID: ${ticket.ticket_type_id}.` });
+            }
             ticketsWithoutSeatsDetails.push({
-                ticketTypeName: currentTicketDetail.ticketTypeName || `Type ${currentTicketDetail.ticketTypeName}`, 
+                ticketTypeName: ticket_type.name || '', 
                 count: ticket.ticket_count,
                 type_id: ticket.ticket_type_id,
                 price: currentTicketDetail.price,
