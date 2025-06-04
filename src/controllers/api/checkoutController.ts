@@ -7,7 +7,6 @@ import ejs from 'ejs';
 import path from 'path';
 
 const prisma = new PrismaClient();
-
 interface Seat {
     seatId: string | number;
     status: string;
@@ -41,22 +40,19 @@ export const checkout = async (req: Request, res: Response) => {
             }
             return val;
         }, z.array(z.union([z.number(), z.string()])).optional()),
-         tickets_without_seats: z.preprocess((val) => {
-            // If it's a string, attempt to parse it
+        tickets_without_seats: z.preprocess((val) => {
             if (typeof val === 'string') {
                 try {
                     return JSON.parse(val);
-                } catch (e) {
-                    console.error("Failed to parse tickets_without_seats string:", e);
-                    return []; // Return empty array on parse error
+                } catch {
+                    return [];
                 }
             }
-            // If it's already an array (or any other type), just return it
             return val;
         }, z.array(z.object({
             ticket_type_id: z.number(),
             ticket_count: z.number().min(1, 'Ticket count must be at least 1'),
-        })).optional().default([])),
+        })).optional()),
     });
 
     const result = schema.safeParse(req.body);
@@ -81,7 +77,7 @@ export const checkout = async (req: Request, res: Response) => {
         tickets_without_seats = [], // Default to empty array if not provided
     } = result.data;
 
-    console.log('tickets_without_seats',tickets_without_seats);
+    console.log('tickets_without_seats', tickets_without_seats); // This should now show the parsed array
     if (seat_ids.length === 0 && tickets_without_seats.length === 0) {
         return res.status(400).json({ message: 'No seats or tickets without seats provided for checkout.' });
     }
@@ -107,7 +103,7 @@ export const checkout = async (req: Request, res: Response) => {
         const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
             ? JSON.parse(event.ticket_details)
             : event.ticket_details || []; // Ensure it's an array
-        console.log('eventTicketDetails',eventTicketDetails);
+        console.log('eventTicketDetails', eventTicketDetails); // This should show the parsed details
         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
         let subTotal = 0;
@@ -148,9 +144,9 @@ export const checkout = async (req: Request, res: Response) => {
 
             // Check if hasTicketCount is true and if there's enough available
             if (currentTicketDetail.hasTicketCount && currentTicketDetail.ticketCount !== null) {
-                if ((currentTicketDetail.bookedTicketCount + ticket.ticket_count) > currentTicketDetail.ticketCount) {
+                if (((currentTicketDetail.bookedTicketCount || 0) + ticket.ticket_count) > currentTicketDetail.ticketCount) {
                     return res.status(400).json({
-                        message: `Not enough tickets available for ticket type ID ${ticket.ticket_type_id}. Available: ${currentTicketDetail.ticketCount - currentTicketDetail.bookedTicketCount}. Requested: ${ticket.ticket_count}.`
+                        message: `Not enough tickets available for ticket type ID ${ticket.ticket_type_id}. Available: ${currentTicketDetail.ticketCount - (currentTicketDetail.bookedTicketCount || 0)}. Requested: ${ticket.ticket_count}.`
                     });
                 }
             }
