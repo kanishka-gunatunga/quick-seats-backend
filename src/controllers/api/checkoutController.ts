@@ -20,6 +20,7 @@ interface TicketWithoutSeat {
     ticket_type_id: number;
     ticket_count: number;
 }
+
 export const checkout = async (req: Request, res: Response) => {
     const schema = z.object({
         first_name: z.string().min(1, 'First name is required'),
@@ -76,7 +77,7 @@ export const checkout = async (req: Request, res: Response) => {
         seat_ids = [], // Default to empty array if not provided
         tickets_without_seats = [], // Default to empty array if not provided
     } = result.data;
-    return tickets_without_seats;
+
     if (seat_ids.length === 0 && tickets_without_seats.length === 0) {
         return res.status(400).json({ message: 'No seats or tickets without seats provided for checkout.' });
     }
@@ -128,11 +129,12 @@ export const checkout = async (req: Request, res: Response) => {
         }
 
         // --- Process tickets without seats and update ticket_details ---
-        const updatedTicketDetails = [...eventTicketDetails];
+        // Create a deep copy to ensure modifications don't affect the original object until saved
+        const updatedTicketDetails = JSON.parse(JSON.stringify(eventTicketDetails));
         const ticketsWithoutSeatsDetails: { ticketTypeName: string; count: number; type_id: number; price: number }[] = [];
 
         for (const ticket of tickets_without_seats) {
-            const ticketDetailIndex = updatedTicketDetails.findIndex(td => td.ticketTypeId === ticket.ticket_type_id);
+            const ticketDetailIndex = updatedTicketDetails.findIndex((td: any) => td.ticketTypeId === ticket.ticket_type_id);
 
             if (ticketDetailIndex === -1) {
                 return res.status(400).json({ message: `Ticket type ID ${ticket.ticket_type_id} not found for this event.` });
@@ -148,8 +150,8 @@ export const checkout = async (req: Request, res: Response) => {
                     });
                 }
             }
-
-            currentTicketDetail.bookedTicketCount += ticket.ticket_count;
+            // Ensure bookedTicketCount is initialized if it's undefined or null
+            currentTicketDetail.bookedTicketCount = (currentTicketDetail.bookedTicketCount || 0) + ticket.ticket_count;
             subTotal += currentTicketDetail.price * ticket.ticket_count;
 
             ticketsWithoutSeatsDetails.push({
@@ -170,8 +172,8 @@ export const checkout = async (req: Request, res: Response) => {
                 country,
                 event_id: event_id,
                 user_id: user_id,
-                seat_ids: seat_ids.length > 0 ? seat_ids : [], // Store seat_ids as an empty array if none selected
-                tickets_without_seats: tickets_without_seats, // Store the new field
+                seat_ids: seat_ids.length > 0 ? JSON.stringify(seat_ids) : '[]', // Stringify seat_ids
+                tickets_without_seats: tickets_without_seats.length > 0 ? JSON.stringify(tickets_without_seats) : '[]', // Stringify tickets_without_seats
                 sub_total: subTotal,
                 discount: 0,
                 total: subTotal,
@@ -246,7 +248,7 @@ export const checkout = async (req: Request, res: Response) => {
             where: { id: parseInt(event_id) },
             data: {
                 seats: JSON.stringify(updatedSeats),
-                ticket_details: JSON.stringify(updatedTicketDetails), // Update ticket_details
+                ticket_details: JSON.stringify(updatedTicketDetails), // Ensure ticket_details is stringified
             },
         });
 
