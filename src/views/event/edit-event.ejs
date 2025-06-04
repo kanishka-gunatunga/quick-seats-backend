@@ -215,7 +215,7 @@ height: auto;
                         <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                        <button type="button" class="btn btn-danger remove-ticket-btn">Remove <%= currentHasCount %></button>
                     </div>
                 </div>
             <% }); %>
