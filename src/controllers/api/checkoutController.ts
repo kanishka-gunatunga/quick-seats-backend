@@ -41,19 +41,22 @@ export const checkout = async (req: Request, res: Response) => {
             }
             return val;
         }, z.array(z.union([z.number(), z.string()])).optional()),
-        tickets_without_seats: z.preprocess((val) => {
+         tickets_without_seats: z.preprocess((val) => {
+            // If it's a string, attempt to parse it
             if (typeof val === 'string') {
                 try {
                     return JSON.parse(val);
-                } catch {
-                    return [];
+                } catch (e) {
+                    console.error("Failed to parse tickets_without_seats string:", e);
+                    return []; // Return empty array on parse error
                 }
             }
+            // If it's already an array (or any other type), just return it
             return val;
         }, z.array(z.object({
             ticket_type_id: z.number(),
             ticket_count: z.number().min(1, 'Ticket count must be at least 1'),
-        })).optional()),
+        })).optional().default([])),
     });
 
     const result = schema.safeParse(req.body);
