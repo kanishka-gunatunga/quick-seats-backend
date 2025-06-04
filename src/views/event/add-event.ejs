@@ -1,185 +1,214 @@
 <%- include('../layouts/header.ejs') %>
 <div class="content-page">
-                <div class="content">
+    <div class="content">
 
-                    <div class="container-fluid">
+        <div class="container-fluid">
 
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h4 class="header-title">Add Event</h4>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="header-title">Add Event</h4>
 
-                                                <form class="mt-4" method="POST" action="/add-event" enctype="multipart/form-data">
-                                                    <% if (success) { %>
-                                                        <div class="alert alert-success"><%= success %></div>
-                                                    <% } %>
-                                                    <% if (error) { %>
-                                                        <div class="alert alert-danger"><%= error %></div>
-                                                    <% } %>
+                            <form class="mt-4" method="POST" action="/add-event" enctype="multipart/form-data">
+                                <% if (success) { %>
+                                    <div class="alert alert-success"><%= success %></div>
+                                <% } %>
+                                <% if (error) { %>
+                                    <div class="alert alert-danger"><%= error %></div>
+                                <% } %>
 
-                                                    <div class="row">
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Name</label>
-                                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || '' %>">
-                                                        <% if (validationErrors?.name) { %>
-                                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Start Date Time</label>
-                                                       <input type="text"  name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || '' %>">
-                                                        <% if (validationErrors?.start_date_time) { %>
-                                                            <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                       <div class="col-md-4 mb-3">
-                                                        <label class="form-label">End Date Time</label>
-                                                       <input type="text"  name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || '' %>">
-                                                        <% if (validationErrors?.end_date_time) { %>
-                                                            <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                        <label class="form-label">Discription</label>
-                                                        <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || '' %></textarea>
-                                                        <% if (validationErrors?.discription) { %>
-                                                            <small class="text-danger"><%= validationErrors.discription[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-6 mb-3">
-                                                        <label class="form-label">Ticket Policy</label>
-                                                        <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || '' %></textarea>
-                                                        <% if (validationErrors?.policy) { %>
-                                                            <small class="text-danger"><%= validationErrors.policy[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Organized By</label>
-                                                        <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || '' %>">
-                                                        <% if (validationErrors?.organized_by) { %>
-                                                            <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Location</label>
-                                                        <select class="form-control" data-toggle="select2" name="location" data-width="100%">
-                                                            <option value="BMICH">BMICH</option>
-                                                            <option value="Nelum Pokuna">Nelum Pokuna</option>
-                                                            <option value="Musaeus College">Musaeus College</option>
-                                                            <option value="Bishop Collage">Bishop Collage</option>
-                                                        </select>
-                                                        <% if (validationErrors?.location) { %>
-                                                            <small class="text-danger"><%= validationErrors.location[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Artists</label>
-                                                        <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
-                                                            <% artists.forEach(artist => { %>
-                                                                <option value="<%= artist.id %>" <%= formData?.artists?.includes(artist.id.toString()) ? 'selected' : '' %>><%= artist.name %></option>
-                                                            <% }); %>
-                                                        </select>
-                                                        <% if (validationErrors?.artists) { %>
-                                                            <small class="text-danger"><%= validationErrors.artists[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Banner Image</label>
-                                                        <input type="file" class="form-control" name="banner_image" >
-                                                        <% if (validationErrors?.banner_image) { %>
-                                                            <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Featured Image</label>
-                                                        <input type="file" class="form-control" name="featured_image">
-                                                        <% if (validationErrors?.featured_image) { %>
-                                                            <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Gallery Files</label>
-                                                        <input type="file" class="form-control" name="gallery_files" multiple>
-                                                        <% if (validationErrors?.gallery_files) { %>
-                                                            <small class="text-danger"><%= validationErrors.gallery_files[0] %></small>
-                                                        <% } %>
-                                                        </div>
-                                                        <div class="col-md-12 mb-3">
-                                                        <h4 class="header-title">Set Ticket Prices</h4>
-                                                        <div  id="ticket-container"></div>
-                                                        <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
-                                                        </div>
-                                                        </div>
-                                                  
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Name</label>
+                                        <input type="text" class="form-control" name="name" value="<%= formData?.name || '' %>">
+                                        <% if (validationErrors?.name) { %>
+                                            <small class="text-danger"><%= validationErrors.name[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Start Date Time</label>
+                                       <input type="text"  name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || '' %>">
+                                        <% if (validationErrors?.start_date_time) { %>
+                                            <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
+                                        <% } %>
+                                    </div>
+                                   <div class="col-md-4 mb-3">
+                                        <label class="form-label">End Date Time</label>
+                                       <input type="text"  name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || '' %>">
+                                        <% if (validationErrors?.end_date_time) { %>
+                                            <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Description</label>
+                                        <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || '' %></textarea>
+                                        <% if (validationErrors?.discription) { %>
+                                            <small class="text-danger"><%= validationErrors.discription[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-6 mb-3">
+                                        <label class="form-label">Ticket Policy</label>
+                                        <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || '' %></textarea>
+                                        <% if (validationErrors?.policy) { %>
+                                            <small class="text-danger"><%= validationErrors.policy[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Organized By</label>
+                                        <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || '' %>">
+                                        <% if (validationErrors?.organized_by) { %>
+                                            <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Location</label>
+                                        <select class="form-control" data-toggle="select2" name="location" data-width="100%">
+                                            <option value="BMICH" <%= formData?.location === 'BMICH' ? 'selected' : '' %>>BMICH</option>
+                                            <option value="Nelum Pokuna" <%= formData?.location === 'Nelum Pokuna' ? 'selected' : '' %>>Nelum Pokuna</option>
+                                            <option value="Musaeus College" <%= formData?.location === 'Musaeus College' ? 'selected' : '' %>>Musaeus College</option>
+                                            <option value="Bishop Collage" <%= formData?.location === 'Bishop Collage' ? 'selected' : '' %>>Bishop Collage</option>
+                                        </select>
+                                        <% if (validationErrors?.location) { %>
+                                            <small class="text-danger"><%= validationErrors.location[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Artists</label>
+                                        <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
+                                            <% artists.forEach(artist => { %>
+                                                <option value="<%= artist.id %>" <%= formData?.artists?.includes(artist.id.toString()) ? 'selected' : '' %>><%= artist.name %></option>
+                                            <% }); %>
+                                        </select>
+                                        <% if (validationErrors?.artists) { %>
+                                            <small class="text-danger"><%= validationErrors.artists[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Banner Image</label>
+                                        <input type="file" class="form-control" name="banner_image" >
+                                        <% if (validationErrors?.banner_image) { %>
+                                            <small class="text-danger"><%= validationErrors.banner_image[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Featured Image</label>
+                                        <input type="file" class="form-control" name="featured_image">
+                                        <% if (validationErrors?.featured_image) { %>
+                                            <small class="text-danger"><%= validationErrors.featured_image[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Gallery Files</label>
+                                        <input type="file" class="form-control" name="gallery_files" multiple>
+                                        <% if (validationErrors?.gallery_files) { %>
+                                            <small class="text-danger"><%= validationErrors.gallery_files[0] %></small>
+                                        <% } %>
+                                    </div>
+                                    <div class="col-md-12 mb-3">
+                                        <h4 class="header-title">Set Ticket Prices</h4>
+                                        <div id="ticket-container"></div>
+                                        <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
+                                        <% if (validationErrors?.tickets) { %>
+                                            <small class="text-danger"><%= validationErrors.tickets[0] %></small>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary">Submit</button>
+                            </form>
 
-                                                    <button type="submit" class="btn btn-primary">Submit</button>
-                                                </form>
-
-                                    </div> </div> </div>
                         </div>
-                        </div> </div>
-
+                    </div>
+                </div>
             </div>
-            <%- include('../layouts/footer.ejs') %>
+        </div>
+    </div>
+</div>
+<%- include('../layouts/footer.ejs') %>
 
 <script>
-  const ticketTypes = <%- JSON.stringify(ticket_types) %>;
-  let ticketIndex = 0;
+    const ticketTypes = <%- JSON.stringify(ticket_types) %>;
+    let ticketIndex = 0;
 
-  function createTicketRow(index) {
-    let options = '';
-    ticketTypes.forEach(tt => {
-      options += `<option value="${tt.id}" data-has-count="${tt.has_ticket_count}">${tt.name}</option>`;
+    function createTicketRow(index, initialData = {}) {
+        let options = '';
+        ticketTypes.forEach(tt => {
+            options += `<option value="${tt.id}" ${initialData.type_id == tt.id ? 'selected' : ''}>${tt.name}</option>`;
+        });
+
+        const hasCountChecked = initialData.has_ticket_count ? 'checked' : '';
+        const countDisplay = initialData.has_ticket_count ? 'block' : 'none';
+        const countRequired = initialData.has_ticket_count ? 'required' : '';
+
+        return `
+            <div class="row ticket-row align-items-end mb-2" data-index="${index}">
+                <div class="col-md-3">
+                    <label class="form-label">Ticket Type</label>
+                    <select name="tickets[${index}][type_id]" class="form-control ticket-type-select" required>
+                        <option value="">Select a type</option>
+                        ${options}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">Price</label>
+                    <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" value="${initialData.price || ''}" required>
+                </div>
+                <div class="col-md-2 form-check mb-3">
+                    <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="has_ticket_count_${index}" name="tickets[${index}][has_ticket_count]" value="1" ${hasCountChecked}>
+                    <label class="form-check-label" for="has_ticket_count_${index}">Has Ticket Count</label>
+                </div>
+                <div class="col-md-3 ticket-count-wrapper" style="display: ${countDisplay};">
+                    <label class="form-label">Ticket Count</label>
+                    <input type="number" name="tickets[${index}][count]" class="form-control" placeholder="Enter count" value="${initialData.ticket_count || ''}" ${countRequired}>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                </div>
+            </div>
+        `;
+    }
+
+    document.getElementById('add-ticket-btn').addEventListener('click', () => {
+        const rowHtml = createTicketRow(ticketIndex++);
+        document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
     });
 
-    return `
-      <div class="row ticket-row align-items-end mb-2" data-index="${index}">
-        <div class="col-md-4">
-          <label class="form-label">Ticket Type</label>
-          <select name="tickets[${index}][type_id]" class="form-control ticket-type-select" required>
-            <option value="">Select a type</option>
-            ${options}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <label class="form-label">Price</label>
-          <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" required>
-        </div>
-        <div class="col-md-3 ticket-count-wrapper" style="display: none;">
-          <label class="form-label">Ticket Count</label>
-          <input type="number" name="tickets[${index}][count]" class="form-control" placeholder="Enter count">
-        </div>
-        <div class="col-md-2">
-          <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
-        </div>
-      </div>
-    `;
-  }
+    // Populate existing ticket data if any (e.g., after validation error)
+    document.addEventListener('DOMContentLoaded', () => {
+        const formDataTickets = <%- JSON.stringify(formData?.tickets || []) %>;
+        formDataTickets.forEach(ticket => {
+            const rowHtml = createTicketRow(ticketIndex++, {
+                type_id: ticket.type_id,
+                price: ticket.price,
+                has_ticket_count: ticket.has_ticket_count === '1', // Convert string to boolean
+                ticket_count: ticket.count
+            });
+            document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
+        });
+    });
 
-  document.getElementById('add-ticket-btn').addEventListener('click', () => {
-    const rowHtml = createTicketRow(ticketIndex++);
-    document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
-  });
 
-  document.getElementById('ticket-container').addEventListener('change', function (e) {
-    if (e.target.classList.contains('ticket-type-select')) {
-      const row = e.target.closest('.ticket-row');
-      const hasCount = e.target.selectedOptions[0].dataset.hasCount === '1';
-      const countWrapper = row.querySelector('.ticket-count-wrapper');
-      if (hasCount) {
-        countWrapper.style.display = 'block';
-        countWrapper.querySelector('input').required = true;
-      } else {
-        countWrapper.style.display = 'none';
-        countWrapper.querySelector('input').required = false;
-      }
-    }
-  });
+    document.getElementById('ticket-container').addEventListener('change', function (e) {
+        if (e.target.classList.contains('has-ticket-count-checkbox')) {
+            const row = e.target.closest('.ticket-row');
+            const countWrapper = row.querySelector('.ticket-count-wrapper');
+            const countInput = countWrapper.querySelector('input');
 
-  document.getElementById('ticket-container').addEventListener('click', function (e) {
-    if (e.target.classList.contains('remove-ticket-btn')) {
-      e.target.closest('.ticket-row').remove();
-    }
-  });
+            if (e.target.checked) {
+                countWrapper.style.display = 'block';
+                countInput.required = true;
+            } else {
+                countWrapper.style.display = 'none';
+                countInput.required = false;
+                countInput.value = ''; // Clear value if not applicable
+            }
+        }
+    });
+
+    document.getElementById('ticket-container').addEventListener('click', function (e) {
+        if (e.target.classList.contains('remove-ticket-btn')) {
+            e.target.closest('.ticket-row').remove();
+        }
+    });
 </script>

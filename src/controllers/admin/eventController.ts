@@ -144,10 +144,12 @@ export const addEventPost = async (req: Request, res: Response) => {
       uniqueSlug = `${baseSlug}-${suffix++}`;
     }
 
-    const ticketDetailsForDb = tickets.map((ticket: any) => ({
-      ticketTypeId: parseInt(ticket.type_id, 10),
-      price: parseFloat(ticket.price),
-      ticketCount: ticket.count ? parseInt(ticket.count, 10) : null,
+   const ticketDetailsForDb = tickets.map((ticket: any) => ({
+        ticketTypeId: parseInt(ticket.type_id, 10),
+        price: parseFloat(ticket.price),
+        hasTicketCount: ticket.has_ticket_count, 
+        ticketCount: ticket.has_ticket_count ? parseInt(ticket.count, 10) : null,
+        bookedTicketCount: 0,
     }));
 
     const event = await prisma.event.create({
@@ -263,7 +265,6 @@ export const editEventGet = async (req: Request, res: Response) => {
             type_id: ticket.ticketTypeId, 
             price: ticket.price,
             count: ticket.ticketCount, 
-            has_ticket_count: ticketType?.has_ticket_count || false,
             ticketTypeName: ticketType?.name || 'Unknown', 
             color: ticketType?.color, 
           };
