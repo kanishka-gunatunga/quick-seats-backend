@@ -83,7 +83,6 @@ model TicketType {
   id        Int      @id @default(autoincrement())
   name  String?
   color  String?
-  has_ticket_count  String?
   status String
   createdAt DateTime @default(now())
 
