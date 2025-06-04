@@ -172,49 +172,60 @@ height: auto;
                                         <h4 class="header-title">Set Ticket Prices</h4>
                                         <div id="ticket-container">
                                             <%
-                                                    // Prioritize formData tickets if present (after validation error)
-                                                    const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
-                                                    %>
+                                                // Prioritize formData tickets if present (after validation error)
+                                                // Otherwise, use enrichedEvent.ticket_details from the database
+                                                const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
+                                            %>
 
                                             <% if (ticketsToRender && ticketsToRender.length > 0) { %>
-                                            <% ticketsToRender.forEach((ticket, index) => { %>
-                                            <%
-                                                                    // Determine if 'ticket' has 'type_id' (from formData) or 'ticketTypeId' (from enrichedEvent)
-                                                                    const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
-                                                                    const currentTicketPrice = ticket.price;
-                                                                    const currentTicketCount = ticket.count || ticket.ticketCount;
-                                                                    const currentTicketType = ticket_types.find(tt => tt.id === currentTicketTypeId);
-                                                                    const currentHasCount = currentTicketType?.has_ticket_count;
-                                                                    %>
-                                            <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
-                                            <div class="col-md-4">
-                                                <label class="form-label">Ticket Type</label>
-                                                <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
-                                                <option value="">Select a type</option>
-                                                <% ticket_types.forEach(tt => { %>
-                                                <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
-                                                    <%= tt.name %>
-                                                </option>
+                                                <% ticketsToRender.forEach((ticket, index) => { %>
+                                                    <%
+                                                        // Determine which properties to use based on source (formData vs. DB)
+                                                        const currentTicketTypeId = ticket.type_id || ticket.ticketTypeId;
+                                                        const currentTicketPrice = ticket.price;
+                                                        const currentTicketCount = ticket.count || ticket.ticketCount;
+                                                        // For formData, has_ticket_count is '1' or undefined. For DB, it's a boolean.
+                                                        const currentHasCount = ticket.has_ticket_count === '1' || ticket.hasTicketCount === true;
+                                                        // Find the full ticket type object to get its actual has_ticket_count property
+                                                        const ticketTypeFromDb = ticket_types.find(tt => tt.id === parseInt(currentTicketTypeId));
+                                                        const actualHasCountFromType = ticketTypeFromDb ? ticketTypeFromDb.has_ticket_count : false; // Default to false if type not found
+                                                    %>
+                                                    <div class="row ticket-row align-items-end mb-2" data-index="<%= index %>">
+                                                        <div class="col-md-4">
+                                                            <label class="form-label">Ticket Type</label>
+                                                            <select name="tickets[<%= index %>][type_id]" class="form-control ticket-type-select" required>
+                                                                <option value="">Select a type</option>
+                                                                <% ticket_types.forEach(tt => { %>
+                                                                    <option value="<%= tt.id %>" data-has-count="<%= tt.has_ticket_count %>" <%= currentTicketTypeId == tt.id ? 'selected' : '' %>>
+                                                                        <%= tt.name %>
+                                                                    </option>
+                                                                <% }); %>
+                                                            </select>
+                                                        </div>
+                                                        <div class="col-md-3">
+                                                            <label class="form-label">Price</label>
+                                                            <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
+                                                        </div>
+                                                        <div class="col-md-3 form-check mb-3 d-flex align-items-center">
+                                                            <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="has_ticket_count_<%= index %>" name="tickets[<%= index %>][has_ticket_count]" value="1" <%= currentHasCount ? 'checked' : '' %>>
+                                                            <label class="form-check-label ms-2" for="has_ticket_count_<%= index %>">Has Ticket Count</label>
+                                                        </div>
+                                                        <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
+                                                            <label class="form-label">Ticket Count</label>
+                                                            <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
+                                                        </div>
+                                                        <div class="col-md-2">
+                                                            <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
+                                                        </div>
+                                                    </div>
                                                 <% }); %>
-                                                </select>
-                                            </div>
-                                            <div class="col-md-3">
-                                                <label class="form-label">Price</label>
-                                                <input type="number" name="tickets[<%= index %>][price]" class="form-control" placeholder="Enter price" value="<%= currentTicketPrice %>" required>
-                                            </div>
-                                            <div class="col-md-3 ticket-count-wrapper" style="<%= currentHasCount ? 'display: block;' : 'display: none;' %>">
-                                                <label class="form-label">Ticket Count</label>
-                                                <input type="number" name="tickets[<%= index %>][count]" class="form-control" placeholder="Enter count" value="<%= currentTicketCount || '' %>" <%= currentHasCount ? 'required' : '' %>>
-                                            </div>
-                                            <div class="col-md-2">
-                                                <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>
-                                            </div>
-                                            </div>
-                                            <% }); %>
                                             <% } %>
                                         </div>
                                         <button type="button" class="btn btn-success" id="add-ticket-btn">+ Add</button>
-                                        </div>
+                                        <% if (validationErrors?.tickets) { %>
+                                            <small class="text-danger"><%= validationErrors.tickets[0] %></small>
+                                        <% } %>
+                                    </div>
                                     </div>
 
                                     <button type="submit" class="btn btn-primary">Update</button>
@@ -272,32 +283,36 @@ height: auto;
         ticketIndex = existingTicketRows.length;
     }
 
-    function createTicketRow(index, ticketData = {}) {
+    function createTicketRow(index, initialData = {}) {
         let options = '';
         ticketTypes.forEach(tt => {
-
-            const isSelected = ticketData.type_id == tt.id || ticketData.ticketTypeId == tt.id;
-            options += `<option value="${tt.id}" data-has-count="${tt.has_ticket_count}" ${isSelected ? 'selected' : ''}>${tt.name}</option>`;
+            options += `<option value="${tt.id}" ${initialData.type_id == tt.id ? 'selected' : ''}>${tt.name}</option>`;
         });
 
-        const initialHasCount = ticketTypes.find(tt => tt.id == (ticketData.type_id || ticketData.ticketTypeId))?.has_ticket_count || false;
+        const hasCountChecked = initialData.has_ticket_count ? 'checked' : '';
+        const countDisplay = initialData.has_ticket_count ? 'block' : 'none';
+        const countRequired = initialData.has_ticket_count ? 'required' : '';
 
         return `
             <div class="row ticket-row align-items-end mb-2" data-index="${index}">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label">Ticket Type</label>
                     <select name="tickets[${index}][type_id]" class="form-control ticket-type-select" required>
                         <option value="">Select a type</option>
                         ${options}
                     </select>
                 </div>
-                <div class="col-md-3">
+                <div class="col-md-2">
                     <label class="form-label">Price</label>
-                    <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" value="${ticketData.price || ''}" required>
+                    <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" value="${initialData.price || ''}" required>
                 </div>
-                <div class="col-md-3 ticket-count-wrapper" style="${initialHasCount ? 'display: block;' : 'display: none;'}">
+                <div class="col-md-2 form-check mb-3">
+                    <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="has_ticket_count_${index}" name="tickets[${index}][has_ticket_count]" value="1" ${hasCountChecked}>
+                    <label class="form-check-label" for="has_ticket_count_${index}">Has Ticket Count</label>
+                </div>
+                <div class="col-md-3 ticket-count-wrapper" style="display: ${countDisplay};">
                     <label class="form-label">Ticket Count</label>
-                    <input type="number" name="tickets[${index}][count]" class="form-control" placeholder="Enter count" value="${ticketData.count || ticketData.ticketCount || ''}" ${initialHasCount ? 'required' : ''}>
+                    <input type="number" name="tickets[${index}][count]" class="form-control" placeholder="Enter count" value="${initialData.ticket_count || ''}" ${countRequired}>
                 </div>
                 <div class="col-md-2">
                     <button type="button" class="btn btn-danger remove-ticket-btn">Remove</button>

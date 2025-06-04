@@ -319,172 +319,204 @@ export const editEventGet = async (req: Request, res: Response) => {
   }
 };
 export const editEventPost = async (req: Request, res: Response) => {
-  const eventId = Number(req.params.id);
+    const eventId = Number(req.params.id);
 
-  const schema = z.object({
-    name: z.string().min(1, 'Name is required'),
-    start_date_time: z.string().min(1, 'Start date and time is required'),
-    end_date_time: z.string().min(1, 'End date and time is required'),
-    discription: z.string().min(1, 'Description is required'),
-    policy: z.string().min(1, 'Ticket Policy is required'),
-    organized_by: z.string().min(1, 'Organized by is required'),
-    location: z.string().min(1, 'Location is required'),
-    artists: z
-      .union([z.string(), z.array(z.string())])
-      .optional()
-      .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
-    tickets: z.array(z.object({
-      type_id: z.string().min(1, 'Ticket type is required'),
-      price: z.string().min(1, 'Ticket price is required'),
-      count: z.string().optional(),
-    })).optional().default([]),
-    // Add validation for existing_gallery_media
-    existing_gallery_media: z.array(z.object({
-      url: z.string().url(),
-      type: z.union([z.literal('image'), z.literal('video')]),
-    })).optional().default([]),
-  });
-
-  const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-  const bannerImageFile = files?.banner_image?.[0];
-  const featuredImageFile = files?.featured_image?.[0];
-  const newGalleryFiles = files?.gallery_files || []; // New gallery files being uploaded
-
-  try {
-    const result = schema.safeParse(req.body);
-
-    if (!result.success) {
-      const errors = result.error.flatten().fieldErrors;
-      req.session.error = 'Please fix the errors below.';
-      req.session.formData = req.body;
-      req.session.validationErrors = errors;
-      return res.redirect(`/event/edit/${eventId}`);
-    }
-
-    const {
-      name,
-      start_date_time,
-      end_date_time,
-      discription,
-      policy,
-      organized_by,
-      location,
-      artists,
-      tickets,
-      existing_gallery_media, // Get existing gallery media from form
-    } = result.data;
-
-    const existingEvent = await prisma.event.findUnique({
-      where: { id: eventId },
-      select: { banner_image: true, featured_image: true, slug: true, name: true, gallery_media: true },
+    const schema = z.object({
+        name: z.string().min(1, 'Name is required'),
+        start_date_time: z.string().min(1, 'Start date and time is required'),
+        end_date_time: z.string().min(1, 'End date and time is required'),
+        discription: z.string().min(1, 'Description is required'),
+        policy: z.string().min(1, 'Ticket Policy is required'),
+        organized_by: z.string().min(1, 'Organized by is required'),
+        location: z.string().min(1, 'Location is required'),
+        artists: z
+            .union([z.string(), z.array(z.string())])
+            .optional()
+            .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
+        tickets: z.array(z.object({
+            type_id: z.string().min(1, 'Ticket type is required'),
+            price: z.string().min(1, 'Ticket price is required'),
+            has_ticket_count: z.string().optional().transform(val => val === '1'), // '1' if checked, undefined otherwise
+            count: z.string().optional(),
+        })).optional().default([]),
+        existing_gallery_media: z.array(z.object({
+            url: z.string().url(),
+            type: z.union([z.literal('image'), z.literal('video')]),
+        })).optional().default([]),
     });
 
-    if (!existingEvent) {
-      req.session.error = 'Event not found.';
-      return res.redirect('/events');
-    }
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    const bannerImageFile = files?.banner_image?.[0];
+    const featuredImageFile = files?.featured_image?.[0];
+    const newGalleryFiles = files?.gallery_files || [];
 
-    let bannerImageUrl: string | null = existingEvent.banner_image;
-    let featuredImageUrl: string | null = existingEvent.featured_image;
-    let galleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media; // Initialize with existing media
+    try {
+        const result = schema.safeParse(req.body);
 
-    // Handle banner image upload
-    if (bannerImageFile) {
-      if (!bannerImageFile.mimetype.startsWith('image/')) {
-        req.session.error = 'Banner image must be an image file.';
+        if (!result.success) {
+            const errors = result.error.flatten().fieldErrors;
+            req.session.error = 'Please fix the errors below.';
+            req.session.formData = req.body;
+            req.session.validationErrors = errors;
+            return res.redirect(`/event/edit/${eventId}`);
+        }
+
+        const {
+            name,
+            start_date_time,
+            end_date_time,
+            discription,
+            policy,
+            organized_by,
+            location,
+            artists,
+            tickets,
+            existing_gallery_media,
+        } = result.data;
+
+        const ticketValidationErrors: { [key: string]: string[] } = {};
+        tickets.forEach((ticket, index) => {
+            if (ticket.has_ticket_count && (!ticket.count || isNaN(parseInt(ticket.count, 10)) || parseInt(ticket.count, 10) <= 0)) {
+                ticketValidationErrors[`tickets[${index}][count]`] = ['Ticket count is required and must be a positive number when "Has Ticket Count" is checked.'];
+            }
+        });
+
+        if (Object.keys(ticketValidationErrors).length > 0) {
+            req.session.error = 'Please fix the errors below.';
+            req.session.formData = req.body;
+            req.session.validationErrors = { ...req.session.validationErrors, ...ticketValidationErrors };
+            return res.redirect(`/event/edit/${eventId}`);
+        }
+
+
+        const existingEvent = await prisma.event.findUnique({
+            where: { id: eventId },
+            select: {
+                banner_image: true,
+                featured_image: true,
+                slug: true,
+                name: true,
+                gallery_media: true,
+                ticket_details: true, 
+            },
+        });
+
+        if (!existingEvent) {
+            req.session.error = 'Event not found.';
+            return res.redirect('/events');
+        }
+
+        let bannerImageUrl: string | null = existingEvent.banner_image;
+        let featuredImageUrl: string | null = existingEvent.featured_image;
+        let galleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media;
+
+        // Handle banner image upload
+        if (bannerImageFile) {
+            if (!bannerImageFile.mimetype.startsWith('image/')) {
+                req.session.error = 'Banner image must be an image file.';
+                req.session.formData = req.body;
+                req.session.validationErrors = { ...req.session.validationErrors, banner_image: ['Banner image must be an image file.'] };
+                return res.redirect(`/event/edit/${eventId}`);
+            }
+            const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
+                access: 'public',
+                addRandomSuffix: true,
+            });
+            bannerImageUrl = url;
+        }
+
+        if (featuredImageFile) {
+            if (!featuredImageFile.mimetype.startsWith('image/')) {
+                req.session.error = 'Featured image must be an image file.';
+                req.session.formData = req.body;
+                req.session.validationErrors = { ...req.session.validationErrors, featured_image: ['Featured image must be an image file.'] };
+                return res.redirect(`/event/edit/${eventId}`);
+            }
+            const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
+                access: 'public',
+                addRandomSuffix: true,
+            });
+            featuredImageUrl = url;
+        }
+
+        for (const file of newGalleryFiles) {
+            let mediaType: 'image' | 'video' | undefined;
+            if (file.mimetype.startsWith('image/')) {
+                mediaType = 'image';
+            } else if (file.mimetype.startsWith('video/')) {
+                mediaType = 'video';
+            } else {
+                req.session.error = 'All new gallery files must be image or video files.';
+                req.session.formData = req.body;
+                req.session.validationErrors = { ...req.session.validationErrors, gallery_files: ['All new gallery files must be image or video files.'] };
+                return res.redirect(`/event/edit/${eventId}`);
+            }
+
+            const { url } = await put(file.originalname, file.buffer, {
+                access: 'public',
+                addRandomSuffix: true,
+            });
+            galleryMedia.push({ url, type: mediaType });
+        }
+
+        let uniqueSlug = existingEvent.slug;
+        if (name !== existingEvent.name) {
+            let baseSlug = slugify(name, { lower: true, strict: true });
+            let suffix = 1;
+            while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
+                uniqueSlug = `${baseSlug}-${suffix++}`;
+            }
+        }
+
+     
+        const existingTicketDetails = existingEvent.ticket_details as Array<any> || [];
+
+        const newTicketDetailsForDb = tickets.map((ticket) => {
+ 
+            const existingTicket = existingTicketDetails.find(
+                (extTicket: any) => extTicket.ticketTypeId === parseInt(ticket.type_id, 10)
+            );
+
+            const bookedTicketCount = existingTicket ? existingTicket.bookedTicketCount : 0;
+
+            return {
+                ticketTypeId: parseInt(ticket.type_id, 10),
+                price: parseFloat(ticket.price),
+                hasTicketCount: ticket.has_ticket_count,
+                ticketCount: ticket.has_ticket_count ? parseInt(ticket.count || '0', 10) : null,
+                bookedTicketCount: bookedTicketCount, 
+            };
+        });
+
+        const updatedEvent = await prisma.event.update({
+            where: { id: eventId },
+            data: {
+                name,
+                slug: uniqueSlug,
+                start_date_time: new Date(start_date_time),
+                end_date_time: new Date(end_date_time),
+                description: discription,
+                policy: policy,
+                organized_by: organized_by,
+                location,
+                banner_image: bannerImageUrl,
+                featured_image: featuredImageUrl,
+                gallery_media: galleryMedia,
+                ticket_details: newTicketDetailsForDb, 
+                artist_details: artists,
+            },
+        });
+
+        req.session.success = 'Event updated successfully!';
+        req.session.formData = {};
+        req.session.validationErrors = {};
+        return res.redirect(`/event/edit/${updatedEvent.id}`);
+    } catch (err) {
+        console.error('Error updating event:', err);
+        req.session.error = 'An unexpected error occurred while updating the event.';
         req.session.formData = req.body;
-        req.session.validationErrors = { ...req.session.validationErrors, banner_image: ['Banner image must be an image file.'] };
         return res.redirect(`/event/edit/${eventId}`);
-      }
-      const { url } = await put(bannerImageFile.originalname, bannerImageFile.buffer, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      bannerImageUrl = url;
     }
-
-    // Handle featured image upload
-    if (featuredImageFile) {
-      if (!featuredImageFile.mimetype.startsWith('image/')) {
-        req.session.error = 'Featured image must be an image file.';
-        req.session.formData = req.body;
-        req.session.validationErrors = { ...req.session.validationErrors, featured_image: ['Featured image must be an image file.'] };
-        return res.redirect(`/event/edit/${eventId}`);
-      }
-      const { url } = await put(featuredImageFile.originalname, featuredImageFile.buffer, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      featuredImageUrl = url;
-    }
-
-    // Handle new gallery file uploads
-    for (const file of newGalleryFiles) {
-      let mediaType: 'image' | 'video' | undefined;
-      if (file.mimetype.startsWith('image/')) {
-        mediaType = 'image';
-      } else if (file.mimetype.startsWith('video/')) {
-        mediaType = 'video';
-      } else {
-        req.session.error = 'All new gallery files must be image or video files.';
-        req.session.formData = req.body;
-        req.session.validationErrors = { ...req.session.validationErrors, gallery_files: ['All new gallery files must be image or video files.'] };
-        return res.redirect(`/event/edit/${eventId}`);
-      }
-
-      const { url } = await put(file.originalname, file.buffer, {
-        access: 'public',
-        addRandomSuffix: true,
-      });
-      galleryMedia.push({ url, type: mediaType });
-    }
-
-    let uniqueSlug = existingEvent.slug;
-    if (name !== existingEvent.name) {
-      let baseSlug = slugify(name, { lower: true, strict: true });
-      let suffix = 1;
-      while (await prisma.event.findFirst({ where: { slug: uniqueSlug, NOT: { id: eventId } } })) {
-        uniqueSlug = `${baseSlug}-${suffix++}`;
-      }
-    }
-
-    const ticketDetailsForDb = tickets.map((ticket) => ({
-      ticketTypeId: Number(ticket.type_id),
-      price: Number(ticket.price),
-      ticketCount: ticket.count ? Number(ticket.count) : null,
-    }));
-
-  
-
-    const updatedEvent = await prisma.event.update({
-      where: { id: eventId },
-      data: {
-        name,
-        slug: uniqueSlug,
-        start_date_time: new Date(start_date_time),
-        end_date_time: new Date(end_date_time),
-        description: discription,
-        policy: policy,
-        organized_by: organized_by,
-        location,
-        banner_image: bannerImageUrl,
-        featured_image: featuredImageUrl,
-        gallery_media: galleryMedia, // Update gallery media with combined existing and new
-        ticket_details: ticketDetailsForDb,
-        artist_details: artists,
-      },
-    });
-
-    req.session.success = 'Event updated successfully!';
-    req.session.formData = {};
-    req.session.validationErrors = {};
-    return res.redirect(`/event/edit/${updatedEvent.id}`);
-  } catch (err) {
-    console.error('Error updating event:', err);
-    req.session.error = 'An unexpected error occurred while updating the event.';
-    req.session.formData = req.body;
-    return res.redirect(`/event/edit/${eventId}`);
-  }
 };
 
 export const updateEventSeats = async (req: Request, res: Response) => {
