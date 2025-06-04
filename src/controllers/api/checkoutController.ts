@@ -20,14 +20,6 @@ interface TicketWithoutSeat {
     ticket_type_id: number;
     ticket_count: number;
 }
-
-interface EventTicketDetail {
-    price: number;
-    ticketCount: number | null;
-    ticketTypeId: number;
-    hasTicketCount: boolean;
-    bookedTicketCount: number;
-}
 export const checkout = async (req: Request, res: Response) => {
     const schema = z.object({
         first_name: z.string().min(1, 'First name is required'),
@@ -58,8 +50,8 @@ export const checkout = async (req: Request, res: Response) => {
             }
             return val;
         }, z.array(z.object({
-            ticket_type_id: z.number().int(),
-            ticket_count: z.number().int().min(1, 'Ticket count must be at least 1'),
+            ticket_type_id: z.number(),
+            ticket_count: z.number().min(1, 'Ticket count must be at least 1'),
         })).optional()),
     });
 
@@ -81,9 +73,13 @@ export const checkout = async (req: Request, res: Response) => {
         country,
         event_id,
         user_id,
-        seat_ids = [], 
-        tickets_without_seats = [], 
+        seat_ids = [], // Default to empty array if not provided
+        tickets_without_seats = [], // Default to empty array if not provided
     } = result.data;
+    
+    if (seat_ids.length === 0 && tickets_without_seats.length === 0) {
+        return res.status(400).json({ message: 'No seats or tickets without seats provided for checkout.' });
+    }
 
     try {
         const event = await prisma.event.findUnique({
@@ -91,7 +87,7 @@ export const checkout = async (req: Request, res: Response) => {
             select: {
                 name: true,
                 seats: true,
-                ticket_details: true, 
+                ticket_details: true, // Select ticket_details
             },
         });
 
@@ -99,24 +95,19 @@ export const checkout = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Event not found.' });
         }
 
-        let eventSeats: Seat[] = [];
-        if (event.seats) {
-            eventSeats = typeof event.seats === 'string'
-                ? JSON.parse(event.seats)
-                : event.seats;
-        }
+        const eventSeats: Seat[] = typeof event.seats === 'string'
+            ? JSON.parse(event.seats)
+            : event.seats || []; // Ensure it's an array
 
-        let eventTicketDetails: EventTicketDetail[] = [];
-        if (event.ticket_details) {
-            eventTicketDetails = typeof event.ticket_details === 'string'
-                ? JSON.parse(event.ticket_details)
-                : event.ticket_details;
-        }
+        const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
+            ? JSON.parse(event.ticket_details)
+            : event.ticket_details || []; // Ensure it's an array
 
         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
         let subTotal = 0;
 
+        // --- Process seat-based tickets ---
         for (const seatId of seat_ids) {
             const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
 
@@ -136,39 +127,39 @@ export const checkout = async (req: Request, res: Response) => {
             subTotal += foundSeat.price;
         }
 
-        const groupedTicketsWithoutSeats: { [ticketTypeName: string]: { count: number; type_id: number; price: number } } = {};
-        const ticketWithoutSeatDetailsForOrder: { ticket_type_id: number; ticket_count: number; price: number; ticketTypeName: string }[] = [];
+        // --- Process tickets without seats and update ticket_details ---
+        const updatedTicketDetails = [...eventTicketDetails];
+        const ticketsWithoutSeatsDetails: { ticketTypeName: string; count: number; type_id: number; price: number }[] = [];
 
-        for (const ticketInfo of tickets_without_seats) {
-            const ticketDetail = eventTicketDetails.find(td => td.ticketTypeId === ticketInfo.ticket_type_id);
+        for (const ticket of tickets_without_seats) {
+            const ticketDetailIndex = updatedTicketDetails.findIndex(td => td.ticketTypeId === ticket.ticket_type_id);
 
-            if (!ticketDetail) {
-                return res.status(400).json({ message: `Ticket type ID ${ticketInfo.ticket_type_id} not found for this event.` });
+            if (ticketDetailIndex === -1) {
+                return res.status(400).json({ message: `Ticket type ID ${ticket.ticket_type_id} not found for this event.` });
             }
 
-            if (ticketDetail.hasTicketCount && (ticketDetail.bookedTicketCount + ticketInfo.ticket_count > (ticketDetail.ticketCount || 0))) {
-                return res.status(400).json({ message: `Not enough tickets available for type ${ticketInfo.ticket_type_id}. Only ${((ticketDetail.ticketCount || 0) - ticketDetail.bookedTicketCount)} remaining.` });
+            const currentTicketDetail = updatedTicketDetails[ticketDetailIndex];
+
+            // Check if hasTicketCount is true and if there's enough available
+            if (currentTicketDetail.hasTicketCount && currentTicketDetail.ticketCount !== null) {
+                if ((currentTicketDetail.bookedTicketCount + ticket.ticket_count) > currentTicketDetail.ticketCount) {
+                    return res.status(400).json({
+                        message: `Not enough tickets available for ticket type ID ${ticket.ticket_type_id}. Available: ${currentTicketDetail.ticketCount - currentTicketDetail.bookedTicketCount}. Requested: ${ticket.ticket_count}.`
+                    });
+                }
             }
 
-            ticketDetail.bookedTicketCount += ticketInfo.ticket_count;
-            subTotal += ticketDetail.price * ticketInfo.ticket_count;
+            currentTicketDetail.bookedTicketCount += ticket.ticket_count;
+            subTotal += currentTicketDetail.price * ticket.ticket_count;
 
-            // For QR code generation and order saving
-            const ticketTypeName = `Ticket Type ${ticketInfo.ticket_type_id}`; // You might want to fetch the actual name from a separate table or event.ticket_details if available
-            if (!groupedTicketsWithoutSeats[ticketTypeName]) {
-                groupedTicketsWithoutSeats[ticketTypeName] = { count: 0, type_id: ticketInfo.ticket_type_id, price: ticketDetail.price };
-            }
-            groupedTicketsWithoutSeats[ticketTypeName].count += ticketInfo.ticket_count;
-            
-            ticketWithoutSeatDetailsForOrder.push({
-                ticket_type_id: ticketInfo.ticket_type_id,
-                ticket_count: ticketInfo.ticket_count,
-                price: ticketDetail.price,
-                ticketTypeName: ticketTypeName // This will be used for email and QR
+            ticketsWithoutSeatsDetails.push({
+                ticketTypeName: currentTicketDetail.ticketTypeName || `Type ${currentTicketDetail.ticketTypeId}`, // Assuming a ticketTypeName exists or create a fallback
+                count: ticket.ticket_count,
+                type_id: ticket.ticket_type_id,
+                price: currentTicketDetail.price,
             });
         }
 
-        // Create the order
         const order = await prisma.order.create({
             data: {
                 email,
@@ -179,8 +170,8 @@ export const checkout = async (req: Request, res: Response) => {
                 country,
                 event_id: event_id,
                 user_id: user_id,
-                seat_ids: seat_ids,
-                tickets_without_seats: tickets_without_seats, // Save the raw input for tickets without seats
+                seat_ids: seat_ids.length > 0 ? seat_ids : [], // Store seat_ids as an empty array if none selected
+                tickets_without_seats: tickets_without_seats, // Store the new field
                 sub_total: subTotal,
                 discount: 0,
                 total: subTotal,
@@ -188,9 +179,9 @@ export const checkout = async (req: Request, res: Response) => {
             },
         });
 
-        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string; type_id: number; seat_ids_for_type?: string[] }[] = [];
+        const qrCodes: { ticketTypeName: string; count: number; qrCodeData: string; type_id: number; seat_ids_for_type?: string[]; type: 'seat' | 'no seat' }[] = [];
 
-        // Generate QR codes for seats
+        // --- Generate QR codes for seat-based tickets ---
         for (const ticketTypeName in groupedSeats) {
             if (Object.prototype.hasOwnProperty.call(groupedSeats, ticketTypeName)) {
                 const seatsForType = groupedSeats[ticketTypeName];
@@ -210,6 +201,7 @@ export const checkout = async (req: Request, res: Response) => {
                     ticketCount: count,
                     ticketTypeId: type_id,
                     seatIdsForType: seatsForType,
+                    type: "seat", // Add type field
                 });
                 const qrCodeDataURL = await QRCode.toDataURL(qrData);
                 qrCodes.push({
@@ -218,33 +210,31 @@ export const checkout = async (req: Request, res: Response) => {
                     qrCodeData: qrCodeDataURL,
                     type_id: type_id,
                     seat_ids_for_type: seatsForType,
+                    type: "seat",
                 });
             }
         }
 
-        // Generate QR codes for tickets without seats
-        for (const ticketTypeName in groupedTicketsWithoutSeats) {
-            if (Object.prototype.hasOwnProperty.call(groupedTicketsWithoutSeats, ticketTypeName)) {
-                const ticketInfo = groupedTicketsWithoutSeats[ticketTypeName];
-
-                const qrData = JSON.stringify({
-                    orderId: order.id,
-                    ticketTypeName: ticketTypeName,
-                    ticketCount: ticketInfo.count,
-                    ticketTypeId: ticketInfo.type_id,
-                    // No seat_ids_for_type for these tickets
-                });
-                const qrCodeDataURL = await QRCode.toDataURL(qrData);
-                qrCodes.push({
-                    ticketTypeName: ticketTypeName,
-                    count: ticketInfo.count,
-                    qrCodeData: qrCodeDataURL,
-                    type_id: ticketInfo.type_id,
-                });
-            }
+        // --- Generate QR codes for tickets without seats ---
+        for (const ticket of ticketsWithoutSeatsDetails) {
+            const qrData = JSON.stringify({
+                orderId: order.id,
+                ticketTypeName: ticket.ticketTypeName,
+                ticketCount: ticket.count,
+                ticketTypeId: ticket.type_id,
+                type: "no seat", // Add type field
+            });
+            const qrCodeDataURL = await QRCode.toDataURL(qrData);
+            qrCodes.push({
+                ticketTypeName: ticket.ticketTypeName,
+                count: ticket.count,
+                qrCodeData: qrCodeDataURL,
+                type_id: ticket.type_id,
+                type: "no seat",
+            });
         }
 
-        // Update seats status
+        // --- Update event seats and ticket_details ---
         const updatedSeats = eventSeats.map((seat: Seat) => {
             if (seat_ids.map(String).includes(seat.seatId.toString())) {
                 return { ...seat, status: 'booked' };
@@ -252,46 +242,47 @@ export const checkout = async (req: Request, res: Response) => {
             return seat;
         });
 
-        // Update event with new seat status and updated ticket_details
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
                 seats: JSON.stringify(updatedSeats),
-                ticket_details: JSON.stringify(eventTicketDetails), // Save updated ticket_details
+                ticket_details: JSON.stringify(updatedTicketDetails), // Update ticket_details
             },
         });
 
+        // --- Prepare email attachments ---
         const attachments: any[] = [];
         qrCodes.forEach((qr, index) => {
             attachments.push({
-                filename: `ticket-${qr.ticketTypeName.replace(/\s/g, '-')}-${index + 1}.png`,
+                filename: `ticket-${qr.ticketTypeName}-${qr.type}-${index + 1}.png`,
                 content: qr.qrCodeData.split("base64,")[1],
                 encoding: 'base64',
                 cid: `qr${index}@event.com`,
             });
         });
 
-        // Prepare details for the email template
+        // --- Prepare email content ---
         const booked_seats_details = Object.keys(groupedSeats).map(ticketTypeName => {
             const seats = groupedSeats[ticketTypeName];
             return `${ticketTypeName}: ${seats.join(', ')}`;
         }).join('; ');
 
-        const booked_tickets_without_seats_details = Object.keys(groupedTicketsWithoutSeats).map(ticketTypeName => {
-            const ticketInfo = groupedTicketsWithoutSeats[ticketTypeName];
-            return `${ticketTypeName}: ${ticketInfo.count} tickets`;
+        const booked_tickets_without_seats_details = ticketsWithoutSeatsDetails.map(ticket => {
+            return `${ticket.ticketTypeName} (No Seat): ${ticket.count} tickets`;
         }).join('; ');
 
-        const allBookedDetails = [booked_seats_details, booked_tickets_without_seats_details].filter(Boolean).join('; ');
+        const all_booked_details = [booked_seats_details, booked_tickets_without_seats_details].filter(Boolean).join('; ');
+
 
         const templatePath = path.join(__dirname, '../../views/email-templates/qr-template.ejs');
         const qrEmailHtml = await ejs.renderFile(templatePath, {
             first_name: first_name,
             event_name: event.name,
-            booked_seats_details: allBookedDetails, // Use combined details
+            booked_seats_details: all_booked_details, // Combine details for email
             qrCodes: qrCodes,
         });
 
+        // --- Send email ---
         await transporter.sendMail({
             from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
             to: email,
@@ -301,7 +292,7 @@ export const checkout = async (req: Request, res: Response) => {
         });
 
         return res.status(201).json({
-            message: 'Order created successfully, tickets booked, and QR codes emailed',
+            message: 'Order created successfully, seats booked, and QR codes emailed',
             order_id: order.id,
             qr_codes: qrCodes,
         });
@@ -330,6 +321,19 @@ export const checkout = async (req: Request, res: Response) => {
 //             }
 //             return val;
 //         }, z.array(z.union([z.number(), z.string()])).optional()),
+//         tickets_without_seats: z.preprocess((val) => {
+//             if (typeof val === 'string') {
+//                 try {
+//                     return JSON.parse(val);
+//                 } catch {
+//                     return [];
+//                 }
+//             }
+//             return val;
+//         }, z.array(z.object({
+//             ticket_type_id: z.number().int(),
+//             ticket_count: z.number().int().min(1, 'Ticket count must be at least 1'),
+//         })).optional()),
 //     });
 
 //     const result = schema.safeParse(req.body);
@@ -340,7 +344,7 @@ export const checkout = async (req: Request, res: Response) => {
 //             errors: result.error.flatten(),
 //         });
 //     }
-//     const { email, first_name, last_name, contact_number, nic_passport, country, event_id, user_id, seat_ids } = result.data;
+//     const { email, first_name, last_name, contact_number, nic_passport, country, event_id, user_id, seat_ids= [],tickets_without_seats = [] } = result.data;
 
 //     try {
 //         const event = await prisma.event.findUnique({
@@ -348,16 +352,21 @@ export const checkout = async (req: Request, res: Response) => {
 //             select: {
 //                 name: true,
 //                 seats: true,
+//                 ticket_details: true,
 //             },
 //         });
 
-//          if (!event || event.seats === null) {
+//          if (!event || !event.seats) {
 //             return res.status(404).json({ message: 'Event not found or has no seat data.' });
 //         }
 
 //         const eventSeats: Seat[] = typeof event.seats === 'string'
 //         ? JSON.parse(event.seats)
 //         : event.seats;
+
+//         const eventTickets: EventTicketDetail[] = typeof event.ticket_details === 'string'
+//         ? JSON.parse(event.ticket_details)
+//         : event.ticket_details;
 
 //         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
 //         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
