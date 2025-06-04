@@ -78,6 +78,7 @@ export const checkout = async (req: Request, res: Response) => {
         tickets_without_seats = [], // Default to empty array if not provided
     } = result.data;
 
+    console.log('tickets_without_seats',tickets_without_seats);
     if (seat_ids.length === 0 && tickets_without_seats.length === 0) {
         return res.status(400).json({ message: 'No seats or tickets without seats provided for checkout.' });
     }
@@ -103,7 +104,7 @@ export const checkout = async (req: Request, res: Response) => {
         const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
             ? JSON.parse(event.ticket_details)
             : event.ticket_details || []; // Ensure it's an array
-
+        console.log('eventTicketDetails',eventTicketDetails);
         const groupedSeats: { [ticketTypeName: string]: string[] } = {};
         const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
         let subTotal = 0;
