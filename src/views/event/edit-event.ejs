@@ -326,33 +326,43 @@ height: auto;
         document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
     });
 
-    document.getElementById('ticket-container').addEventListener('change', function(e) {
-        if (e.target.classList.contains('ticket-type-select')) {
-            const row = e.target.closest('.ticket-row');
-            const selectedOption = e.target.selectedOptions[0];
+    // Populate existing ticket data if any (e.g., after validation error)
+    document.addEventListener('DOMContentLoaded', () => {
+        const formDataTickets = <%- JSON.stringify(formData?.tickets || []) %>;
+        formDataTickets.forEach(ticket => {
+            const rowHtml = createTicketRow(ticketIndex++, {
+                type_id: ticket.type_id,
+                price: ticket.price,
+                has_ticket_count: ticket.has_ticket_count === '1', // Convert string to boolean
+                ticket_count: ticket.count
+            });
+            document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
+        });
+    });
 
-            const hasCount = selectedOption.dataset.hasCount === '1';
+
+    document.getElementById('ticket-container').addEventListener('change', function (e) {
+        if (e.target.classList.contains('has-ticket-count-checkbox')) {
+            const row = e.target.closest('.ticket-row');
             const countWrapper = row.querySelector('.ticket-count-wrapper');
             const countInput = countWrapper.querySelector('input');
 
-            if (hasCount) {
+            if (e.target.checked) {
                 countWrapper.style.display = 'block';
                 countInput.required = true;
             } else {
                 countWrapper.style.display = 'none';
                 countInput.required = false;
-                countInput.value = ''; 
+                countInput.value = ''; // Clear value if not applicable
             }
         }
     });
 
-    document.getElementById('ticket-container').addEventListener('click', function(e) {
+    document.getElementById('ticket-container').addEventListener('click', function (e) {
         if (e.target.classList.contains('remove-ticket-btn')) {
             e.target.closest('.ticket-row').remove();
-
         }
     });
-
 
 
 </script>
