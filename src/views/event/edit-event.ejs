@@ -185,7 +185,7 @@ height: auto;
                     const currentTicketPrice = ticket.price;
                     const currentTicketCount = ticket.count || ticket.ticketCount;
                     // For formData, has_ticket_count is '1' or undefined. For DB, it's a boolean.
-                    const currentHasCount = ticket.has_ticket_count === '1' || ticket.hasTicketCount === true;
+                    const currentHasCount = ticket.has_ticket_count === true || ticket.hasTicketCount === true;
                     // Find the full ticket type object to get its actual has_ticket_count property
                     const ticketTypeFromDb = ticket_types.find(tt => tt.id === parseInt(currentTicketTypeId));
                     const actualHasCountFromType = ticketTypeFromDb ? ticketTypeFromDb.has_ticket_count : false; // Default to false if type not found
