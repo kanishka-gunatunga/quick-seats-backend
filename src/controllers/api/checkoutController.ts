@@ -155,7 +155,7 @@ export const checkout = async (req: Request, res: Response) => {
             subTotal += currentTicketDetail.price * ticket.ticket_count;
 
             ticketsWithoutSeatsDetails.push({
-                ticketTypeName: currentTicketDetail.ticketTypeName || `Type ${currentTicketDetail.ticketTypeId}`, // Assuming a ticketTypeName exists or create a fallback
+                ticketTypeName: currentTicketDetail.ticketTypeName || `Type ${currentTicketDetail.ticketTypeName}`, 
                 count: ticket.ticket_count,
                 type_id: ticket.ticket_type_id,
                 price: currentTicketDetail.price,
