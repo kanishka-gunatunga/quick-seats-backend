@@ -76,7 +76,7 @@ export const checkout = async (req: Request, res: Response) => {
         seat_ids = [], // Default to empty array if not provided
         tickets_without_seats = [], // Default to empty array if not provided
     } = result.data;
-    
+    return tickets_without_seats;
     if (seat_ids.length === 0 && tickets_without_seats.length === 0) {
         return res.status(400).json({ message: 'No seats or tickets without seats provided for checkout.' });
     }
