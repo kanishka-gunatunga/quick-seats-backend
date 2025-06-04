@@ -288,11 +288,12 @@ export const editEventGet = async (req: Request, res: Response) => {
       ? event.ticket_details.map((ticket: any) => {
           const ticketType = ticket_types.find(tt => tt.id === ticket.ticketTypeId);
           return {
-            type_id: ticket.ticketTypeId, 
+            type_id: ticket.ticketTypeId,
             price: ticket.price,
-            count: ticket.ticketCount, 
-            ticketTypeName: ticketType?.name || 'Unknown', 
-            color: ticketType?.color, 
+            count: ticket.ticketCount,
+            has_ticket_count: ticket.hasTicketCount,
+            ticketTypeName: ticketType?.name || 'Unknown',
+            color: ticketType?.color,
           };
         })
       : [];
