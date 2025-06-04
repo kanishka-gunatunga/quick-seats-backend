@@ -272,43 +272,48 @@ height: auto;
     </div>
 </div>
 <%- include('../layouts/footer.ejs') %>
-
 <script>
- 
     const ticketTypes = <%- JSON.stringify(ticket_types) %>;
-    let ticketIndex = 0; 
+    let ticketIndex = 0; // Initialize ticketIndex for dynamic row generation
 
-    const existingTicketRows = document.querySelectorAll('.ticket-row');
-    if (existingTicketRows.length > 0) {
-        ticketIndex = existingTicketRows.length;
-    }
+    // The line below for initializing ticketIndex based on existing rows
+    // should be removed if you're populating from formData/enrichedEvent below.
+    // It can cause issues if the page loads without existing rows rendered via EJS.
+    // const existingTicketRows = document.querySelectorAll('.ticket-row');
+    // if (existingTicketRows.length > 0) {
+    //     ticketIndex = existingTicketRows.length;
+    // }
 
     function createTicketRow(index, initialData = {}) {
         let options = '';
         ticketTypes.forEach(tt => {
-            options += `<option value="${tt.id}" ${initialData.type_id == tt.id ? 'selected' : ''}>${tt.name}</option>`;
+            // Ensure data-has-count is correctly set on options for dynamic updates
+            options += `<option value="${tt.id}" data-has-count="${tt.has_ticket_count}" ${initialData.type_id == tt.id ? 'selected' : ''}>${tt.name}</option>`;
         });
 
+        // Determine if the "Has Ticket Count" checkbox should be checked
         const hasCountChecked = initialData.has_ticket_count ? 'checked' : '';
+        // Determine initial display style for the count input wrapper
         const countDisplay = initialData.has_ticket_count ? 'block' : 'none';
+        // Determine if the count input should be required initially
         const countRequired = initialData.has_ticket_count ? 'required' : '';
 
         return `
             <div class="row ticket-row align-items-end mb-2" data-index="${index}">
-                <div class="col-md-3">
+                <div class="col-md-4"> <%-- Changed from col-md-3 to col-md-4 to accommodate checkbox column --%>
                     <label class="form-label">Ticket Type</label>
                     <select name="tickets[${index}][type_id]" class="form-control ticket-type-select" required>
                         <option value="">Select a type</option>
                         ${options}
                     </select>
                 </div>
-                <div class="col-md-2">
+                <div class="col-md-3"> <%-- Changed from col-md-2 to col-md-3 --%>
                     <label class="form-label">Price</label>
                     <input type="number" name="tickets[${index}][price]" class="form-control" placeholder="Enter price" value="${initialData.price || ''}" required>
                 </div>
-                <div class="col-md-2 form-check mb-3">
+                <div class="col-md-3 form-check mb-3 d-flex align-items-center"> <%-- New column for checkbox --%>
                     <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="has_ticket_count_${index}" name="tickets[${index}][has_ticket_count]" value="1" ${hasCountChecked}>
-                    <label class="form-check-label" for="has_ticket_count_${index}">Has Ticket Count</label>
+                    <label class="form-check-label ms-2" for="has_ticket_count_${index}">Has Ticket Count</label>
                 </div>
                 <div class="col-md-3 ticket-count-wrapper" style="display: ${countDisplay};">
                     <label class="form-label">Ticket Count</label>
@@ -326,23 +331,67 @@ height: auto;
         document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
     });
 
-    // Populate existing ticket data if any (e.g., after validation error)
+    // Populate existing ticket data on page load
     document.addEventListener('DOMContentLoaded', () => {
-        const formDataTickets = <%- JSON.stringify(formData?.tickets || []) %>;
-        formDataTickets.forEach(ticket => {
-            const rowHtml = createTicketRow(ticketIndex++, {
-                type_id: ticket.type_id,
+        // This is the core change: use `ticketsToRender` which is determined by EJS
+        // It correctly prioritizes formData, then falls back to enrichedEvent.ticket_details.
+        const ticketsData = <%- JSON.stringify(ticketsToRender || []) %>; // Use the EJS variable directly
+
+        ticketsData.forEach(ticket => {
+            const initialTicketData = {
+                type_id: ticket.type_id || ticket.ticketTypeId, // Handle both formData ('type_id') and DB ('ticketTypeId')
                 price: ticket.price,
-                has_ticket_count: ticket.has_ticket_count === '1', // Convert string to boolean
-                ticket_count: ticket.count
-            });
+                has_ticket_count: ticket.has_ticket_count === '1' || ticket.hasTicketCount === true, // Convert string '1' to boolean true
+                ticket_count: ticket.count || ticket.ticketCount // Handle both formData ('count') and DB ('ticketCount')
+            };
+            const rowHtml = createTicketRow(ticketIndex++, initialTicketData);
             document.getElementById('ticket-container').insertAdjacentHTML('beforeend', rowHtml);
+        });
+
+        // Trigger change event for pre-filled checkboxes and select elements
+        // to set count input visibility and checkbox state correctly
+        document.querySelectorAll('.ticket-row').forEach(row => {
+            const selectElement = row.querySelector('.ticket-type-select');
+            const checkboxElement = row.querySelector('.has-ticket-count-checkbox');
+
+            // Trigger change on select to set checkbox and count visibility
+            if (selectElement) {
+                const event = new Event('change', { bubbles: true });
+                selectElement.dispatchEvent(event);
+            }
+            // Trigger change on checkbox (redundant if select handles it, but good for robustness)
+            if (checkboxElement) {
+                 const event = new Event('change', { bubbles: true });
+                 checkboxElement.dispatchEvent(event);
+            }
         });
     });
 
 
     document.getElementById('ticket-container').addEventListener('change', function (e) {
-        if (e.target.classList.contains('has-ticket-count-checkbox')) {
+        if (e.target.classList.contains('ticket-type-select')) {
+            const selectedOption = e.target.options[e.target.selectedIndex];
+            // Check if data-has-count is defined and convert to boolean
+            const hasCount = selectedOption.dataset.hasCount === 'true';
+            const row = e.target.closest('.ticket-row');
+            const hasCountCheckbox = row.querySelector('.has-ticket-count-checkbox');
+            const countWrapper = row.querySelector('.ticket-count-wrapper');
+            const countInput = countWrapper.querySelector('input');
+
+            // Set the checkbox state based on the selected ticket type
+            hasCountCheckbox.checked = hasCount;
+
+            // Update count input visibility and required status
+            if (hasCount) {
+                countWrapper.style.display = 'block';
+                countInput.required = true;
+            } else {
+                countWrapper.style.display = 'none';
+                countInput.required = false;
+                countInput.value = ''; // Clear value if not applicable
+            }
+
+        } else if (e.target.classList.contains('has-ticket-count-checkbox')) {
             const row = e.target.closest('.ticket-row');
             const countWrapper = row.querySelector('.ticket-count-wrapper');
             const countInput = countWrapper.querySelector('input');
@@ -363,8 +412,6 @@ height: auto;
             e.target.closest('.ticket-row').remove();
         }
     });
-
-
 </script>
 <!-- 
 <script>
