@@ -22,7 +22,7 @@ export const issueTickets = async (req: Request, res: Response) => {
 export const ticketVerify = async (req: Request, res: Response) => {
     try {
 
-        const { orderId, ticketTypeId, seatIdsForType, type, ticketCount } = req.body;
+        const { orderId, ticketTypeId, seatIdsForType, type, ticketCount,ticketTypeName } = req.body;
 
         if (!orderId || !ticketTypeId || !type) {
             return res.status(400).json({ message: 'Missing essential fields: orderId, ticketTypeId, or type.' });
@@ -76,7 +76,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
             if (typeof ticketCount === 'undefined') {
                 return res.status(400).json({ message: 'Missing ticketCount for a "no seat" type ticket.' });
             }
-            console.log('eventTicketDetails', eventTicketDetails);
+   
             const ticketDetail = eventTicketDetails.find(
                 (td: any) => td.ticketTypeId === ticketTypeId
             );
@@ -86,7 +86,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
             }
 
             verifiedTicketDetails = {
-                ticketTypeName: ticketDetail.ticketTypeName || 'Unknown',
+                ticketTypeName: ticketTypeName,
                 count: ticketCount, 
                 type: "no seat",
      
