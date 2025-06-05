@@ -38,148 +38,200 @@
 
             </div>
             <%- include('../../layouts/staff-footer.ejs') %>
-
- <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
 <script>
-  const qrResult = document.getElementById('decoded-data');
-  const ticketDetails = document.getElementById("ticket-details");
+    const qrResult = document.getElementById('decoded-data');
+    const ticketDetails = document.getElementById("ticket-details");
 
-  const html5QrCode = new Html5Qrcode("qr-reader");
-  const config = { fps: 10, qrbox: 250 };
+    const html5QrCode = new Html5Qrcode("qr-reader");
+    const config = { fps: 10, qrbox: 250 };
 
-  async function handleDecodedData(decodedText) {
-    let scannedData;
-    try {
-      scannedData = JSON.parse(decodedText);
-      qrResult.textContent = JSON.stringify(scannedData, null, 2);
-    } catch (err) {
-      qrResult.textContent = "Invalid QR data.";
-      console.error("Invalid JSON in QR code:", err);
-      return;
-    }
+    async function handleDecodedData(decodedText) {
+        let scannedData;
+        try {
+            scannedData = JSON.parse(decodedText);
+            qrResult.textContent = JSON.stringify(scannedData, null, 2);
+        } catch (err) {
+            qrResult.textContent = "Invalid QR data.";
+            console.error("Invalid JSON in QR code:", err);
+            return;
+        }
 
-    // Ensure scannedData has the expected properties
-    const { orderId, ticketTypeId, seatIdsForType } = scannedData;
-    if (!orderId || !ticketTypeId || !seatIdsForType) {
-        qrResult.textContent = "Invalid QR data: Missing orderId, ticketTypeId, or seatIdsForType.";
-        return;
-    }
+        // Ensure scannedData has the expected properties
+        const { orderId, ticketTypeId, type, seatIdsForType, ticketCount, ticketTypeName } = scannedData;
 
+        if (!orderId || !ticketTypeId || !type) {
+            qrResult.textContent = "Invalid QR data: Missing essential fields (orderId, ticketTypeId, or type).";
+            return;
+        }
 
-    try {
-      // Send orderId, ticketTypeId, and specific seatIds to backend for verification
-      const res = await fetch("/staff/ticket-verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, ticketTypeId, seatIdsForType })
-      });
+        try {
+            let res;
+            let backendBody = { orderId, ticketTypeId, type }; // Base body for the backend call
 
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.message || "Verification failed");
-      }
-
-      // Destructure eventName, ticketTypeName, and seats from the backend response
-      const { eventName, ticketTypeName, seats } = await res.json(); 
-
-      renderTicketDetails(orderId, eventName, ticketTypeName, seats);
-    } catch (err) {
-      ticketDetails.innerHTML = `<p style="color: red;">❌ Error: ${err.message}</p>`;
-      console.error("Error verifying ticket:", err);
-    }
-  }
-
-  function renderTicketDetails(orderId, eventName, ticketTypeName, seats) {
-    ticketDetails.innerHTML = `
-      <h4>Event Name: ${eventName}</h4>
-      <h5>Ticket Type: ${ticketTypeName}</h5>
-      <ul class="list-group mb-0 user-list">
-        ${seats.map(seat => `
-          <li id="seat-${seat.seatId}" class="list-group-item">
-            Seat: <strong>${seat.seatId}</strong>
-            ${
-              seat.status === "issued"
-                ? '<span style="color: green;">✅ Already Issued</span>'
-                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Ticket</button>`
+            if (type === "seat") {
+                // For seated tickets, include seatIdsForType
+                if (!seatIdsForType || !Array.isArray(seatIdsForType) || seatIdsForType.length === 0) {
+                    qrResult.textContent = "Invalid QR data: Missing seatIdsForType for a 'seat' type ticket.";
+                    return;
+                }
+                backendBody.seatIdsForType = seatIdsForType;
+            } else if (type === "no seat") {
+                // For non-seated tickets, include ticketCount
+                if (typeof ticketCount === 'undefined' || typeof ticketTypeName === 'undefined') {
+                    qrResult.textContent = "Invalid QR data: Missing ticketCount or ticketTypeName for a 'no seat' type ticket.";
+                    return;
+                }
+                backendBody.ticketCount = ticketCount;
+                backendBody.ticketTypeName = ticketTypeName;
+            } else {
+                qrResult.textContent = "Invalid QR data: Unknown ticket type.";
+                return;
             }
-            <span id="status-${seat.seatId}" style="margin-left: 10px;"></span>
-          </li>
-        `).join("")}
-      </ul>
-    `;
-  }
 
-  async function issueTicket(orderId, seatId) {
-    try {
-      const res = await fetch("/staff/confirm-ticket-issue", { 
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, seatId }) 
-      });
+            // Send data to backend for verification
+            res = await fetch("/staff/ticket-verify", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(backendBody)
+            });
 
-      const result = await res.json();
-      const statusEl = document.getElementById(`status-${seatId}`);
-      const seatListItem = document.getElementById(`seat-${seatId}`); 
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || "Verification failed");
+            }
 
-      if (res.ok) {
-        if (seatListItem) {
-          // Remove the button and update the text
-          const button = seatListItem.querySelector('button');
-          if (button) {
-            button.remove();
-          }
-          if (statusEl) {
-            statusEl.innerHTML = '<span style="color: green;">✅ Issued</span>'; // Update the status span
-          }
+            // Destructure relevant data from the backend response
+            const { eventName, verifiedTicketDetails } = await res.json();
+
+            // Render details based on the ticket type
+            if (type === "seat") {
+                renderSeatedTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.seats);
+            } else if (type === "no seat") {
+                renderNoSeatTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.count);
+            }
+
+        } catch (err) {
+            ticketDetails.innerHTML = `<p style="color: red;">❌ Error: ${err.message}</p>`;
+            console.error("Error verifying ticket:", err);
         }
-      } else {
-        if (statusEl) {
-          statusEl.innerText = `❌ ${result.message || 'Error issuing'}`;
+    }
+
+    function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats) {
+        ticketDetails.innerHTML = `
+            <h4>Event Name: ${eventName}</h4>
+            <h5>Ticket Type: ${ticketTypeName}</h5>
+            <ul class="list-group mb-0 user-list">
+                ${seats.map(seat => `
+                    <li id="seat-${seat.seatId}" class="list-group-item">
+                        Seat: <strong>${seat.seatId}</strong>
+                        ${
+                            seat.status === "issued"
+                                ? '<span style="color: green;">✅ Already Issued</span>'
+                                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}', 'seat')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Ticket</button>`
+                        }
+                        <span id="status-${seat.seatId}" style="margin-left: 10px;"></span>
+                    </li>
+                `).join("")}
+            </ul>
+        `;
+    }
+
+    function renderNoSeatTicketDetails(orderId, eventName, ticketTypeName, count) {
+        ticketDetails.innerHTML = `
+            <h4>Event Name: ${eventName}</h4>
+            <h5>Ticket Type: ${ticketTypeName}</h5>
+            <p>Number of tickets: <strong>${count}</strong></p>
+            <div id="no-seat-status">
+                <button onclick="issueTicket('${orderId}', null, 'no seat')" class="btn btn-warning btn-xs waves-effect waves-light">Issue All Tickets</button>
+                <span id="status-no-seat" style="margin-left: 10px;"></span>
+            </div>
+        `;
+    }
+
+
+    async function issueTicket(orderId, seatId = null, ticketType) {
+        try {
+            const res = await fetch("/staff/confirm-ticket-issue", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ orderId, seatId, ticketType }) // Pass ticketType to backend
+            });
+
+            const result = await res.json();
+            let statusEl;
+            let listItem;
+
+            if (ticketType === 'seat') {
+                statusEl = document.getElementById(`status-${seatId}`);
+                listItem = document.getElementById(`seat-${seatId}`);
+            } else if (ticketType === 'no seat') {
+                statusEl = document.getElementById('status-no-seat');
+                listItem = document.getElementById('no-seat-status');
+            }
+
+
+            if (res.ok) {
+                if (listItem) {
+                    const button = listItem.querySelector('button');
+                    if (button) {
+                        button.remove();
+                    }
+                    if (statusEl) {
+                        statusEl.innerHTML = '<span style="color: green;">✅ Issued</span>';
+                    }
+                }
+            } else {
+                if (statusEl) {
+                    statusEl.innerText = `❌ ${result.message || 'Error issuing'}`;
+                }
+            }
+        } catch (err) {
+            let errorStatusEl = seatId ? document.getElementById(`status-${seatId}`) : document.getElementById('status-no-seat');
+            if (errorStatusEl) {
+                errorStatusEl.innerText = "❌ Network error or server issue.";
+            }
+            console.error("Error issuing ticket:", err);
         }
-      }
-    } catch (err) {
-      document.getElementById(`status-${seatId}`).innerText = "❌ Network error or server issue.";
-      console.error("Error issuing ticket:", err);
     }
-  }
 
-  // === LIVE SCAN ===
-  Html5Qrcode.getCameras().then(cameras => {
-    if (cameras && cameras.length) {
-      html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        (decodedText) => {
-          html5QrCode.stop(); // Optional: stop scanning after 1 scan
-          handleDecodedData(decodedText);
-        },
-        (errorMessage) => {
-          // console.warn("QR code scan error:", errorMessage); // Log errors silently
+    // === LIVE SCAN ===
+    Html5Qrcode.getCameras().then(cameras => {
+        if (cameras && cameras.length) {
+            html5QrCode.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText) => {
+                    html5QrCode.stop(); // Optional: stop scanning after 1 scan
+                    handleDecodedData(decodedText);
+                },
+                (errorMessage) => {
+                    // console.warn("QR code scan error:", errorMessage); // Log errors silently
+                }
+            ).catch(err => {
+                console.error("Failed to start QR code scanner:", err);
+                alert("Failed to start camera. Please ensure camera access is granted.");
+            });
+        } else {
+            alert("No cameras found or camera access denied. Please try scanning from a file.");
         }
-      ).catch(err => {
-        console.error("Failed to start QR code scanner:", err);
-        alert("Failed to start camera. Please ensure camera access is granted.");
-      });
-    } else {
-      alert("No cameras found or camera access denied. Please try scanning from a file.");
-    }
-  }).catch(err => {
-    console.error("Error getting cameras:", err);
-    alert("Error accessing camera information.");
-  });
+    }).catch(err => {
+        console.error("Error getting cameras:", err);
+        alert("Error accessing camera information.");
+    });
 
-  // === FILE SCAN ===
-  const fileInput = document.getElementById('qr-file-input');
-  fileInput.addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+    // === FILE SCAN ===
+    const fileInput = document.getElementById('qr-file-input');
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
 
-    try {
-      const decodedText = await html5QrCode.scanFile(file, true);
-      handleDecodedData(decodedText);
-    } catch (err) {
-      qrResult.textContent = "❌ Failed to scan QR code from image.";
-      console.error("QR scan file error: ", err);
-    }
-  });
+        try {
+            const decodedText = await html5QrCode.scanFile(file, true);
+            handleDecodedData(decodedText);
+        } catch (err) {
+            qrResult.textContent = "❌ Failed to scan QR code from image.";
+            console.error("QR scan file error: ", err);
+        }
+    });
 </script>
