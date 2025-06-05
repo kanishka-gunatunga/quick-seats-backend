@@ -89,7 +89,7 @@
                 qrResult.textContent = "Invalid QR data: Unknown ticket type.";
                 return;
             }
-
+            console.log(backendBody);
             // Send data to backend for verification
             res = await fetch("/staff/ticket-verify", {
                 method: "POST",
