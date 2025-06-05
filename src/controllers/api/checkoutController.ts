@@ -172,6 +172,11 @@ export const checkout = async (req: Request, res: Response) => {
             });
         }
 
+        const ticketsWithoutSeatsForOrder = tickets_without_seats.map(ticket => ({
+            ...ticket,
+            issued_count: 0,
+        }));
+
         const order = await prisma.order.create({
             data: {
                 email,
@@ -183,7 +188,7 @@ export const checkout = async (req: Request, res: Response) => {
                 event_id: event_id,
                 user_id: user_id,
                 seat_ids: seat_ids.length > 0 ? JSON.stringify(seat_ids) : '[]', // Stringify seat_ids
-                tickets_without_seats: tickets_without_seats.length > 0 ? JSON.stringify(tickets_without_seats) : '[]', // Stringify tickets_without_seats
+                tickets_without_seats: ticketsWithoutSeatsForOrder.length > 0 ? JSON.stringify(ticketsWithoutSeatsForOrder) : '[]', // Stringify tickets_without_seats
                 sub_total: subTotal,
                 discount: 0,
                 total: subTotal,
