@@ -506,7 +506,7 @@ export const validateOtp = async (req: Request, res: Response) => {
       },
     });
 
-    const templatePath = path.join(__dirname, '../../email-templates/register-success-template.ejs');
+    const templatePath = path.join(__dirname, '../../views/email-templates/register-success-template.ejs');
     
     const emailHtml = await ejs.renderFile(templatePath, {
         first_name: user.userDetails.first_name,
