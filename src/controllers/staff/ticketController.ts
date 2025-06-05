@@ -21,7 +21,7 @@ export const issueTickets = async (req: Request, res: Response) => {
 
 export const ticketVerify = async (req: Request, res: Response) => {
     try {
-      
+
         const { orderId, ticketTypeId, seatIdsForType, type, ticketCount } = req.body;
 
         if (!orderId || !ticketTypeId || !type) {
@@ -78,7 +78,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
             }
 
             const ticketDetail = eventTicketDetails.find(
-                (td: any) => td.type_id === ticketTypeId
+                (td: any) => td.ticketTypeId === ticketTypeId
             );
 
             if (!ticketDetail) {
