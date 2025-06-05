@@ -107,9 +107,9 @@
 
             // Render details based on the ticket type
             if (type === "seat") {
-                renderSeatedTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.seats);
+                renderSeatedTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.seats,verifiedTicketDetails.ticketTypeId);
             } else if (type === "no seat") {
-                renderNoSeatTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.count);
+                renderNoSeatTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.countverifiedTicketDetails.ticketTypeId);
             }
 
         } catch (err) {
@@ -118,7 +118,7 @@
         }
     }
 
-    function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats) {
+    function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats,ticketTypeId) {
         ticketDetails.innerHTML = `
             <h4>Event Name: ${eventName}</h4>
             <h5>Ticket Type: ${ticketTypeName}</h5>
@@ -138,17 +138,22 @@
         `;
     }
 
-    function renderNoSeatTicketDetails(orderId, eventName, ticketTypeName, count) {
-        ticketDetails.innerHTML = `
-            <h4>Event Name: ${eventName}</h4>
-            <h5>Ticket Type: ${ticketTypeName}</h5>
-            <p>Number of tickets: <strong>${count}</strong></p>
-            <div id="no-seat-status">
-                <button onclick="issueTicketNoSeat('${orderId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue All Tickets</button>
-                <span id="status-no-seat" style="margin-left: 10px;"></span>
+    
+    function renderNoSeatTicketDetails(orderId, eventName, ticketTypeName, count, ticketTypeId) { 
+    ticketDetails.innerHTML = `
+        <h4>Event Name: ${eventName}</h4>
+        <h5>Ticket Type: ${ticketTypeName}</h5>
+        <p>Total tickets of this type in order: <strong>${count}</strong></p>
+        <div id="no-seat-issue-section">
+            <div class="form-group">
+                <label for="issueCount-${orderId}-${ticketTypeId}">Tickets to Issue:</label>
+                <input type="number" id="issueCount-${orderId}-${ticketTypeId}" class="form-control" value="1" min="1" max="${count}">
             </div>
-        `;
-    }
+            <button onclick="issueTicketNoSeat('${orderId}', ${ticketTypeId}, ${count})" class="btn btn-warning btn-xs waves-effect waves-light">Issue Tickets</button>
+            <span id="status-no-seat" style="margin-left: 10px;"></span>
+        </div>
+    `;
+}
 
 
     async function issueTicket(orderId, seatId) {
@@ -189,6 +194,59 @@
             console.error("Error issuing ticket:", err);
         }
     }
+
+    async function issueTicketNoSeat(orderId, ticketTypeId, inputElementId) {
+    const issueCountInput = document.getElementById(inputElementId);
+    const countToIssue = parseInt(issueCountInput.value);
+    // Find the status span specific to this ticket type and order for better UI
+    const statusEl = document.getElementById(`status-no-seat-${orderId}-${ticketTypeId}`);
+    const issueSection = document.getElementById(`no-seat-issue-section-${orderId}-${ticketTypeId}`);
+
+    if (isNaN(countToIssue) || countToIssue <= 0) {
+        if (statusEl) {
+            statusEl.innerText = "❌ Please enter a valid number of tickets to issue.";
+            statusEl.style.color = "red";
+        }
+        return;
+    }
+
+    try {
+        // Sending to a NEW, dedicated URL and including ticketTypeId in the body
+        const res = await fetch("/staff/issue-no-seat-tickets", { // <-- NEW DEDICATED URL
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                orderId: orderId,
+                ticketTypeId: ticketTypeId, // <-- NOW SENDING TICKET TYPE ID
+                countToIssue: countToIssue,
+                type: "no seat" // Still good to include this for backend clarity
+            })
+        });
+
+        const result = await res.json();
+
+        if (res.ok) {
+            if (statusEl) {
+                statusEl.innerHTML = '<span style="color: green;">✅ Issued</span>';
+                statusEl.style.color = "green";
+            }
+            if (issueSection) {
+                issueSection.innerHTML = `<p style="color: green;">✅ Successfully issued ${countToIssue} ticket(s).</p>`;
+            }
+        } else {
+            if (statusEl) {
+                statusEl.innerText = `❌ ${result.message || 'Error issuing'}`;
+                statusEl.style.color = "red";
+            }
+        }
+    } catch (err) {
+        if (statusEl) {
+            statusEl.innerText = "❌ Network error or server issue.";
+            statusEl.style.color = "red";
+        }
+        console.error("Error issuing no-seat ticket:", err);
+    }
+}
 
     // === LIVE SCAN ===
     Html5Qrcode.getCameras().then(cameras => {

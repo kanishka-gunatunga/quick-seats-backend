@@ -70,7 +70,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
             });
 
             const ticketTypeName = eventSeats.find((s) => s.type_id === ticketTypeId)?.ticketTypeName || 'Unknown';
-            verifiedTicketDetails = { ticketTypeName, seats, type: "seat" };
+            verifiedTicketDetails = { ticketTypeName, seats, type: "seat",ticketTypeId };
 
         } else if (type === "no seat") {
             if (typeof ticketCount === 'undefined') {
@@ -89,7 +89,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
                 ticketTypeName: ticketTypeName,
                 count: ticketCount, 
                 type: "no seat",
-     
+                ticketTypeId
             };
 
         } else {
