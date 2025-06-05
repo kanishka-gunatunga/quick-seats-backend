@@ -484,9 +484,13 @@ export const validateOtp = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
+      include: { userDetails: true }
     });
 
     if (!user || !user.otp) {
+      return res.status(400).json({ message: 'Invalid email address or OTP not requested.' });
+    }
+    if (!user.userDetails) {
       return res.status(400).json({ message: 'Invalid email address or OTP not requested.' });
     }
 
@@ -500,6 +504,19 @@ export const validateOtp = async (req: Request, res: Response) => {
           otp: null,
           is_verified: 1,
       },
+    });
+
+    const templatePath = path.join(__dirname, '../../email-templates/register-success-template.ejs');
+    
+    const emailHtml = await ejs.renderFile(templatePath, {
+        first_name: user.userDetails.first_name,
+    });
+
+    await transporter.sendMail({
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'Welcome to Quick Tickets!',
+        html: emailHtml,
     });
     return res.status(200).json({ message: 'OTP validated successfully.',type: otp_type });
     }
