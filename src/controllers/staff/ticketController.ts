@@ -76,7 +76,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
             if (typeof ticketCount === 'undefined') {
                 return res.status(400).json({ message: 'Missing ticketCount for a "no seat" type ticket.' });
             }
-
+            console.log('eventTicketDetails', eventTicketDetails);
             const ticketDetail = eventTicketDetails.find(
                 (td: any) => td.ticketTypeId === ticketTypeId
             );
