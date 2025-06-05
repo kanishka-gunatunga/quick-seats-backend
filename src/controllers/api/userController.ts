@@ -467,6 +467,7 @@ export const validateOtp = async (req: Request, res: Response) => {
   const schema = z.object({
     email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
     otp: z.string({ required_error: 'OTP is required' }),
+    otp_type: z.string({ required_error: 'OTP Type is required' }),
   });
 
   const result = schema.safeParse(req.body);
@@ -478,7 +479,7 @@ export const validateOtp = async (req: Request, res: Response) => {
     });
   }
 
-  const { email, otp } = result.data;
+  const { email, otp, otp_type } = result.data;
 
   try {
     const user = await prisma.user.findUnique({
@@ -492,15 +493,27 @@ export const validateOtp = async (req: Request, res: Response) => {
     if (user.otp !== otp) {
       return res.status(400).json({ message: 'Invalid OTP.' });
     }
-
+    if(otp_type == 'register'){
     await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        otp: null,
+        where: { id: user.id },
+        data: {
+          otp: null,
+          is_verified: 1,
       },
     });
+    return res.status(200).json({ message: 'OTP validated successfully.',type: otp_type });
+    }
+    else{
+    await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          otp: null,
+      },
+    });
+    return res.status(200).json({ message: 'OTP validated successfully.',type: otp_type });
+    }
 
-    return res.status(200).json({ message: 'OTP validated successfully.' });
+    
   } catch (err) {
     console.error('Error during OTP validation:', err);
     return res.status(500).json({ message: 'An unexpected error occurred.' });
