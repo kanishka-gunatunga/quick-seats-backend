@@ -49,6 +49,7 @@ export const register = async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         user_role: 2,
+        is_verified: 0,
         otp: null,
         status: 'active',
       },
@@ -65,19 +66,40 @@ export const register = async (req: Request, res: Response) => {
       },
     });
 
-    const templatePath = path.join(__dirname, '../../email-templates/register-success-template.ejs');
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
 
+    const templatePath = path.join(__dirname, '../../views/email-templates/confirm-email-template.ejs');
     const emailHtml = await ejs.renderFile(templatePath, {
-        first_name: first_name,
+        otp: otp,
     });
 
     await transporter.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
         to: email,
-        subject: 'Welcome to Quick Tickets!',
+        subject: 'Confirm Your Account',
         html: emailHtml,
     });
-    return res.status(201).json({ message: 'User registered successfully' });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: otp
+      },
+    });
+
+    // const templatePath = path.join(__dirname, '../../email-templates/register-success-template.ejs');
+
+    // const emailHtml = await ejs.renderFile(templatePath, {
+    //     first_name: first_name,
+    // });
+
+    // await transporter.sendMail({
+    //     from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+    //     to: email,
+    //     subject: 'Welcome to Quick Tickets!',
+    //     html: emailHtml,
+    // });
+    return res.status(201).json({ message: 'User registered successfully. Please confirm your account to login.' });
   } catch (err) {
     console.error('Registration error:', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -108,6 +130,9 @@ if (!result.success) {
     return res.status(400).json({ message: 'Invalid credentials' });
   }
 
+  if (user.is_verified == 0) {
+    return res.status(400).json({ message: 'Please verify your account to login' });
+  }
   const validPassword = await bcrypt.compare(password, user.password);
   if (!validPassword) {
      return res.status(400).json({ message: 'Invalid credentials' });

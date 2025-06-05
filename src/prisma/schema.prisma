@@ -24,6 +24,7 @@ model User {
   email     String   @unique
   password  String
   user_role  Int
+  is_verified  Int?
   otp      String?
   status String
   createdAt DateTime @default(now())
