@@ -129,7 +129,7 @@
                         ${
                             seat.status === "issued"
                                 ? '<span style="color: green;">✅ Already Issued</span>'
-                                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}', 'seat')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Ticket</button>`
+                                : `<button onclick="issueTicket('${orderId}', '${seat.seatId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Ticket</button>`
                         }
                         <span id="status-${seat.seatId}" style="margin-left: 10px;"></span>
                     </li>
@@ -144,33 +144,27 @@
             <h5>Ticket Type: ${ticketTypeName}</h5>
             <p>Number of tickets: <strong>${count}</strong></p>
             <div id="no-seat-status">
-                <button onclick="issueTicket('${orderId}', null, 'no seat')" class="btn btn-warning btn-xs waves-effect waves-light">Issue All Tickets</button>
+                <button onclick="issueTicketNoSeat('${orderId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue All Tickets</button>
                 <span id="status-no-seat" style="margin-left: 10px;"></span>
             </div>
         `;
     }
 
 
-    async function issueTicket(orderId, seatId = null, ticketType) {
+    async function issueTicket(orderId, seatId) {
         try {
             const res = await fetch("/staff/confirm-ticket-issue", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ orderId, seatId, ticketType }) // Pass ticketType to backend
+                body: JSON.stringify({ orderId, seatId})
             });
 
             const result = await res.json();
             let statusEl;
             let listItem;
 
-            if (ticketType === 'seat') {
-                statusEl = document.getElementById(`status-${seatId}`);
-                listItem = document.getElementById(`seat-${seatId}`);
-            } else if (ticketType === 'no seat') {
-                statusEl = document.getElementById('status-no-seat');
-                listItem = document.getElementById('no-seat-status');
-            }
-
+            statusEl = document.getElementById(`status-${seatId}`);
+            listItem = document.getElementById(`seat-${seatId}`);
 
             if (res.ok) {
                 if (listItem) {
