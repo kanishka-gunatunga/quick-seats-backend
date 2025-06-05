@@ -139,18 +139,18 @@
     }
 
     
-    function renderNoSeatTicketDetails(orderId, eventName, ticketTypeName, count, ticketTypeId) { 
+    function renderNoSeatTicketDetails(orderId, eventName, ticketTypeName, count, ticketTypeId) {
     ticketDetails.innerHTML = `
         <h4>Event Name: ${eventName}</h4>
         <h5>Ticket Type: ${ticketTypeName}</h5>
         <p>Total tickets of this type in order: <strong>${count}</strong></p>
-        <div id="no-seat-issue-section">
+        <div id="no-seat-issue-section-${orderId}-${ticketTypeId}">
             <div class="form-group">
                 <label for="issueCount-${orderId}-${ticketTypeId}">Tickets to Issue:</label>
                 <input type="number" id="issueCount-${orderId}-${ticketTypeId}" class="form-control" value="1" min="1" max="${count}">
             </div>
-            <button onclick="issueTicketNoSeat('${orderId}', ${ticketTypeId}, ${count})" class="btn btn-warning btn-xs waves-effect waves-light">Issue Tickets</button>
-            <span id="status-no-seat" style="margin-left: 10px;"></span>
+            <button onclick="issueTicketNoSeat('${orderId}', ${ticketTypeId}, 'issueCount-${orderId}-${ticketTypeId}')" class="btn btn-warning btn-xs waves-effect waves-light">Issue Tickets</button>
+            <span id="status-no-seat-${orderId}-${ticketTypeId}" style="margin-left: 10px;"></span>
         </div>
     `;
 }
@@ -217,7 +217,7 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 orderId: orderId,
-                ticketTypeId: ticketTypeId, // <-- NOW SENDING TICKET TYPE ID
+                ticketTypeId: ticketTypeId, 
                 countToIssue: countToIssue,
                 type: "no seat" // Still good to include this for backend clarity
             })
