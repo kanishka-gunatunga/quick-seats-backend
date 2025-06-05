@@ -583,3 +583,57 @@ export const resetPassword = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'An unexpected error occurred.' });
   }
 };
+
+
+export const resendOtp = async (req: Request, res: Response) => {
+  const schema = z.object({
+    email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+  });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+      message: 'Invalid input',
+      errors: result.error.flatten(),
+    });
+  }
+
+  const { email } = result.data;
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email address.' });
+    }
+
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+
+    const templatePath = path.join(__dirname, '../../views/email-templates/resend-otp-template.ejs');
+    const emailHtml = await ejs.renderFile(templatePath, {
+        otp: otp,
+    });
+
+    await transporter.sendMail({
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'OTP Resend Request',
+        html: emailHtml,
+    });
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        otp: otp
+      },
+    });
+
+    return res.status(200).json({ message: 'OTP sent to your email.' });
+  } catch (err) {
+    console.error('Error during forgot password process:', err);
+    return res.status(500).json({ message: 'An unexpected error occurred.' });
+  }
+};
