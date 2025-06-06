@@ -994,45 +994,50 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         }
 
         // --- Handle Assigned Seats Cancellation ---
-        let seatIdsInOrder: { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[] = [];
+        // Ensure seatIdsInOrder is correctly typed to match the structure you provided in the example
+        let seatIdsInOrder: string[] = []; 
         if (typeof order.seat_ids === 'string') {
             try {
-                seatIdsInOrder = JSON.parse(order.seat_ids) as { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[];
+                seatIdsInOrder = JSON.parse(order.seat_ids);
             } catch (e) {
                 console.error("Failed to parse seat_ids from order during full cancellation:", e);
                 // Continue, but log the error. We don't want this to block the whole cancellation if it's malformed.
             }
         } else if (Array.isArray(order.seat_ids)) {
-            seatIdsInOrder = order.seat_ids as { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[];
+            // Assuming order.seat_ids could directly be an array of strings
+            seatIdsInOrder = order.seat_ids as string[];
         }
 
         let eventSeatDetails: { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[] = [];
         if (typeof event.seats === 'string') {
             try {
-                eventSeatDetails = JSON.parse(event.seats) as { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[];
+                eventSeatDetails = JSON.parse(event.seats);
             } catch (e) {
                 console.error("Failed to parse event seat_details during full cancellation:", e);
-                 // Continue, but log the error.
+                // Continue, but log the error.
             }
         } else if (Array.isArray(event.seats)) {
             eventSeatDetails = event.seats as { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[];
         }
 
-        for (const seat of seatIdsInOrder) {
-            const seatIdToCancel = seat.seatId;
-            const ticketTypeId = seat.type_id;
-            const ticketTypeName = seat.ticketTypeName;
+        for (const seatIdToCancel of seatIdsInOrder) { // Iterate directly over the seat IDs
+            let ticketTypeNameForCanceledSeat: string = 'N/A'; // Default value
+            let typeIdForCanceledSeat: number = 0; // Default value
 
-            // Mark seat as available in event's seat details
-            const seatFoundAndUpdated = eventSeatDetails.some(eventSeat => {
-                if (eventSeat.seatId === seatIdToCancel) {
-                    eventSeat.status = "available";
-                    return true;
+            // Find the corresponding seat in eventSeatDetails to get ticketTypeName and type_id
+            const seatInEvent = eventSeatDetails.find(eventSeat => eventSeat.seatId === seatIdToCancel);
+            if (seatInEvent) {
+                seatInEvent.status = "available";
+
+                typeIdForCanceledSeat = seatInEvent.ticketTypeId;
+
+                // To get the ticketTypeName, you might need to query the ticket types or have it in event.ticket_details
+                // For this example, let's assume we can get it from event.ticket_details
+                const relatedTicketDetail = event.ticket_details && (typeof event.ticket_details === 'string' ? JSON.parse(event.ticket_details) : event.ticket_details).find((td: any) => td.ticketTypeId === typeIdForCanceledSeat);
+                if (relatedTicketDetail) {
+                    ticketTypeNameForCanceledSeat = relatedTicketDetail.name || `Type ${typeIdForCanceledSeat}`;
                 }
-                return false;
-            });
-
-            if (!seatFoundAndUpdated) {
+            } else {
                 console.warn(`Seat ${seatIdToCancel} not found in event ${event.id} seat_details during full cancellation.`);
             }
 
@@ -1042,8 +1047,9 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                     order_id: parseInt(order_id, 10),
                     type: 'seat',
                     seat_id: seatIdToCancel,
-                    type_id: String(ticketTypeId),
-                    ticketTypeName: ticketTypeName,
+                    type_id: String(typeIdForCanceledSeat), // Ensure this is a string if your schema expects it
+                    ticketTypeName: ticketTypeNameForCanceledSeat,
+                    quantity: 1, // A single seat is cancelled
                 },
             });
         }
@@ -1057,34 +1063,35 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         });
 
         // --- Handle Tickets Without Assigned Seats Cancellation ---
-        let ticketsWithoutSeatsInOrder: { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[] = [];
+        // Ensure ticketsWithoutSeatsInOrder is typed correctly based on your example
+        let ticketsWithoutSeatsInOrder: { issued_count: number; ticket_count: number; ticket_type_id: number; name?: string }[] = [];
         if (typeof order.tickets_without_seats === 'string') {
             try {
-                ticketsWithoutSeatsInOrder = JSON.parse(order.tickets_without_seats) as { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[];
+                ticketsWithoutSeatsInOrder = JSON.parse(order.tickets_without_seats);
             } catch (e) {
                 console.error("Failed to parse tickets_without_seats from order during full cancellation:", e);
                 // Continue, but log the error.
             }
         } else if (Array.isArray(order.tickets_without_seats)) {
-            ticketsWithoutSeatsInOrder = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[];
+            ticketsWithoutSeatsInOrder = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number; name?: string }[];
         }
 
-        let eventTicketDetails: { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[] = [];
+        let eventTicketDetails: { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number; name?: string }[] = [];
         if (typeof event.ticket_details === 'string') {
             try {
-                eventTicketDetails = JSON.parse(event.ticket_details) as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
+                eventTicketDetails = JSON.parse(event.ticket_details);
             } catch (e) {
                 console.error("Failed to parse event ticket_details during full cancellation:", e);
                 // Continue, but log the error.
             }
         } else if (Array.isArray(event.ticket_details)) {
-            eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
+            eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number; name?: string }[];
         }
 
         for (const ticket of ticketsWithoutSeatsInOrder) {
             const quantityToCancel = ticket.ticket_count; // Cancel all remaining tickets of this type
             const ticketTypeId = ticket.ticket_type_id;
-            const ticketTypeName = ticket.name;
+            const ticketTypeName = ticket.name || 'N/A'; // Use name from the ticket object or a default
 
             if (quantityToCancel > 0) {
                 // Update event's ticket details
@@ -1105,7 +1112,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                     data: {
                         order_id: parseInt(order_id, 10),
                         type: 'no seat',
-                        type_id: String(ticketTypeId),
+                        type_id: String(ticketTypeId), // Ensure this is a string
                         ticketTypeName: ticketTypeName,
                         quantity: quantityToCancel,
                     },
