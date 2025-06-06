@@ -60,54 +60,89 @@ export const getCustomerDetails = async (req: Request, res: Response) => {
 };
 
 export const getTicketsWithoutSeats = async (req: Request, res: Response) => {
-  const eventId  = req.params.id;
+  const eventId = req.params.id;
 
   try {
     const event = await prisma.event.findUnique({
-        where: {
-            id: parseInt(eventId),
-        },
-        select: {
-            ticket_details: true,
-        },
+      where: {
+        id: parseInt(eventId),
+      },
+      select: {
+        ticket_details: true, // Select the ticket_details JSON string
+      },
     });
 
     if (!event) {
-        return res.status(404).json({ error: 'Event not found' });
+      return res.status(404).json({ error: 'Event not found' });
     }
-    
-    const allTicketDetails: any[] = event.ticket_details ? JSON.parse(event.ticket_details as string) : [];
 
+    // Parse the ticket_details JSON string from the event
+    // Ensure it's an array, default to empty array if null or parsing fails
+    let allTicketDetails: any[] = [];
+    if (event.ticket_details) {
+      try {
+        allTicketDetails = JSON.parse(event.ticket_details as string);
+        if (!Array.isArray(allTicketDetails)) {
+          console.warn("event.ticket_details parsed but is not an array:", allTicketDetails);
+          allTicketDetails = [];
+        }
+      } catch (parseError) {
+        console.error("Error parsing event.ticket_details JSON:", parseError);
+        allTicketDetails = [];
+      }
+    }
+
+    // Filter for ticket types that are designated as 'tickets without seats'
+    // These are the ones where hasTicketCount is true
+    const ticketsWithoutSeatsConfig = allTicketDetails.filter(
+      (ticket: any) => ticket.hasTicketCount === true
+    );
+
+    if (ticketsWithoutSeatsConfig.length === 0) {
+      // If no ticket types with hasTicketCount: true, return an empty array
+      return res.json([]);
+    }
+
+    // Extract unique ticket type IDs from the filtered configuration
     const uniqueTicketTypeIds = [
-            ...new Set(allTicketDetails.map((ticket: any) => ticket.ticketTypeId))
-        ].filter(id => id !== undefined && id !== null); 
+      ...new Set(ticketsWithoutSeatsConfig.map((ticket: any) => ticket.ticketTypeId))
+    ].filter(id => id !== undefined && id !== null); // Filter out any undefined/null IDs
 
-        const ticketTypes = await prisma.ticketType.findMany({
-            where: {
-                id: { in: uniqueTicketTypeIds },
-            },
-            select: {
-                id: true,
-                name: true,
-            },
-        });
+    // Fetch the actual ticket type names from the TicketType model
+    const ticketTypes = await prisma.ticketType.findMany({
+      where: {
+        id: { in: uniqueTicketTypeIds },
+      },
+      select: {
+        id: true,
+        name: true,
+      },
+    });
 
-        const ticketTypeNameMap = new Map(ticketTypes.map(tt => [tt.id, tt.name]));
+    // Create a map for quick lookup of ticket type names
+    const ticketTypeNameMap = new Map(ticketTypes.map(tt => [tt.id, tt.name]));
 
-        const ticketsWithoutSeats = allTicketDetails
-            .filter((ticket: any) => ticket.hasTicketCount === true)
-            .map((ticket: any) => ({
-                ticket_type_id: ticket.ticketTypeId,
-                ticket_type_name: ticketTypeNameMap.get(ticket.ticketTypeId) || 'Unknown',
-                available_count: (ticket.ticketCount || 0) - (ticket.bookedTicketCount || 0),
-                price: ticket.price,
-            }));
+    // Prepare the final response data for tickets without seats
+    const ticketsWithoutSeatsResponse = ticketsWithoutSeatsConfig.map((ticket: any) => {
+      const totalConfiguredCount = ticket.ticketCount || 0;
+      // Get the booked count from the parsed ticket_details
+      const currentlyBookedCount = ticket.bookedTicketCount || 0; 
+      
+      const availableCount = totalConfiguredCount - currentlyBookedCount;
 
-        res.json(ticketsWithoutSeats);
+      return {
+        ticket_type_id: ticket.ticketTypeId,
+        ticket_type_name: ticketTypeNameMap.get(ticket.ticketTypeId) || 'Unknown Ticket Type',
+        // Ensure available_count is not negative
+        available_count: Math.max(0, availableCount), 
+        price: ticket.price,
+      };
+    });
 
-    res.json(ticketsWithoutSeats);
+    res.json(ticketsWithoutSeatsResponse);
+
   } catch (error) {
-    console.error('Error fetching customer details:', error);
+    console.error('Error fetching tickets without seats:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
