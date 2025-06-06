@@ -8,7 +8,7 @@ import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, d
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia} from '../../controllers/admin/eventController';
 import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
 import { orderReport } from '../../controllers/admin/reportController';
-import { addBookingGet,getCustomerDetails,getTicketsWithoutSeats,addBookingPost,bookings,viewBooking,cancelSeat,cancelTicketsWithoutSeat } from '../../controllers/admin/bookingController';
+import { addBookingGet,getCustomerDetails,getTicketsWithoutSeats,addBookingPost,bookings,viewBooking,cancelSeat,cancelTicketsWithoutSeat,cancelEntireBooking } from '../../controllers/admin/bookingController';
 
 const router = express.Router();
 
@@ -74,6 +74,8 @@ router.get('/bookings', isAdminLoggedIn, bookings);
 router.get('/booking/view/:id', isAdminLoggedIn, viewBooking);
 router.post('/bookings/cancel-seat/:id', isAdminLoggedIn, cancelSeat);
 router.post('/bookings/cancel-tickets-without-seat/:id', isAdminLoggedIn, cancelTicketsWithoutSeat);
+router.get('/bookings/cancel-booking/:id', cancelEntireBooking);
+
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);
 export default router;

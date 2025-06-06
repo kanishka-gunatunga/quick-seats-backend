@@ -963,3 +963,184 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
         });
     }
 };
+
+
+export const cancelEntireBooking = async (req: Request, res: Response) => {
+    const order_id = req.params.id;
+
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(order_id, 10) },
+        });
+
+        if (!order) {
+            req.session.error = 'Order not found.';
+            req.session.save(() => {
+                return res.redirect('/bookings');
+            });
+            return;
+        }
+
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(order.event_id, 10) },
+        });
+
+        if (!event) {
+            req.session.error = 'Associated event not found for this order.';
+            req.session.save(() => {
+                return res.redirect(`/booking/view/${order_id}`);
+            });
+            return;
+        }
+
+        // --- Handle Assigned Seats Cancellation ---
+        let seatIdsInOrder: { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[] = [];
+        if (typeof order.seat_ids === 'string') {
+            try {
+                seatIdsInOrder = JSON.parse(order.seat_ids) as { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[];
+            } catch (e) {
+                console.error("Failed to parse seat_ids from order during full cancellation:", e);
+                // Continue, but log the error. We don't want this to block the whole cancellation if it's malformed.
+            }
+        } else if (Array.isArray(order.seat_ids)) {
+            seatIdsInOrder = order.seat_ids as { seatId: string; type_id: number; ticketTypeName: string; price: number; color: string }[];
+        }
+
+        let eventSeatDetails: { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[] = [];
+        if (typeof event.seats === 'string') {
+            try {
+                eventSeatDetails = JSON.parse(event.seats) as { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[];
+            } catch (e) {
+                console.error("Failed to parse event seat_details during full cancellation:", e);
+                 // Continue, but log the error.
+            }
+        } else if (Array.isArray(event.seats)) {
+            eventSeatDetails = event.seats as { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[];
+        }
+
+        for (const seat of seatIdsInOrder) {
+            const seatIdToCancel = seat.seatId;
+            const ticketTypeId = seat.type_id;
+            const ticketTypeName = seat.ticketTypeName;
+
+            // Mark seat as available in event's seat details
+            const seatFoundAndUpdated = eventSeatDetails.some(eventSeat => {
+                if (eventSeat.seatId === seatIdToCancel) {
+                    eventSeat.status = "available";
+                    return true;
+                }
+                return false;
+            });
+
+            if (!seatFoundAndUpdated) {
+                console.warn(`Seat ${seatIdToCancel} not found in event ${event.id} seat_details during full cancellation.`);
+            }
+
+            // Record the cancellation
+            await prisma.canceledTicket.create({
+                data: {
+                    order_id: parseInt(order_id, 10),
+                    type: 'seat',
+                    seat_id: seatIdToCancel,
+                    type_id: String(ticketTypeId),
+                    ticketTypeName: ticketTypeName,
+                },
+            });
+        }
+
+        // Update the event with the modified seat status
+        await prisma.event.update({
+            where: { id: parseInt(order.event_id, 10) },
+            data: {
+                seats: JSON.stringify(eventSeatDetails),
+            },
+        });
+
+        // --- Handle Tickets Without Assigned Seats Cancellation ---
+        let ticketsWithoutSeatsInOrder: { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[] = [];
+        if (typeof order.tickets_without_seats === 'string') {
+            try {
+                ticketsWithoutSeatsInOrder = JSON.parse(order.tickets_without_seats) as { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[];
+            } catch (e) {
+                console.error("Failed to parse tickets_without_seats from order during full cancellation:", e);
+                // Continue, but log the error.
+            }
+        } else if (Array.isArray(order.tickets_without_seats)) {
+            ticketsWithoutSeatsInOrder = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number; name: string }[];
+        }
+
+        let eventTicketDetails: { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[] = [];
+        if (typeof event.ticket_details === 'string') {
+            try {
+                eventTicketDetails = JSON.parse(event.ticket_details) as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
+            } catch (e) {
+                console.error("Failed to parse event ticket_details during full cancellation:", e);
+                // Continue, but log the error.
+            }
+        } else if (Array.isArray(event.ticket_details)) {
+            eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
+        }
+
+        for (const ticket of ticketsWithoutSeatsInOrder) {
+            const quantityToCancel = ticket.ticket_count; // Cancel all remaining tickets of this type
+            const ticketTypeId = ticket.ticket_type_id;
+            const ticketTypeName = ticket.name;
+
+            if (quantityToCancel > 0) {
+                // Update event's ticket details
+                const ticketTypeFoundAndUpdated = eventTicketDetails.some(detail => {
+                    if (detail.ticketTypeId === ticketTypeId) {
+                        detail.bookedTicketCount = Math.max(0, detail.bookedTicketCount - quantityToCancel);
+                        return true;
+                    }
+                    return false;
+                });
+
+                if (!ticketTypeFoundAndUpdated) {
+                    console.warn(`Ticket type ${ticketTypeName} (ID: ${ticketTypeId}) not found in event ${event.id} ticket_details during full cancellation.`);
+                }
+
+                // Record the cancellation
+                await prisma.canceledTicket.create({
+                    data: {
+                        order_id: parseInt(order_id, 10),
+                        type: 'no seat',
+                        type_id: String(ticketTypeId),
+                        ticketTypeName: ticketTypeName,
+                        quantity: quantityToCancel,
+                    },
+                });
+            }
+        }
+
+        // Update the event with the modified ticket counts
+        await prisma.event.update({
+            where: { id: parseInt(order.event_id, 10) },
+            data: {
+                ticket_details: JSON.stringify(eventTicketDetails),
+            },
+        });
+
+        // --- Finalize Order Cancellation ---
+        await prisma.order.update({
+            where: { id: parseInt(order_id, 10) },
+            data: {
+                seat_ids: JSON.stringify([]), // Clear all assigned seats
+                tickets_without_seats: JSON.stringify([]), // Clear all unassigned tickets
+                status: 'cancelled', // You might want to add a 'status' field to your Order model
+            },
+        });
+
+        req.session.success = `Booking ${order_id} and all associated tickets have been cancelled successfully.`;
+        req.session.save(() => {
+            res.redirect(`/booking/view/${order_id}`);
+        });
+
+    } catch (err: any) {
+        console.error("Error cancelling entire booking:", err);
+        req.session.error = 'An error occurred while cancelling the entire booking.';
+        req.session.save(() => {
+            res.redirect(`/booking/view/${order_id}`);
+        });
+    }
+};
