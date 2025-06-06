@@ -963,8 +963,6 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
         });
     }
 };
-
-
 export const cancelEntireBooking = async (req: Request, res: Response) => {
     const order_id = req.params.id;
 
@@ -993,8 +991,17 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             return;
         }
 
+        // --- Fetch all ticket types for lookup ---
+        // This is crucial for getting accurate ticket type names.
+        const ticketTypes = await prisma.ticketType.findMany({});
+        const ticketTypeNameMap = new Map<number, string>();
+        ticketTypes.forEach(type => {
+            // Option 1: Provide a fallback string if type.name is null
+            ticketTypeNameMap.set(type.id, type.name || 'Unnamed Ticket Type'); 
+            // Or simply: ticketTypeNameMap.set(type.id, type.name || '');
+        });
+
         // --- Handle Assigned Seats Cancellation ---
-        // Ensure seatIdsInOrder is correctly typed to match the structure you provided in the example
         let seatIdsInOrder: string[] = []; 
         if (typeof order.seat_ids === 'string') {
             try {
@@ -1004,7 +1011,6 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                 // Continue, but log the error. We don't want this to block the whole cancellation if it's malformed.
             }
         } else if (Array.isArray(order.seat_ids)) {
-            // Assuming order.seat_ids could directly be an array of strings
             seatIdsInOrder = order.seat_ids as string[];
         }
 
@@ -1014,46 +1020,37 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                 eventSeatDetails = JSON.parse(event.seats);
             } catch (e) {
                 console.error("Failed to parse event seat_details during full cancellation:", e);
-                // Continue, but log the error.
             }
         } else if (Array.isArray(event.seats)) {
             eventSeatDetails = event.seats as { seatId: string; status: string; price: number; type_id: number; color: string }[];
         }
 
-        for (const seatIdToCancel of seatIdsInOrder) { // Iterate directly over the seat IDs
-            let ticketTypeNameForCanceledSeat: string = 'N/A'; // Default value
-            let typeIdForCanceledSeat: number = 0; // Default value
+        for (const seatIdToCancel of seatIdsInOrder) {
+            let ticketTypeNameForCanceledSeat: string = 'N/A';
+            let typeIdForCanceledSeat: number = 0;
 
-            // Find the corresponding seat in eventSeatDetails to get ticketTypeName and type_id
             const seatInEvent = eventSeatDetails.find(eventSeat => eventSeat.seatId === seatIdToCancel);
             if (seatInEvent) {
                 seatInEvent.status = "available";
-
                 typeIdForCanceledSeat = seatInEvent.type_id;
-
-                // To get the ticketTypeName, you might need to query the ticket types or have it in event.ticket_details
-                // For this example, let's assume we can get it from event.ticket_details
-                const relatedTicketDetail = event.ticket_details && (typeof event.ticket_details === 'string' ? JSON.parse(event.ticket_details) : event.ticket_details).find((td: any) => td.ticketTypeId === typeIdForCanceledSeat);
-                if (relatedTicketDetail) {
-                    ticketTypeNameForCanceledSeat = relatedTicketDetail.ticketTypeName || `Type ${typeIdForCanceledSeat}`;
-                }
+                // Use the map to get the ticket type name
+                ticketTypeNameForCanceledSeat = ticketTypeNameMap.get(typeIdForCanceledSeat) || `Type ${typeIdForCanceledSeat}`;
             } else {
                 console.warn(`Seat ${seatIdToCancel} not found in event ${event.id} seat_details during full cancellation.`);
             }
 
-            // Record the cancellation
             await prisma.canceledTicket.create({
                 data: {
                     order_id: parseInt(order_id, 10),
                     type: 'seat',
                     seat_id: seatIdToCancel,
-                    type_id: String(typeIdForCanceledSeat), // Ensure this is a string if your schema expects it
+                    type_id: String(typeIdForCanceledSeat),
                     ticketTypeName: ticketTypeNameForCanceledSeat,
+                    quantity: 1, // Always 1 for a single seat
                 },
             });
         }
 
-        // Update the event with the modified seat status
         await prisma.event.update({
             where: { id: parseInt(order.event_id, 10) },
             data: {
@@ -1062,14 +1059,12 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         });
 
         // --- Handle Tickets Without Assigned Seats Cancellation ---
-        // Ensure ticketsWithoutSeatsInOrder is typed correctly based on your example
         let ticketsWithoutSeatsInOrder: { issued_count: number; ticket_count: number; ticket_type_id: number; name?: string }[] = [];
         if (typeof order.tickets_without_seats === 'string') {
             try {
                 ticketsWithoutSeatsInOrder = JSON.parse(order.tickets_without_seats);
             } catch (e) {
                 console.error("Failed to parse tickets_without_seats from order during full cancellation:", e);
-                // Continue, but log the error.
             }
         } else if (Array.isArray(order.tickets_without_seats)) {
             ticketsWithoutSeatsInOrder = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number; name?: string }[];
@@ -1081,19 +1076,18 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                 eventTicketDetails = JSON.parse(event.ticket_details);
             } catch (e) {
                 console.error("Failed to parse event ticket_details during full cancellation:", e);
-                // Continue, but log the error.
             }
         } else if (Array.isArray(event.ticket_details)) {
             eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number; name?: string }[];
         }
 
         for (const ticket of ticketsWithoutSeatsInOrder) {
-            const quantityToCancel = ticket.ticket_count; // Cancel all remaining tickets of this type
+            const quantityToCancel = ticket.ticket_count;
             const ticketTypeId = ticket.ticket_type_id;
-            const ticketTypeName = ticket.name || 'N/A'; // Use name from the ticket object or a default
+            // Use the map to get the ticket type name, overriding ticket.name if present
+            const ticketTypeName = ticketTypeNameMap.get(ticketTypeId) || 'N/A'; 
 
             if (quantityToCancel > 0) {
-                // Update event's ticket details
                 const ticketTypeFoundAndUpdated = eventTicketDetails.some(detail => {
                     if (detail.ticketTypeId === ticketTypeId) {
                         detail.bookedTicketCount = Math.max(0, detail.bookedTicketCount - quantityToCancel);
@@ -1106,12 +1100,11 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                     console.warn(`Ticket type ${ticketTypeName} (ID: ${ticketTypeId}) not found in event ${event.id} ticket_details during full cancellation.`);
                 }
 
-                // Record the cancellation
                 await prisma.canceledTicket.create({
                     data: {
                         order_id: parseInt(order_id, 10),
                         type: 'no seat',
-                        type_id: String(ticketTypeId), // Ensure this is a string
+                        type_id: String(ticketTypeId),
                         ticketTypeName: ticketTypeName,
                         quantity: quantityToCancel,
                     },
@@ -1119,7 +1112,6 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             }
         }
 
-        // Update the event with the modified ticket counts
         await prisma.event.update({
             where: { id: parseInt(order.event_id, 10) },
             data: {
@@ -1133,7 +1125,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             data: {
                 seat_ids: JSON.stringify([]), // Clear all assigned seats
                 tickets_without_seats: JSON.stringify([]), // Clear all unassigned tickets
-                status: 'cancelled', // You might want to add a 'status' field to your Order model
+                status: 'cancelled', // Update order status to 'cancelled'
             },
         });
 
