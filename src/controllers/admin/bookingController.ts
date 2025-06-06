@@ -58,3 +58,56 @@ export const getCustomerDetails = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+export const getTicketsWithoutSeats = async (req: Request, res: Response) => {
+  const eventId  = req.params.id;
+
+  try {
+    const event = await prisma.event.findUnique({
+        where: {
+            id: parseInt(eventId),
+        },
+        select: {
+            ticket_details: true,
+        },
+    });
+
+    if (!event) {
+        return res.status(404).json({ error: 'Event not found' });
+    }
+    
+    const allTicketDetails: any[] = event.ticket_details ? JSON.parse(event.ticket_details as string) : [];
+
+    const uniqueTicketTypeIds = [
+            ...new Set(allTicketDetails.map((ticket: any) => ticket.ticketTypeId))
+        ].filter(id => id !== undefined && id !== null); 
+
+        const ticketTypes = await prisma.ticketType.findMany({
+            where: {
+                id: { in: uniqueTicketTypeIds },
+            },
+            select: {
+                id: true,
+                name: true,
+            },
+        });
+
+        const ticketTypeNameMap = new Map(ticketTypes.map(tt => [tt.id, tt.name]));
+
+        const ticketsWithoutSeats = allTicketDetails
+            .filter((ticket: any) => ticket.hasTicketCount === true)
+            .map((ticket: any) => ({
+                ticket_type_id: ticket.ticketTypeId,
+                ticket_type_name: ticketTypeNameMap.get(ticket.ticketTypeId) || 'Unknown',
+                available_count: (ticket.ticketCount || 0) - (ticket.bookedTicketCount || 0),
+                price: ticket.price,
+            }));
+
+        res.json(ticketsWithoutSeats);
+
+    res.json(ticketsWithoutSeats);
+  } catch (error) {
+    console.error('Error fetching customer details:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};

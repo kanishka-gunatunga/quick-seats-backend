@@ -346,6 +346,14 @@ height: auto;
                                                             <div id="seatMapContainer" class="mt-4">
                                                             </div>
                                                         </div>
+
+                                                        <div id="ticketsWithoutSeatsContainer" style="display: none;">
+    <h4>Tickets Without Assigned Seats:</h4>
+    <div id="ticketTypesList">
+        </div>
+</div>
+
+<input type="hidden" id="tickets_without_seats" name="tickets_without_seats">
                                                     </div>
                                                      <input type="hidden" name="selected_seats" id="selectedSeatsInput">    
                                                     <button type="submit" class="btn btn-primary">Submit</button>
@@ -370,6 +378,13 @@ height: auto;
     const eventSelect = document.getElementById('eventSelect');
     const seatMapContainer = document.getElementById('seatMapContainer');
     const selectedSeatsInput = document.getElementById('selectedSeatsInput'); // The hidden input for selected seats
+
+
+    const ticketsWithoutSeatsContainer = document.getElementById('ticketsWithoutSeatsContainer');
+    const ticketTypesList = document.getElementById('ticketTypesList');
+    const ticketsWithoutSeatsHiddenInput = document.getElementById('tickets_without_seats');
+
+    let selectedTicketsWithoutSeats = {};
 
     let currentSeatsData = {}; // Object to quickly look up seat data by ID { "A1": {status: "booked", ...}, "A2": {...} }
     let selectedSeatsForBooking = []; // Array to hold the IDs of seats selected by the admin for the current booking
@@ -486,6 +501,10 @@ height: auto;
         const location = selectedOption.dataset.location;
         let seatsDataString = selectedOption.dataset.seats; // Get the seats data string from data-attribute
         const eventId = this.value;
+        ticketTypesList.innerHTML = '';
+        ticketsWithoutSeatsContainer.style.display = 'none';
+        selectedTicketsWithoutSeats = {};
+        ticketsWithoutSeatsHiddenInput.value = '';
 
         // Clear previously selected seats and the input field
         selectedSeatsForBooking = [];
@@ -501,7 +520,7 @@ height: auto;
 
         // --- IMPORTANT DEBUGGING LOGS AND FIX ---
         console.log('1. Raw seatsDataString from data-attribute:', seatsDataString);
-
+        
         let rawSeats = [];
         if (seatsDataString) {
             try {
@@ -618,6 +637,65 @@ height: auto;
                 });
                 console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
             }, 100); // Increased delay slightly to ensure DOM readiness, especially for large SVGs
+
+            const ticketsWithoutSeatsResponse = await fetch(`/get-tickets-without-seats/${eventId}`);
+
+            if (!ticketsWithoutSeatsResponse.ok) {
+                    throw new Error(`HTTP error! status: ${ticketsWithoutSeatsResponse.status}`);
+                }
+                const ticketsWithoutSeats = await ticketsWithoutSeatsResponse.json();
+
+                if (ticketsWithoutSeats.length > 0) {
+                    ticketsWithoutSeatsContainer.style.display = 'block';
+                    ticketsWithoutSeats.forEach(ticketType => {
+                        const div = document.createElement('div');
+                        div.className = 'form-group mb-2'; 
+
+                        div.innerHTML = `
+                            <label for="ticketType_${ticketType.ticket_type_id}">${ticketType.ticket_type_name} (Available: ${ticketType.available_count}, Price: $${ticketType.price})</label>
+                            <input type="number" 
+                                   id="ticketType_${ticketType.ticket_type_id}" 
+                                   class="form-control ticket-count-input" 
+                                   min="0" 
+                                   max="${ticketType.available_count}" 
+                                   value="0" 
+                                   data-ticket-type-id="${ticketType.ticket_type_id}">
+                        `;
+                        ticketTypesList.appendChild(div);
+
+                        // Initialize the selected count for this ticket type
+                        selectedTicketsWithoutSeats[ticketType.ticket_type_id] = 0;
+                    });
+
+                    // Attach event listener to the parent container for delegation
+                    ticketTypesList.addEventListener('input', (e) => {
+                        if (e.target.classList.contains('ticket-count-input')) {
+                            const ticketTypeId = parseInt(e.target.dataset.ticketTypeId);
+                            let count = parseInt(e.target.value);
+
+                            // Ensure count is not negative and within available limit
+                            if (isNaN(count) || count < 0) {
+                                count = 0;
+                            }
+                            const maxCount = parseInt(e.target.max);
+                            if (count > maxCount) {
+                                count = maxCount;
+                                e.target.value = maxCount; // Update the input field
+                            }
+
+                            selectedTicketsWithoutSeats[ticketTypeId] = count;
+                            updateHiddenInput();
+                        }
+                    });
+
+                    // Initial update of the hidden input
+                    updateHiddenInput();
+
+                } else {
+                    // No tickets without seats for this event
+                    ticketsWithoutSeatsContainer.style.display = 'none';
+                }
+
         } catch (error) {
             console.error('Failed to load SVG or apply seat states:', error);
             seatMapContainer.innerHTML = '<p class="text-danger">Error loading seat map. Please check the file path and server configuration.</p>';
@@ -637,6 +715,20 @@ height: auto;
         console.warn("Customer select element not found (ID: customerSelect).");
     }
 
+     function updateHiddenInput() {
+        const formattedData = [];
+        for (const ticketTypeId in selectedTicketsWithoutSeats) {
+            if (selectedTicketsWithoutSeats.hasOwnProperty(ticketTypeId) && selectedTicketsWithoutSeats[ticketTypeId] > 0) {
+                formattedData.push({
+                    ticket_type_id: parseInt(ticketTypeId),
+                    ticket_count: selectedTicketsWithoutSeats[ticketTypeId]
+                });
+            }
+        }
+        ticketsWithoutSeatsHiddenInput.value = JSON.stringify(formattedData);
+        console.log('Hidden input value:', ticketsWithoutSeatsHiddenInput.value); // For debugging
+    }
+    
     // Trigger event select change on page load if an event is pre-selected
     if (eventSelect) { // Check if eventSelect exists
         if (eventSelect.value) {
