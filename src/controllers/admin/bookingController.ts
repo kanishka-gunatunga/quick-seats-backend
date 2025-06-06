@@ -762,7 +762,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
 
         // Update the event with the modified seat status
         await prisma.event.update({
-            where: { id:  parseInt(order_id, 10)  },
+            where: { id:  parseInt(order.event_id, 10)  },
             data: {
                 seats: JSON.stringify(eventSeatDetails),
             },
