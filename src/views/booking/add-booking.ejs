@@ -644,7 +644,7 @@ height: auto;
                     throw new Error(`HTTP error! status: ${ticketsWithoutSeatsResponse.status}`);
                 }
                 const ticketsWithoutSeats = await ticketsWithoutSeatsResponse.json();
-
+                console.log('ticketsWithoutSeats',ticketsWithoutSeats);
                 if (ticketsWithoutSeats.length > 0) {
                     ticketsWithoutSeatsContainer.style.display = 'block';
                     ticketsWithoutSeats.forEach(ticketType => {
@@ -728,7 +728,7 @@ height: auto;
         ticketsWithoutSeatsHiddenInput.value = JSON.stringify(formattedData);
         console.log('Hidden input value:', ticketsWithoutSeatsHiddenInput.value); // For debugging
     }
-    
+
     // Trigger event select change on page load if an event is pre-selected
     if (eventSelect) { // Check if eventSelect exists
         if (eventSelect.value) {
