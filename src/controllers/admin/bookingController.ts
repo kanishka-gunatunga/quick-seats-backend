@@ -1049,7 +1049,6 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                     seat_id: seatIdToCancel,
                     type_id: String(typeIdForCanceledSeat), // Ensure this is a string if your schema expects it
                     ticketTypeName: ticketTypeNameForCanceledSeat,
-                    quantity: 1, // A single seat is cancelled
                 },
             });
         }
