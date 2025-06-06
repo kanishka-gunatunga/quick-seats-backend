@@ -84,26 +84,27 @@
 
                             <h4 class="mt-2">Booked Tickets</h4>
 
-                            <% if (order.seat_ids && order.seat_ids.length > 0) { %>
-                                <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
-                                <div class="row">
-                                    <% order.seat_ids.forEach(seat => { %> <% // Changed 'seatId' to 'seat' because it's now an object %>
-                                        <div class="col-md-2 mb-3">
-                                            <div class="card">
-                                                <div class="card-body text-center">
-                                                    <h6>Seat: <%= seat.seatId %></h6> <% // Access the 'seatId' property of the seat object %>
-                                                    <p>Ticket Type: **<%= seat.ticketTypeName %>**</p> <% // Directly access the 'ticketTypeName' property %>
-                                                    <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seat.seatId %>? This action cannot be undone.');">
-                                                        <input type="hidden" name="seatId" value="<%= seat.seatId %>"> <% // Use seat.seatId for the hidden input %>
-                                                        <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
-                                                    </form>
-                                                </div>
+                           <% if (order.seat_ids && order.seat_ids.length > 0) { %>
+                            <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
+                            <div class="row">
+                                <% order.seat_ids.forEach(seat => { %>
+                                    <div class="col-md-2 mb-3">
+                                        <div class="card">
+                                            <div class="card-body text-center">
+                                                <h6>Seat: <%= seat.seatId %></h6>
+                                                <p>Ticket Type: <span style="font-weight: bold; color: <%= seat.color %>;"><%= seat.ticketTypeName %></span></p>
+                                                <p>Price: Rs. <%= seat.price %></p>
+                                                <p>Status: <%= seat.status %></p>
+                                                <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seat.seatId %>? This action cannot be undone.');">
+                                                    <input type="hidden" name="seatId" value="<%= seat.seatId %>">
+                                                    <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
+                                                </form>
                                             </div>
                                         </div>
-                                    <% }) %>
-                                </div>
-                            <% } %>
-
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } %>
                             <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
                                 <h5 class="mt-4">Tickets without Assigned Seats</h5>
                                 <div class="table-responsive">

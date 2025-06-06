@@ -565,12 +565,42 @@ export const viewBooking = async (req: Request, res: Response) => {
       }
     }
 
+    const seatsWithDetails: any[] = [];
+    const eventSeats = typeof event.seats === 'string' ? JSON.parse(event.seats) : event.seats;
+
+    const validatedSeatIds: string[] = [];
+    if (Array.isArray(seatIds)) {
+      seatIds.forEach((id: any) => { 
+        if (typeof id === 'string') {
+          validatedSeatIds.push(id);
+        } else {
+          console.warn(`Skipping non-string seatId: ${id}`);
+        }
+      });
+    }
+
+    if (Array.isArray(validatedSeatIds) && Array.isArray(eventSeats)) {
+      validatedSeatIds.forEach((seatId: string) => { 
+        const foundSeat = eventSeats.find((s: any) => s.seatId === seatId);
+        if (foundSeat) {
+          const ticketType = ticketTypes.find(tt => tt.id === foundSeat.type_id);
+          seatsWithDetails.push({
+            seatId: foundSeat.seatId,
+            price: foundSeat.price,
+            status: foundSeat.status,
+            type_id: foundSeat.type_id,
+            ticketTypeName: ticketType ? ticketType.name : "Unknown Type",
+            color: ticketType ? ticketType.color : "#CCCCCC"
+          });
+        }
+      });
+    }
     const orderWithParsedData = {
       ...order,
       event: event,
       tickets_without_seats: ticketsWithoutSeats,
-      seat_ids: seatIds,
-      ticketTypes: ticketTypes, // Pass ALL ticket types to the template
+      seat_ids: seatsWithDetails,
+      ticketTypes: ticketTypes, 
     };
 
     const error = req.session.error;

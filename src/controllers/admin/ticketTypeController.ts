@@ -29,7 +29,6 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
     .object({
       name: z.string().min(1, 'Name is required'),
       color: z.string().min(1, 'Color is required'),
-      has_ticket_count: z.string().optional(),
     });
 
   const result = schema.safeParse(req.body);
@@ -42,7 +41,7 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
     return res.redirect('/add-admin'); 
   }
 
-  const { name,has_ticket_count,color} = result.data;
+  const { name,color} = result.data;
 
   try {
 
@@ -51,7 +50,6 @@ export const addTicketTypePost = async (req: Request, res: Response) => {
       data: {
         name,
         color,
-        has_ticket_count,
         status: 'active',
       },
     });
@@ -175,8 +173,7 @@ export const editTicketTypePost = async (req: Request, res: Response) => {
       where: { id: userId },
       data: {
         name,
-        color,
-        has_ticket_count
+        color
       },
     });
 
