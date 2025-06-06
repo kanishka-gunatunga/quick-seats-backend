@@ -513,6 +513,7 @@ export const bookings = async (req: Request, res: Response) => {
     orders: ordersWithEventNames, 
   });
 }; 
+
 export const viewBooking = async (req: Request, res: Response) => {
   const order_id = req.params.id;
 

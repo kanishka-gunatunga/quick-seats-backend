@@ -91,7 +91,20 @@
                                         <div class="col-md-2 mb-3">
                                             <div class="card">
                                                 <div class="card-body text-center">
-                                                    <h6><%= seatId %></h6>
+                                                    <h6>Seat: <%= seatId %></h6>
+                                                    <%
+                                                        // Find the seat object in order.event.seats using the seatId
+                                                        const seatInfo = order.event.seats ? order.event.seats.find(s => s.id === seatId) : null;
+                                                        let seatTicketTypeName = "N/A"; // Default if not found
+                                                        if (seatInfo && seatInfo.ticket_type_id) {
+                                                            // Find the ticket type name from the overall list of ticket types
+                                                            const foundTicketType = order.ticketTypes.find(tt => tt.id === parseInt(seatInfo.ticket_type_id, 10));
+                                                            if (foundTicketType) {
+                                                                seatTicketTypeName = foundTicketType.name;
+                                                            }
+                                                        }
+                                                    %>
+                                                    <p>Ticket Type: **<%= seatTicketTypeName %>**</p>
                                                     <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seatId %>? This action cannot be undone.');">
                                                         <input type="hidden" name="seatId" value="<%= seatId %>">
                                                         <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
@@ -121,7 +134,6 @@
                                                 <tr>
                                                     <td>
                                                         <%
-                                                            // Ensure ticket.ticket_type_id is parsed to an integer for a correct comparison
                                                             const ticketTypeId = parseInt(ticket.ticket_type_id, 10);
                                                             const ticketType = order.ticketTypes.find(tt => tt.id === ticketTypeId);
                                                             if (ticketType) {
@@ -138,13 +150,13 @@
                                                     <td><%= ticket.ticket_count %></td>
                                                     <td><%= ticket.issued_count %></td>
                                                     <td>
-                                                        <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST">
+                                                        <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST" class="d-flex align-items-center">
                                                             <input type="hidden" name="ticketTypeId" value="<%= ticket.ticket_type_id %>">
-                                                            <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count %>" value="1" class="form-control" style="width: 100px; display: inline-block;">
+                                                            <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count - ticket.issued_count %>" value="1" class="form-control me-2" style="width: 100px;">
+                                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel</button>
+                                                        </form>
                                                     </td>
                                                     <td>
-                                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel Tickets</button>
-                                                        </form>
                                                     </td>
                                                 </tr>
                                             <% }) %>
