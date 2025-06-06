@@ -22,57 +22,43 @@
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">First Name</label>
                                                             <input type="text" class="form-control" name="first_name" id="firstName" value="<%= order.first_name %>" disabled>
-                                                            <% if (validationErrors?.first_name) { %>
-                                                                <small class="text-danger"><%= validationErrors.first_name[0] %></small>
-                                                            <% } %>
+                                         
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Last Name</label>
                                                             <input type="text" class="form-control" name="last_name" id="lastName" value="<%= order.last_name %>" disabled>
-                                                            <% if (validationErrors?.last_name) { %>
-                                                                <small class="text-danger"><%= validationErrors.last_name[0] %></small>
-                                                            <% } %>
+                                                     
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Email</label>
                                                             <input type="email" class="form-control" name="email" id="emailField" value="<%= order.email %>" disabled>
-                                                            <% if (validationErrors?.email) { %>
-                                                                <small class="text-danger"><%= validationErrors.email[0] %></small>
-                                                            <% } %>
+                                                 
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Contact Number</label>
                                                             <input type="text" class="form-control" name="contact_number" id="contactNumber" value="<%= order.contact_number %>" disabled>
-                                                            <% if (validationErrors?.contact_number) { %>
-                                                                <small class="text-danger"><%= validationErrors.contact_number[0] %></small>
-                                                            <% } %>
+                                                      
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">NIC/Passport</label>
                                                             <input type="text" class="form-control" name="nic_passport" id="nicPassport" value="<%= order.nic_passport %>" disabled>
-                                                            <% if (validationErrors?.nic_passport) { %>
-                                                                <small class="text-danger"><%= validationErrors.nic_passport[0] %></small>
-                                                            <% } %>
+                                                     
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Country</label>
                                                             <input type="text" class="form-control" name="country" id="country" value="<%= order.country %>" disabled>
-                                                            <% if (validationErrors?.country) { %>
-                                                                <small class="text-danger"><%= validationErrors.country[0] %></small>
-                                                            <% } %>
+                                                          
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Event</label>
                                                             <input type="text" class="form-control" name="event" id="event" value="<%= order.event.name %>" disabled>
-                                                            <% if (validationErrors?.event) { %>
-                                                                <small class="text-danger"><%= validationErrors.event[0] %></small>
-                                                            <% } %>
+                                                         
                                                         </div>
                                                       
                                                     </div>
