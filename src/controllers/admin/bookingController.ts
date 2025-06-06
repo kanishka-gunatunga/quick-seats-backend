@@ -513,7 +513,6 @@ export const bookings = async (req: Request, res: Response) => {
     orders: ordersWithEventNames, 
   });
 }; 
-
 export const viewBooking = async (req: Request, res: Response) => {
   const order_id = req.params.id;
 
@@ -542,38 +541,35 @@ export const viewBooking = async (req: Request, res: Response) => {
       return;
     }
 
-    // --- NEW: Fetch ticket types for the event separately ---
+    // This line is correct as per your *current* schema (no event_id on TicketType)
     const ticketTypes = await prisma.ticketType.findMany({});
-    // --- END NEW ---
 
-    // Ensure tickets_without_seats is parsed if it's a JSON string
     let ticketsWithoutSeats = order.tickets_without_seats;
     if (typeof ticketsWithoutSeats === 'string') {
       try {
         ticketsWithoutSeats = JSON.parse(ticketsWithoutSeats);
       } catch (e) {
         console.error("Failed to parse tickets_without_seats:", e);
-        ticketsWithoutSeats = []; // Default to empty array on parse error
+        ticketsWithoutSeats = [];
       }
     }
 
-    // Ensure seat_ids is parsed if it's a JSON string
     let seatIds = order.seat_ids;
     if (typeof seatIds === 'string') {
       try {
         seatIds = JSON.parse(seatIds);
       } catch (e) {
         console.error("Failed to parse seat_ids:", e);
-        seatIds = []; // Default to empty array on parse error
+        seatIds = [];
       }
     }
 
     const orderWithParsedData = {
       ...order,
-      event: event, 
+      event: event,
       tickets_without_seats: ticketsWithoutSeats,
       seat_ids: seatIds,
-      ticketTypes: ticketTypes, 
+      ticketTypes: ticketTypes, // Pass ALL ticket types to the template
     };
 
     const error = req.session.error;

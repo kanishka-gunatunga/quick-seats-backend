@@ -121,11 +121,17 @@
                                                 <tr>
                                                     <td>
                                                         <%
-                                                            const ticketType = ticketTypes.find(tt => tt.id === ticket.ticket_type_id);
+                                                            // Ensure ticket.ticket_type_id is parsed to an integer for a correct comparison
+                                                            const ticketTypeId = parseInt(ticket.ticket_type_id, 10);
+                                                            const ticketType = order.ticketTypes.find(tt => tt.id === ticketTypeId);
                                                             if (ticketType) {
-                                                                %><%= ticketType.name %> (LKR <%= ticketType.price %>)<%
+                                                        %>
+                                                                <%= ticketType.name %> (LKR <%= ticketType.price %>)
+                                                        <%
                                                             } else {
-                                                                %>Unknown Ticket Type (ID: <%= ticket.ticket_type_id %>)<%
+                                                        %>
+                                                                Unknown Ticket Type (ID: <%= ticket.ticket_type_id %>)
+                                                        <%
                                                             }
                                                         %>
                                                     </td>
@@ -137,7 +143,7 @@
                                                             <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count %>" value="1" class="form-control" style="width: 100px; display: inline-block;">
                                                     </td>
                                                     <td>
-                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel Tickets</button>
+                                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel Tickets</button>
                                                         </form>
                                                     </td>
                                                 </tr>
