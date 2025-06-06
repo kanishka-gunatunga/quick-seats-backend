@@ -521,7 +521,7 @@ export const viewBooking = async (req: Request, res: Response) => {
     const order = await prisma.order.findUnique({
       where: { id: parseInt(order_id as string, 10) },
     });
-
+    
     if (!order) {
       req.session.error = 'Order not found.';
       req.session.save(() => {
@@ -542,6 +542,9 @@ export const viewBooking = async (req: Request, res: Response) => {
       return;
     }
 
+    const cancells = await prisma.canceledTicket.findMany({
+      where: { order_id:  parseInt(order_id, 10)  },
+    });
 
     const ticketTypes = await prisma.ticketType.findMany({});
 
@@ -635,6 +638,7 @@ export const viewBooking = async (req: Request, res: Response) => {
       tickets_without_seats: enrichedTicketsWithoutSeats,
       seat_ids: seatsWithDetails,
       ticketTypes: ticketTypes, 
+      cancells: cancells,
     };
 
     const error = req.session.error;

@@ -145,6 +145,29 @@
                             </div>
                         <% } %>
 
+                        <h4 class="mt-2">Cancelations</h4>
+                         <div class="table-responsive">
+                            <table class="table table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Seat or No Seat</th>
+                                        <th>Ticket Type</th>
+                                        <th>Seat ID</th>
+                                        <th>Quantity</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        <% order.cancells.forEach(cancel => { %>
+                                <tr>
+                                    <td>
+                                        <%= cancel.type %>
+                                    </td>
+                                    <td><%= cancel.ticketTypeName %></td>
+                                    <td><%= cancel.seat_id ?? '-' %></td>
+                                    <td><%= cancel.quantity ?? '-' %></td>
+                                  
+                                    </tr>
+                        <% }) %>
                         </div>
                     </div>
                 </div>
