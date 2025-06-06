@@ -477,3 +477,18 @@ export const addBookingPost = async (req: Request, res: Response) => {
         
     }
 };
+
+export const bookings = async (req: Request, res: Response) => {
+  const orders = await prisma.order.findMany({ });
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  res.render('booking/bookings', {
+    error,
+    success,
+    orders,
+  });
+}; 

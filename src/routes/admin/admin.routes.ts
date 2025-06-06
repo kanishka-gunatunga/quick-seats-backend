@@ -8,7 +8,7 @@ import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, d
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia} from '../../controllers/admin/eventController';
 import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
 import { orderReport } from '../../controllers/admin/reportController';
-import { addBookingGet,getCustomerDetails,getTicketsWithoutSeats,addBookingPost } from '../../controllers/admin/bookingController';
+import { addBookingGet,getCustomerDetails,getTicketsWithoutSeats,addBookingPost,bookings } from '../../controllers/admin/bookingController';
 
 const router = express.Router();
 
@@ -70,7 +70,7 @@ router.get('/add-booking', isAdminLoggedIn, addBookingGet);
 router.post('/add-booking', isAdminLoggedIn, addBookingPost);
 router.get('/customer-details/:id', getCustomerDetails);
 router.get('/get-tickets-without-seats/:id', getTicketsWithoutSeats);
-
+router.get('/bookings', isAdminLoggedIn, bookings);
 
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);

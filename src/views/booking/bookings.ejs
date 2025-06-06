@@ -1,0 +1,88 @@
+<%- include('../layouts/header.ejs') %>
+<!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+         
+            <div class="content-page">
+                <div class="content">
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                       
+                                        <h4 class="header-title">Bookings</h4>
+                                                <% if (success) { %>
+                                                    <div class="alert alert-success"><%= success %></div>
+                                                <% } %>
+                                                <% if (error) { %>
+                                                    <div class="alert alert-danger"><%= error %></div>
+                                                <% } %>
+
+                                         <div class="row">
+                                            <div class="col-12">
+                                                <div class="card">
+                                                    <div class="card-body table-responsive">
+                                                       
+                    
+                                                        <table id="responsive-datatable" class="table table-bordered table-bordered dt-responsive nowrap">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Customer Name</th>
+                                                                <th>Status</th>
+                                                                <th>Details</th>
+                                                                <th>Actions</th>
+                                                            </tr>
+                                                        </thead>
+                    
+                    
+                                                        <tbody>
+                                                            <% orders.forEach(order => { %>
+                                                                <tr>
+                                                                <td><%= order.first_name %> <%= order.last_name %></td>
+                                                                <td>
+                                                                    <span class="badge <%= order.status === 'pending' ? 'bg-warning' : (order.status === 'completed' ? 'bg-success' : 'bg-danger') %>">
+                                                                    <%= order.status %>
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <strong>Email:</strong> <%= order.email %><br>
+                                                                    <strong>Contact:</strong> <%= order.contact_number %><br>
+                                                                    <strong>NIC/Passport:</strong> <%= order.nic_passport %><br>
+                                                                    <strong>Country:</strong> <%= order.country %><br>
+                                                                    <strong>Seats:</strong> <%= order.seat_ids.join(', ') %><br>
+                                                                    <strong>Total:</strong> Rs. <%= order.total.toFixed(2) %>
+                                                                </td>
+                                                                <td>
+                                                                    <a href="/booking/view/<%= order.id %>" class="btn btn-primary rounded-pill waves-effect waves-light">View</a>
+                                                                </td>
+                                                                </tr>
+                                                            <% }) %>
+                                                        </tbody>
+
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            
+                                            </div>
+                                        </div> <!-- end row -->   
+
+                                    </div> <!-- end card-body -->
+                                </div> <!-- end card -->
+                            </div>
+                        </div>
+                        <!-- end row -->        
+                        
+                    
+                    </div> <!-- container -->
+
+                </div>
+
+            </div>
+            <!-- ============================================================== -->
+            <!-- End Page content -->
+            <!-- ============================================================== -->
+<%- include('../layouts/footer.ejs') %>
