@@ -1008,7 +1008,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             seatIdsInOrder = order.seat_ids as string[];
         }
 
-        let eventSeatDetails: { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[] = [];
+        let eventSeatDetails: { seatId: string; status: string; price: number; type_id: number; color: string }[] = [];
         if (typeof event.seats === 'string') {
             try {
                 eventSeatDetails = JSON.parse(event.seats);
@@ -1017,7 +1017,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                 // Continue, but log the error.
             }
         } else if (Array.isArray(event.seats)) {
-            eventSeatDetails = event.seats as { seatId: string; status: string; price: number; ticketTypeId: number; color: string }[];
+            eventSeatDetails = event.seats as { seatId: string; status: string; price: number; type_id: number; color: string }[];
         }
 
         for (const seatIdToCancel of seatIdsInOrder) { // Iterate directly over the seat IDs
@@ -1029,13 +1029,13 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             if (seatInEvent) {
                 seatInEvent.status = "available";
 
-                typeIdForCanceledSeat = seatInEvent.ticketTypeId;
+                typeIdForCanceledSeat = seatInEvent.type_id;
 
                 // To get the ticketTypeName, you might need to query the ticket types or have it in event.ticket_details
                 // For this example, let's assume we can get it from event.ticket_details
                 const relatedTicketDetail = event.ticket_details && (typeof event.ticket_details === 'string' ? JSON.parse(event.ticket_details) : event.ticket_details).find((td: any) => td.ticketTypeId === typeIdForCanceledSeat);
                 if (relatedTicketDetail) {
-                    ticketTypeNameForCanceledSeat = relatedTicketDetail.name || `Type ${typeIdForCanceledSeat}`;
+                    ticketTypeNameForCanceledSeat = relatedTicketDetail.ticketTypeName || `Type ${typeIdForCanceledSeat}`;
                 }
             } else {
                 console.warn(`Seat ${seatIdToCancel} not found in event ${event.id} seat_details during full cancellation.`);
