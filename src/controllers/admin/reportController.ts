@@ -210,7 +210,7 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
     worksheet.addRow(['Booked Seats', bookedSeatsCount]);
     worksheet.addRow(['Issued Seats', issuedSeatsCount]);
     worksheet.addRow(['Other (Not Booked/Issued) Seats', notBookedSeatsCount]);
-    worksheet.addRow(['Total Seats JSON Size (bytes)', totalSeatsJsonSize]);
+
 
 
     // --- Add Overall Ticket Count Summary ---
