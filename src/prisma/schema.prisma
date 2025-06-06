@@ -136,6 +136,6 @@ model canceledTicket {
   seat_id      String?
   type_id String?
   ticketTypeName   String?
-  
+  quantity Float?
   createdAt DateTime? @default(now())
 }

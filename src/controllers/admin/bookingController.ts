@@ -791,3 +791,171 @@ export const cancelSeat = async (req: Request, res: Response) => {
         });
     }
 };
+
+
+export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
+    const order_id = req.params.id;
+    const { cancelQuantity, ticketTypeId, ticketTypeName } = req.body;
+
+    if (!cancelQuantity || !ticketTypeId || !ticketTypeName) {
+        req.session.error = 'Missing cancellation quantity, ticket type ID, or ticket type name.';
+        req.session.save(() => {
+            return res.redirect(`/booking/view/${order_id}`);
+        });
+        return;
+    }
+
+    const quantityToCancel = parseInt(cancelQuantity, 10);
+
+    if (isNaN(quantityToCancel) || quantityToCancel <= 0) {
+        req.session.error = 'Invalid cancellation quantity.';
+        req.session.save(() => {
+            return res.redirect(`/booking/view/${order_id}`);
+        });
+        return;
+    }
+
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(order_id, 10) },
+        });
+
+        if (!order) {
+            req.session.error = 'Order not found.';
+            req.session.save(() => {
+                return res.redirect('/bookings');
+            });
+            return;
+        }
+
+        // --- Update order's tickets_without_seats ---
+        let ticketsWithoutSeats: { issued_count: number; ticket_count: number; ticket_type_id: number }[] = [];
+        if (typeof order.tickets_without_seats === 'string') {
+            try {
+                ticketsWithoutSeats = JSON.parse(order.tickets_without_seats);
+            } catch (e) {
+                console.error("Failed to parse tickets_without_seats from order:", e);
+                req.session.error = 'An error occurred while processing order ticket data.';
+                req.session.save(() => {
+                    return res.redirect(`/booking/view/${order_id}`);
+                });
+                return;
+            }
+        } else if (Array.isArray(order.tickets_without_seats)) {
+            ticketsWithoutSeats = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number }[];
+        }
+
+        let ticketFoundInOrder = false;
+        const updatedTicketsWithoutSeats = ticketsWithoutSeats.map(ticket => {
+            if (ticket.ticket_type_id === parseInt(ticketTypeId, 10)) {
+                if (ticket.ticket_count < quantityToCancel) {
+                    req.session.error = `Cannot cancel ${quantityToCancel} tickets. Only ${ticket.ticket_count} available for cancellation for ${ticketTypeName}.`;
+                    req.session.save(() => {
+                        throw new Error("Insufficient tickets to cancel in order."); 
+                    });
+                }
+                ticketFoundInOrder = true;
+                return {
+                    ...ticket,
+                    ticket_count: ticket.ticket_count - quantityToCancel,
+                };
+            }
+            return ticket;
+        });
+
+        if (!ticketFoundInOrder) {
+            req.session.error = `Ticket type ${ticketTypeName} not found in this order's tickets without seats.`;
+            req.session.save(() => {
+                return res.redirect(`/booking/view/${order_id}`);
+            });
+            return;
+        }
+
+        // Get the event associated with the order to update ticket details
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(order.event_id, 10) },
+        });
+
+        if (!event) {
+            req.session.error = 'Associated event not found.';
+            req.session.save(() => {
+                return res.redirect(`/booking/view/${order_id}`);
+            });
+            return;
+        }
+
+        // --- Update event's ticket_details ---
+        let eventTicketDetails: { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[] = [];
+        if (typeof event.ticket_details === 'string') {
+            try {
+                eventTicketDetails = JSON.parse(event.ticket_details);
+            } catch (e) {
+                console.error("Failed to parse event ticket_details:", e);
+                req.session.error = 'An error occurred while processing event ticket data.';
+                req.session.save(() => {
+                    return res.redirect(`/booking/view/${order_id}`);
+                });
+                return;
+            }
+        } else if (Array.isArray(event.ticket_details)) {
+            eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
+        }
+
+        let ticketFoundInEvent = false;
+        const updatedEventTicketDetails = eventTicketDetails.map(detail => {
+            if (detail.ticketTypeId === parseInt(ticketTypeId, 10)) {
+                if (detail.bookedTicketCount < quantityToCancel) {
+                     console.warn(`Attempted to cancel ${quantityToCancel} tickets but only ${detail.bookedTicketCount} were marked as booked for ticket type ${ticketTypeName} in event.`);
+                }
+                ticketFoundInEvent = true;
+                return {
+                    ...detail,
+                    bookedTicketCount: Math.max(0, detail.bookedTicketCount - quantityToCancel), 
+                };
+            }
+            return detail;
+        });
+
+        if (!ticketFoundInEvent) {
+             console.warn(`Ticket type ${ticketTypeName} (ID: ${ticketTypeId}) not found in event ${event.id} ticket_details.`);
+        }
+
+        await prisma.order.update({
+            where: { id: parseInt(order_id, 10) },
+            data: {
+                tickets_without_seats: JSON.stringify(updatedTicketsWithoutSeats),
+            },
+        });
+
+        await prisma.event.update({
+            where: { id: parseInt(order.event_id, 10) },
+            data: {
+                ticket_details: JSON.stringify(updatedEventTicketDetails),
+            },
+        });
+
+        await prisma.canceledTicket.create({
+            data: {
+                order_id: parseInt(order_id, 10),
+                type: 'no seat', 
+                type_id: ticketTypeId,
+                ticketTypeName: ticketTypeName,
+                quantity: quantityToCancel,
+            },
+        });
+
+        req.session.success = `${quantityToCancel} x ${ticketTypeName} tickets cancelled successfully.`;
+        req.session.save(() => {
+            res.redirect(`/booking/view/${order_id}`);
+        });
+
+    } catch (err: any) {
+        console.error("Error cancelling tickets without seat:", err);
+        if (!req.session.error) {
+            req.session.error = 'An error occurred while cancelling the tickets.';
+        }
+        req.session.save(() => {
+            res.redirect(`/booking/view/${order_id}`);
+        });
+    }
+};

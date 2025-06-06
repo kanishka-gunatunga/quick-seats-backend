@@ -130,6 +130,7 @@
                                                     <% if (ticket.ticket_count - ticket.issued_count > 0) { %>
                                                         <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST" class="d-flex align-items-center">
                                                             <input type="hidden" name="ticketTypeId" value="<%= ticket.ticket_type_id %>">
+                                                            <input type="hidden" name="ticketTypeName" value="<%= ticket.name %>">
                                                             <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count - ticket.issued_count %>" value="1" class="form-control me-2" style="width: 100px;">
                                                             <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel</button>
                                                         </form>
