@@ -332,7 +332,7 @@ height: auto;
                                                         </div>
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Event</label>
-                                                            <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
+                                                            <select class="form-control" data-toggle="select2" name="event_id" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>
                                                                         <option value="<%= event.id %>" data-location="<%= event.location %>"  data-seats="<%= JSON.stringify(event.seats || []) %>"><%= event.name %></option>
