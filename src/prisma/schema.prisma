@@ -125,4 +125,5 @@ model Order {
   discount       Float
   total          Float
   status         String
+  createdAt DateTime? @default(now())
 }
