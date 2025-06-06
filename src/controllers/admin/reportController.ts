@@ -19,3 +19,18 @@ export const orderReport = async (req: Request, res: Response) => {
     orders,
   });
 }; 
+
+export const attendenceReport = async (req: Request, res: Response) => {
+  const events = await prisma.event.findMany({ });
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  res.render('reports/attendence-report', {
+    error,
+    success,
+    events,
+  });
+}; 
