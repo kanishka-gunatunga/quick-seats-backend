@@ -64,7 +64,7 @@ height: auto;
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">Contact Number</label>
-                                                            <input type="email" class="form-control" name="contact_number" id="contactNumber" value="<%= formData?.contact_number || '' %>">
+                                                            <input type="text" class="form-control" name="contact_number" id="contactNumber" value="<%= formData?.contact_number || '' %>">
                                                             <% if (validationErrors?.contact_number) { %>
                                                                 <small class="text-danger"><%= validationErrors.contact_number[0] %></small>
                                                             <% } %>
@@ -72,7 +72,7 @@ height: auto;
 
                                                         <div class="col-md-4 mb-3">
                                                             <label class="form-label">NIC/Passport</label>
-                                                            <input type="email" class="form-control" name="nic_passport" id="nicPassport" value="<%= formData?.nic_passport || '' %>">
+                                                            <input type="text" class="form-control" name="nic_passport" id="nicPassport" value="<%= formData?.nic_passport || '' %>">
                                                             <% if (validationErrors?.nic_passport) { %>
                                                                 <small class="text-danger"><%= validationErrors.nic_passport[0] %></small>
                                                             <% } %>
