@@ -663,7 +663,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
     if (!seatId) {
         req.session.error = 'Missing seat ID to cancel.';
         req.session.save(() => {
-            return res.redirect(`/bookings/view/${order_id}`);
+            return res.redirect(`/booking/view/${order_id}`);
         });
         return;
     }
@@ -690,7 +690,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 console.error("Failed to parse seat_ids from order:", e);
                 req.session.error = 'An error occurred while processing seat data.';
                 req.session.save(() => {
-                    return res.redirect(`/bookings/view/${order_id}`);
+                    return res.redirect(`/booking/view/${order_id}`);
                 });
                 return;
             }
@@ -704,7 +704,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
         if (updatedSeatIds.length === initialSeatCount) {
             req.session.error = `Seat ${seatId} not found in this booking.`;
             req.session.save(() => {
-                return res.redirect(`/bookings/view/${order_id}`);
+                return res.redirect(`/booking/view/${order_id}`);
             });
             return;
         }
@@ -717,7 +717,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
         if (!event) {
             req.session.error = 'Associated event not found.';
             req.session.save(() => {
-                return res.redirect(`/bookings/view/${order_id}`);
+                return res.redirect(`/booking/view/${order_id}`);
             });
             return;
         }
@@ -731,7 +731,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 console.error("Failed to parse event seat_details:", e);
                 req.session.error = 'An error occurred while processing event seat data.';
                 req.session.save(() => {
-                    return res.redirect(`/bookings/view/${order_id}`);
+                    return res.redirect(`/booking/view/${order_id}`);
                 });
                 return;
             }
@@ -780,14 +780,14 @@ export const cancelSeat = async (req: Request, res: Response) => {
         
         req.session.success = `Seat ${seatId} cancelled successfully.`;
         req.session.save(() => {
-            res.redirect(`/bookings/view/${order_id}`);
+            res.redirect(`/booking/view/${order_id}`);
         });
 
     } catch (err) {
         console.error("Error cancelling seat:", err);
         req.session.error = 'An error occurred while cancelling the seat.';
         req.session.save(() => {
-            res.redirect(`/bookings/view/${order_id}`);
+            res.redirect(`/booking/view/${order_id}`);
         });
     }
 };
