@@ -121,7 +121,7 @@
                                                 <tr>
                                                     <td>
                                                         <%
-                                                            const ticketType = ticket_types.find(tt => tt.id === ticket.ticket_type_id);
+                                                            const ticketType = ticketTypes.find(tt => tt.id === ticket.ticket_type_id);
                                                             if (ticketType) {
                                                                 %><%= ticketType.name %> (LKR <%= ticketType.price %>)<%
                                                             } else {
