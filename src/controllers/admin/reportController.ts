@@ -42,6 +42,9 @@ export const attendenceReport = async (req: Request, res: Response) => {
     validationErrors,
   });
 }; 
+
+
+
 export const attendenceReportPost = async (req: Request, res: Response) => {
   const schema = z.object({
     event: z.string().min(1, 'Event ID is required'),
@@ -92,20 +95,40 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
 
     // --- Add Ticket Sales Summary Section ---
 
-    // Explicitly cast eventDetails.ticket_details to an array
-    const eventTicketDetails = (eventDetails.ticket_details || []) as Array<{
+    let eventTicketDetails: Array<{
       price: number;
       ticketCount: number | null;
       ticketTypeId: number;
       hasTicketCount: boolean;
       bookedTicketCount: number;
-    }>; // Added a more specific type for clarity, though `Array<any>` would also work
+    }> = [];
+
+    // Check if ticket_details exists and parse it if it's a string (e.g., from a JSON column)
+    if (eventDetails.ticket_details) {
+      if (Array.isArray(eventDetails.ticket_details)) {
+        eventTicketDetails = eventDetails.ticket_details as Array<any>; // Already an array
+      } else if (typeof eventDetails.ticket_details === 'string') {
+        try {
+          // Attempt to parse the JSON string into an array
+          const parsedDetails = JSON.parse(eventDetails.ticket_details);
+          if (Array.isArray(parsedDetails)) {
+            eventTicketDetails = parsedDetails;
+          } else {
+            console.warn('eventDetails.ticket_details was a string but not a valid JSON array.');
+          }
+        } catch (parseError) {
+          console.error('Error parsing ticket_details JSON:', parseError);
+          // Fallback to empty array if parsing fails
+          eventTicketDetails = [];
+        }
+      }
+    }
+
 
     // Map ticket types for easy lookup by ID
     const ticketTypeMap = new Map<number, string>();
     ticketTypes.forEach(type => {
-      // If type.name is null, use an empty string instead
-      ticketTypeMap.set(type.id, type.name || '');
+      ticketTypeMap.set(type.id, type.name || ''); // Handle null names
     });
 
     // Filter and prepare ticket sales data for tickets with a defined count
