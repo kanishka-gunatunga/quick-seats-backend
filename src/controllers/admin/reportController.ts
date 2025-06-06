@@ -68,10 +68,11 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
       return res.redirect('/attendence-report');
     }
 
-    // Fetch event details along with its attendees
     const eventDetails = await prisma.event.findUnique({
-      where: { id: eventId }
+      where: { id: eventId },
     });
+
+    const ticketTypes = await prisma.ticketType.findMany({});
 
     if (!eventDetails) {
       req.session.error = 'Event not found.';
@@ -87,8 +88,54 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
     // Add header row for event details
     worksheet.addRow(['Event Name', eventDetails.name]);
     worksheet.addRow(['Location', eventDetails.location]);
-    worksheet.addRow(['Organized Date', eventDetails.start_date_time.toDateString()]); // Assuming organizedDate is a Date object
+    worksheet.addRow(['Organized Date', eventDetails.start_date_time.toDateString()]);
 
+    // --- Add Ticket Sales Summary Section ---
+
+    // Explicitly cast eventDetails.ticket_details to an array
+    const eventTicketDetails = (eventDetails.ticket_details || []) as Array<{
+      price: number;
+      ticketCount: number | null;
+      ticketTypeId: number;
+      hasTicketCount: boolean;
+      bookedTicketCount: number;
+    }>; // Added a more specific type for clarity, though `Array<any>` would also work
+
+    // Map ticket types for easy lookup by ID
+    const ticketTypeMap = new Map<number, string>();
+    ticketTypes.forEach(type => {
+      // If type.name is null, use an empty string instead
+      ticketTypeMap.set(type.id, type.name || '');
+    });
+
+    // Filter and prepare ticket sales data for tickets with a defined count
+    const ticketSalesData = eventTicketDetails
+      .filter(detail => detail.hasTicketCount)
+      .map(detail => ({
+        ticketTypeName: ticketTypeMap.get(detail.ticketTypeId) || 'Unknown Ticket Type',
+        availableTicketCount: detail.ticketCount,
+        bookedTicketCount: detail.bookedTicketCount,
+      }));
+
+    // Add blank rows for visual separation
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+
+    // Add section header for Ticket Sales Summary
+    const salesHeaderRow = worksheet.addRow(['Ticket Sales Summary']);
+    salesHeaderRow.font = { bold: true, size: 14 };
+
+    // Add column headers for ticket sales data
+    worksheet.addRow(['Ticket Type', 'Available Tickets', 'Booked Tickets']);
+
+    // Add actual ticket sales data rows
+    ticketSalesData.forEach(data => {
+      worksheet.addRow([
+        data.ticketTypeName,
+        data.availableTicketCount,
+        data.bookedTicketCount,
+      ]);
+    });
 
     // Set response headers for download
     res.setHeader(
@@ -103,12 +150,11 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
     // Write workbook to response
     await workbook.xlsx.write(res);
     res.end();
-    
+
   } catch (err) {
     console.error('Error generating attendance report:', err);
     req.session.error = 'An unexpected error occurred while generating the report.';
     req.session.formData = req.body;
-    // Redirect to a more appropriate error page or the report page itself
     return res.redirect('/attendence-report');
   }
 };
