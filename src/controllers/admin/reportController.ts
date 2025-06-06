@@ -44,7 +44,6 @@ export const attendenceReport = async (req: Request, res: Response) => {
 }; 
 
 
-
 export const attendenceReportPost = async (req: Request, res: Response) => {
   const schema = z.object({
     event: z.string().min(1, 'Event ID is required'),
@@ -71,8 +70,14 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
       return res.redirect('/attendence-report');
     }
 
+    // Fetch event details including ticket_details and seats
     const eventDetails = await prisma.event.findUnique({
       where: { id: eventId },
+      // If ticket_details and seats are relations, you might need to include them:
+      // include: {
+      //   ticketDetails: true, // Adjust to your relation name
+      //   seats: true,         // Adjust to your relation name
+      // }
     });
 
     const ticketTypes = await prisma.ticketType.findMany({});
@@ -93,8 +98,7 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
     worksheet.addRow(['Location', eventDetails.location]);
     worksheet.addRow(['Organized Date', eventDetails.start_date_time.toDateString()]);
 
-    // --- Add Ticket Sales Summary Section ---
-
+    // --- Process Ticket Details (for tickets without specific seats) ---
     let eventTicketDetails: Array<{
       price: number;
       ticketCount: number | null;
@@ -103,13 +107,11 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
       bookedTicketCount: number;
     }> = [];
 
-    // Check if ticket_details exists and parse it if it's a string (e.g., from a JSON column)
     if (eventDetails.ticket_details) {
       if (Array.isArray(eventDetails.ticket_details)) {
-        eventTicketDetails = eventDetails.ticket_details as Array<any>; // Already an array
+        eventTicketDetails = eventDetails.ticket_details as Array<any>;
       } else if (typeof eventDetails.ticket_details === 'string') {
         try {
-          // Attempt to parse the JSON string into an array
           const parsedDetails = JSON.parse(eventDetails.ticket_details);
           if (Array.isArray(parsedDetails)) {
             eventTicketDetails = parsedDetails;
@@ -118,12 +120,10 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
           }
         } catch (parseError) {
           console.error('Error parsing ticket_details JSON:', parseError);
-          // Fallback to empty array if parsing fails
           eventTicketDetails = [];
         }
       }
     }
-
 
     // Map ticket types for easy lookup by ID
     const ticketTypeMap = new Map<number, string>();
@@ -131,27 +131,67 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
       ticketTypeMap.set(type.id, type.name || ''); // Handle null names
     });
 
-    // Filter and prepare ticket sales data for tickets with a defined count
+    // Filter and prepare ticket sales data for tickets with a defined count (seated tickets implicitly handled by event.seats)
     const ticketSalesData = eventTicketDetails
-      .filter(detail => detail.hasTicketCount)
+      .filter(detail => detail.hasTicketCount) // These are the tickets with specific quantity limits, but NOT individual seats
       .map(detail => ({
         ticketTypeName: ticketTypeMap.get(detail.ticketTypeId) || 'Unknown Ticket Type',
         availableTicketCount: detail.ticketCount,
         bookedTicketCount: detail.bookedTicketCount,
       }));
 
-    // Add blank rows for visual separation
-    worksheet.addRow([]);
-    worksheet.addRow([]);
+    // --- Process Seats Data ---
+    let eventSeats: Array<{
+      color: string;
+      price: number;
+      seatId: string;
+      status: 'available' | 'booked' | 'issued' | 'unavailable' | string; // Extend with expected statuses
+      type_id: number;
+      ticketTypeName: string;
+    }> = [];
 
-    // Add section header for Ticket Sales Summary
-    const salesHeaderRow = worksheet.addRow(['Ticket Sales Summary']);
+    if (eventDetails.seats) {
+      if (Array.isArray(eventDetails.seats)) {
+        eventSeats = eventDetails.seats as Array<any>;
+      } else if (typeof eventDetails.seats === 'string') {
+        try {
+          const parsedSeats = JSON.parse(eventDetails.seats);
+          if (Array.isArray(parsedSeats)) {
+            eventSeats = parsedSeats;
+          } else {
+            console.warn('eventDetails.seats was a string but not a valid JSON array.');
+          }
+        } catch (parseError) {
+          console.error('Error parsing seats JSON:', parseError);
+          eventSeats = [];
+        }
+      }
+    }
+
+    // Calculate seat counts based on status
+    let bookedSeatsCount = 0;
+    let issuedSeatsCount = 0;
+    let notBookedSeatsCount = 0; // This will cover all seats that are not 'booked' or 'issued'
+
+    eventSeats.forEach(seat => {
+      if (seat.status === 'booked') {
+        bookedSeatsCount++;
+      } else if (seat.status === 'issued') {
+        issuedSeatsCount++;
+      } else {
+        notBookedSeatsCount++; // This includes 'unavailable' and any other non-booked/non-issued status
+      }
+    });
+
+    const totalSeatsJsonSize = JSON.stringify(eventSeats).length; // Size in bytes
+
+    // --- Add Ticket Sales Summary Section (for tickets with defined count, but no individual seats) ---
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    const salesHeaderRow = worksheet.addRow(['Ticket Sales Summary (Tickets without individual seats)']);
     salesHeaderRow.font = { bold: true, size: 14 };
 
-    // Add column headers for ticket sales data
     worksheet.addRow(['Ticket Type', 'Available Tickets', 'Booked Tickets']);
-
-    // Add actual ticket sales data rows
     ticketSalesData.forEach(data => {
       worksheet.addRow([
         data.ticketTypeName,
@@ -159,6 +199,33 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
         data.bookedTicketCount,
       ]);
     });
+
+    // --- Add Seat Distribution Summary Section (for tickets with individual seats) ---
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    const seatHeaderRow = worksheet.addRow(['Seat Distribution Summary (Tickets with individual seats)']);
+    seatHeaderRow.font = { bold: true, size: 14 };
+
+    worksheet.addRow(['Total Seats', eventSeats.length]);
+    worksheet.addRow(['Booked Seats', bookedSeatsCount]);
+    worksheet.addRow(['Issued Seats', issuedSeatsCount]);
+    worksheet.addRow(['Other (Not Booked/Issued) Seats', notBookedSeatsCount]);
+    worksheet.addRow(['Total Seats JSON Size (bytes)', totalSeatsJsonSize]);
+
+
+    // --- Add Overall Ticket Count Summary ---
+    worksheet.addRow([]);
+    worksheet.addRow([]);
+    const overallHeaderRow = worksheet.addRow(['Overall Ticket Count Summary']);
+    overallHeaderRow.font = { bold: true, size: 14 };
+
+    const ticketsWithoutSeatsCount = eventTicketDetails
+        .filter(detail => !detail.hasTicketCount) // These are the tickets that do NOT have a specific seat assigned
+        .reduce((sum, detail) => sum + detail.bookedTicketCount, 0);
+
+    worksheet.addRow(['Tickets with Individual Seats (Total)', eventSeats.length]);
+    worksheet.addRow(['Tickets without Individual Seats (Booked Count)', ticketsWithoutSeatsCount]);
+
 
     // Set response headers for download
     res.setHeader(
