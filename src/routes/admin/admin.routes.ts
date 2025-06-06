@@ -7,7 +7,7 @@ import { addArtistGet, addArtistPost, artists, activateArtist, deactivateArtist 
 import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, deactivateTicketType ,editTicketTypeGet, editTicketTypePost} from '../../controllers/admin/ticketTypeController';
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia} from '../../controllers/admin/eventController';
 import { addStaffGet, addStaffPost, staffs, activateStaff, deactivateStaff ,editStaffGet, editStaffPost } from '../../controllers/admin/staffController';
-import { orderReport,attendenceReport } from '../../controllers/admin/reportController';
+import { orderReport,attendenceReport,attendenceReportPost } from '../../controllers/admin/reportController';
 import { addBookingGet,getCustomerDetails,getTicketsWithoutSeats,addBookingPost,bookings,viewBooking,cancelSeat,cancelTicketsWithoutSeat,cancelEntireBooking } from '../../controllers/admin/bookingController';
 
 const router = express.Router();
@@ -79,4 +79,5 @@ router.get('/bookings/cancel-booking/:id', cancelEntireBooking);
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);
 router.get('/attendence-report', isAdminLoggedIn, attendenceReport);
+router.post('/attendence-report', isAdminLoggedIn, attendenceReportPost);
 export default router;
