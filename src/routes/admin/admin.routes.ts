@@ -72,7 +72,7 @@ router.get('/customer-details/:id', getCustomerDetails);
 router.get('/get-tickets-without-seats/:id', getTicketsWithoutSeats);
 router.get('/bookings', isAdminLoggedIn, bookings);
 router.get('/booking/view/:id', isAdminLoggedIn, viewBooking);
-router.post('/booking/cancel-seat/:id', isAdminLoggedIn, cancelSeat);
+router.post('/bookings/cancel-seat/:id', isAdminLoggedIn, cancelSeat);
 
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);
