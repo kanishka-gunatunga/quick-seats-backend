@@ -87,26 +87,14 @@
                             <% if (order.seat_ids && order.seat_ids.length > 0) { %>
                                 <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
                                 <div class="row">
-                                    <% order.seat_ids.forEach(seatId => { %>
+                                    <% order.seat_ids.forEach(seat => { %> <% // Changed 'seatId' to 'seat' because it's now an object %>
                                         <div class="col-md-2 mb-3">
                                             <div class="card">
                                                 <div class="card-body text-center">
-                                                    <h6>Seat: <%= seatId %></h6>
-                                                    <%
-                                                        // Find the seat object in order.event.seats using the seatId
-                                                        const seatInfo = order.event.seats ? order.event.seats.find(s => s.id === seatId) : null;
-                                                        let seatTicketTypeName = "N/A"; // Default if not found
-                                                        if (seatInfo && seatInfo.ticket_type_id) {
-                                                            // Find the ticket type name from the overall list of ticket types
-                                                            const foundTicketType = order.ticketTypes.find(tt => tt.id === parseInt(seatInfo.ticket_type_id, 10));
-                                                            if (foundTicketType) {
-                                                                seatTicketTypeName = foundTicketType.name;
-                                                            }
-                                                        }
-                                                    %>
-                                                    <p>Ticket Type: **<%= seatTicketTypeName %>**</p>
-                                                    <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seatId %>? This action cannot be undone.');">
-                                                        <input type="hidden" name="seatId" value="<%= seatId %>">
+                                                    <h6>Seat: <%= seat.seatId %></h6> <% // Access the 'seatId' property of the seat object %>
+                                                    <p>Ticket Type: **<%= seat.ticketTypeName %>**</p> <% // Directly access the 'ticketTypeName' property %>
+                                                    <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seat.seatId %>? This action cannot be undone.');">
+                                                        <input type="hidden" name="seatId" value="<%= seat.seatId %>"> <% // Use seat.seatId for the hidden input %>
                                                         <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
                                                     </form>
                                                 </div>
