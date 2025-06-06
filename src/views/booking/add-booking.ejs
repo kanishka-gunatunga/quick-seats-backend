@@ -358,7 +358,7 @@ height: auto;
             </div>
             <%- include('../layouts/footer.ejs') %>
 <script>
-   document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
     // Selectors for elements on the page
     const customerSelect = document.getElementById('customerSelect');
     const firstNameField = document.getElementById('firstName');
@@ -417,26 +417,14 @@ height: auto;
 
 
     // Function to update the visual state of a seat in the SVG
-    function updateSeatVisual(seatGroup, status) {
+    // This function now accepts an optional 'initialColor' parameter for setting the base color
+    function updateSeatVisual(seatGroup, status, initialColor = '#C4C4C4') {
         const seatPaths = seatGroup.querySelectorAll('path');
-        let fillColor = '#C4C4C4'; // Default available/unselected gray
+        let fillColor = initialColor; // Use the provided initialColor as the base
 
-        // Determine fill color based on status
-        switch (status) {
-            case 'booked':
-            case 'issued':
-            case 'pending':
-                fillColor = '#FF0000'; // Red for occupied/reserved
-                break;
-            case 'unavailable':
-                fillColor = '#000000'; // Black for explicitly unavailable
-                break;
-            case 'selected':
-                fillColor = '#FFD700'; // Gold for admin-selected
-                break;
-            case 'available':
-            default:
-                fillColor = '#C4C4C4'; // Gray for available
+        // Override the fill color if the seat is 'selected' by the admin
+        if (status === 'selected') {
+            fillColor = '#FFD700'; // Gold for admin-selected
         }
 
         seatPaths.forEach(path => {
@@ -460,11 +448,12 @@ height: auto;
             return;
         }
 
-        // Get the current status from our currentSeatsData map (based on backend data)
+        // Get the current status and color from our currentSeatsData map (based on backend data)
         const seatInfo = currentSeatsData[seatId];
         // IMPORTANT: If currentSeatsData is empty (meaning no seats assigned from backend),
         // or if the specific seatId is not found in the backend data, it should NOT be available.
         const seatStatus = seatInfo ? seatInfo.status : 'unavailable'; // Default to 'unavailable' if seat not found in backend data
+        const seatColor = seatInfo ? seatInfo.color : '#C4C4C4'; // Get the backend color or default
 
         // Only allow selection if the seat is explicitly 'available' in the backend data
         if (seatStatus !== 'available') {
@@ -477,12 +466,12 @@ height: auto;
         if (indexInSelected > -1) {
             // Seat is already selected by admin, deselect it
             selectedSeatsForBooking.splice(indexInSelected, 1);
-            // Revert visual to its original 'available' state
-            updateSeatVisual(seatGroup, 'available');
+            // Revert visual to its original 'available' state using its backend color
+            updateSeatVisual(seatGroup, 'available', seatColor); // Pass the backend color
         } else {
             // Seat is not selected, select it
             selectedSeatsForBooking.push(seatId);
-            updateSeatVisual(seatGroup, 'selected'); // Set to 'selected' state
+            updateSeatVisual(seatGroup, 'selected'); // Set to 'selected' state (gold)
         }
 
         selectedSeatsInput.value = JSON.stringify(selectedSeatsForBooking);
@@ -519,15 +508,15 @@ height: auto;
                 // First attempt to parse
                 let parsedData = JSON.parse(seatsDataString);
                 console.log('2. parsedData after first JSON.parse:', parsedData);
-                console.log('   Type of parsedData (first parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
+                console.log('    Type of parsedData (first parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
 
                 // Check if the result of the first parse is a string and try parsing again
                 // This handles cases where the data was double-stringified on the server
                 if (typeof parsedData === 'string' && parsedData.startsWith('[') && parsedData.endsWith(']')) {
-                    console.log('   Parsed data is a string, attempting second parse...');
+                    console.log('    Parsed data is a string, attempting second parse...');
                     parsedData = JSON.parse(parsedData); // Try parsing again
                     console.log('3. parsedData after second JSON.parse:', parsedData);
-                    console.log('   Type of parsedData (second parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
+                    console.log('    Type of parsedData (second parse):', typeof parsedData, 'Is Array:', Array.isArray(parsedData));
                 }
 
                 // Ensure the final parsed data is an array
@@ -552,8 +541,11 @@ height: auto;
         currentSeatsData = rawSeats.reduce((acc, seat) => {
             // Ensure 'seat' object is valid and has a string 'seatId' before accessing properties
             if (seat && typeof seat.seatId === 'string') {
-                // Default seat status to 'available' if 'status' property is missing from backend data
-                acc[seat.seatId] = { status: seat.status || 'available' }; 
+                // Store both status and color
+                acc[seat.seatId] = {
+                    status: seat.status || 'available', // Default to 'available' if status is missing
+                    color: seat.color || '#C4C4C4' // Default to gray if color is missing
+                };
             } else {
                 console.warn("Skipping invalid seat entry in rawSeats:", seat);
             }
@@ -605,11 +597,11 @@ height: auto;
                     }
 
                     const seatInfo = currentSeatsData[seatId];
-                    // IMPORTANT: The initial status of seats in the SVG
-                    // If no seatInfo from backend data, it's 'unavailable' by default.
+                    // Get status and color from the backend data
                     const status = seatInfo ? seatInfo.status : 'unavailable'; // Defaults to 'unavailable' if seat not provided by backend
+                    const color = seatInfo ? seatInfo.color : '#C4C4C4'; // Defaults to gray if color not provided by backend
 
-                    updateSeatVisual(seatGroup, status); // Apply initial color/style
+                    updateSeatVisual(seatGroup, status, color); // Apply initial color/style using the backend color
 
                     // Only add click listener if the seat is 'available' based on backend data
                     if (status === 'available') {
@@ -636,7 +628,7 @@ height: auto;
     // Check if customerSelect exists before trying to access its value
     if (customerSelect) {
         // Also check for empty string for the "Select..." option
-        if (customerSelect.value && customerSelect.value !== 'guest' && customerSelect.value !== '') { 
+        if (customerSelect.value && customerSelect.value !== 'guest' && customerSelect.value !== '') {
             $(customerSelect).trigger('change'); // Trigger change if a customer is pre-selected
         } else {
             clearCustomerFields();
@@ -663,20 +655,20 @@ height: auto;
         .clickable-seat:hover > path { /* Apply hover to paths within clickable groups */
             opacity: 0.8; /* Dim on hover */
         }
-        /* Styles for non-clickable/occupied seats */
+        /* Styles for non-clickable/occupied seats (fill color is now primarily from JS) */
         .seat-status-booked > path,
         .seat-status-issued > path,
         .seat-status-pending > path,
         .seat-status-unavailable > path {
             cursor: not-allowed !important;
-            filter: grayscale(50%); /* Desaturate non-selectable seats */
+            /* filter: grayscale(50%); /* You can keep this or remove if backend color is sufficient */
         }
-        /* Style for admin-selected seats */
+        /* Style for admin-selected seats (overrides backend color when selected) */
         .seat-status-selected > path {
             stroke: #333;
             stroke-width: 2;
         }
-        /* Default fill for available seats is handled in JS updateSeatVisual function */
+        /* Default fill for available seats is now primarily from JS updateSeatVisual function */
     `;
     document.head.appendChild(style);
 });
