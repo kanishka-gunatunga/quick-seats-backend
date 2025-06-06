@@ -32,6 +32,7 @@
                                                         <thead>
                                                             <tr>
                                                                 <th>Customer Name</th>
+                                                                <th>Event</th>
                                                                 <th>Status</th>
                                                                 <th>Details</th>
                                                                 <th>Actions</th>
@@ -43,6 +44,7 @@
                                                             <% orders.forEach(order => { %>
                                                                 <tr>
                                                                 <td><%= order.first_name %> <%= order.last_name %></td>
+                                                                 <td><%= order.eventName %></td>
                                                                 <td>
                                                                     <span class="badge <%= order.status === 'pending' ? 'bg-warning' : (order.status === 'completed' ? 'bg-success' : 'bg-danger') %>">
                                                                     <%= order.status %>

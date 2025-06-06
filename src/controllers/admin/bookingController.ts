@@ -481,6 +481,27 @@ export const addBookingPost = async (req: Request, res: Response) => {
 export const bookings = async (req: Request, res: Response) => {
   const orders = await prisma.order.findMany({ });
 
+   const eventIds = [...new Set(orders.map(order => parseInt(order.event_id, 10)))];
+
+   const events = await prisma.event.findMany({
+    where: {
+      id: {
+        in: eventIds,
+      },
+    },
+  });
+
+  const eventMap = new Map<number, string>(); 
+  events.forEach(event => {
+    eventMap.set(event.id, event.name);
+  });
+
+  const ordersWithEventNames = orders.map(order => ({
+    ...order,
+    event_id: parseInt(order.event_id, 10),
+    eventName: eventMap.get(parseInt(order.event_id, 10)) || 'Unknown Event',
+  }));
+
   const error = req.session.error;
   const success = req.session.success;
   req.session.error = undefined;
@@ -489,6 +510,43 @@ export const bookings = async (req: Request, res: Response) => {
   res.render('booking/bookings', {
     error,
     success,
-    orders,
+    orders: ordersWithEventNames, 
   });
 }; 
+
+
+export const viewBooking = async (req: Request, res: Response) => {
+  const order_id = req.params.id;
+
+  const order = await prisma.order.findUnique({
+    where: { id: parseInt(order_id as string, 10) },
+  });
+
+  if (!order) {
+    req.session.error = 'Order not found.';
+    req.session.save(() => {
+      return res.redirect('/bookings');
+    });
+    return;
+  }
+
+  const event = await prisma.event.findUnique({
+    where: { id: parseInt(order.event_id, 10) }, 
+  });
+
+  const orderWithEvent = {
+    ...order,
+    event: event || null,
+  };
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  res.render('booking/view-booking', {
+    error,
+    success,
+    order: orderWithEvent, 
+  });
+};
