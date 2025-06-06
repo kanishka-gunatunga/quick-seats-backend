@@ -542,7 +542,7 @@ export const viewBooking = async (req: Request, res: Response) => {
       return;
     }
 
-    // This line is correct as per your *current* schema (no event_id on TicketType)
+
     const ticketTypes = await prisma.ticketType.findMany({});
 
     let ticketsWithoutSeats = order.tickets_without_seats;
@@ -554,6 +554,39 @@ export const viewBooking = async (req: Request, res: Response) => {
         ticketsWithoutSeats = [];
       }
     }
+
+    const enrichedTicketsWithoutSeats: any[] = [];
+    const eventTicketDetails = typeof event.ticket_details === 'string' 
+        ? JSON.parse(event.ticket_details) 
+        : event.ticket_details;
+
+    if (Array.isArray(ticketsWithoutSeats) && Array.isArray(eventTicketDetails)) {
+        ticketsWithoutSeats.forEach((ticket: any) => {
+            const ticketTypeId = parseInt(ticket.ticket_type_id, 10);
+            const foundTicketType = ticketTypes.find(tt => tt.id === ticketTypeId);
+            const foundEventTicketDetail = eventTicketDetails.find((etd: any) => etd.ticketTypeId === ticketTypeId);
+
+            if (foundTicketType) {
+                enrichedTicketsWithoutSeats.push({
+                    ticket_type_id: ticketTypeId,
+                    ticket_count: ticket.ticket_count,
+                    issued_count: ticket.issued_count,
+                    name: foundTicketType.name,
+                    price: foundEventTicketDetail ? foundEventTicketDetail.price : 'N/A', // Get price from event.ticket_details
+                });
+            } else {
+                // Handle cases where ticket type is not found (optional: log or push with default name)
+                enrichedTicketsWithoutSeats.push({
+                    ticket_type_id: ticketTypeId,
+                    ticket_count: ticket.ticket_count,
+                    issued_count: ticket.issued_count,
+                    name: "Unknown Ticket Type",
+                    price: 'N/A',
+                });
+            }
+        });
+    }
+
 
     let seatIds = order.seat_ids;
     if (typeof seatIds === 'string') {
@@ -567,6 +600,7 @@ export const viewBooking = async (req: Request, res: Response) => {
 
     const seatsWithDetails: any[] = [];
     const eventSeats = typeof event.seats === 'string' ? JSON.parse(event.seats) : event.seats;
+
 
     const validatedSeatIds: string[] = [];
     if (Array.isArray(seatIds)) {
@@ -598,7 +632,7 @@ export const viewBooking = async (req: Request, res: Response) => {
     const orderWithParsedData = {
       ...order,
       event: event,
-      tickets_without_seats: ticketsWithoutSeats,
+      tickets_without_seats: enrichedTicketsWithoutSeats,
       seat_ids: seatsWithDetails,
       ticketTypes: ticketTypes, 
     };
