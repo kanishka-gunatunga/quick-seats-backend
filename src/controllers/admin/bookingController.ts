@@ -655,3 +655,139 @@ export const viewBooking = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const cancelSeat = async (req: Request, res: Response) => {
+    const order_id = req.params.id;
+    const { seatId,type_id,ticketTypeName} = req.body;
+
+    if (!seatId) {
+        req.session.error = 'Missing seat ID to cancel.';
+        req.session.save(() => {
+            return res.redirect(`/bookings/view/${order_id}`);
+        });
+        return;
+    }
+
+    try {
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(order_id, 10) },
+        });
+
+        if (!order) {
+            req.session.error = 'Order not found.';
+            req.session.save(() => {
+                return res.redirect('/bookings');
+            });
+            return;
+        }
+
+        // Parse seat_ids from the order
+        let seatIds: string[] = [];
+        if (typeof order.seat_ids === 'string') {
+            try {
+                seatIds = JSON.parse(order.seat_ids);
+            } catch (e) {
+                console.error("Failed to parse seat_ids from order:", e);
+                req.session.error = 'An error occurred while processing seat data.';
+                req.session.save(() => {
+                    return res.redirect(`/bookings/view/${order_id}`);
+                });
+                return;
+            }
+        } else if (Array.isArray(order.seat_ids)) {
+            seatIds = order.seat_ids as string[];
+        }
+
+        const initialSeatCount = seatIds.length;
+        const updatedSeatIds = seatIds.filter(id => id !== seatId);
+
+        if (updatedSeatIds.length === initialSeatCount) {
+            req.session.error = `Seat ${seatId} not found in this booking.`;
+            req.session.save(() => {
+                return res.redirect(`/bookings/view/${order_id}`);
+            });
+            return;
+        }
+
+        // Get the event associated with the order to update seat status
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(order.event_id, 10) },
+        });
+
+        if (!event) {
+            req.session.error = 'Associated event not found.';
+            req.session.save(() => {
+                return res.redirect(`/bookings/view/${order_id}`);
+            });
+            return;
+        }
+
+        // Parse event's seat_details
+        let eventSeatDetails: any[] = [];
+        if (typeof event.seats === 'string') {
+            try {
+                eventSeatDetails = JSON.parse(event.seats);
+            } catch (e) {
+                console.error("Failed to parse event seat_details:", e);
+                req.session.error = 'An error occurred while processing event seat data.';
+                req.session.save(() => {
+                    return res.redirect(`/bookings/view/${order_id}`);
+                });
+                return;
+            }
+        } else if (Array.isArray(event.seats)) {
+            eventSeatDetails = event.seats;
+        }
+
+
+  
+        const seatFoundInEvent = eventSeatDetails.some(seat => {
+            if (seat.seatId === seatId) {
+                seat.status = "available";
+                return true;
+            }
+            return false;
+        });
+
+        if (!seatFoundInEvent) {
+             console.warn(`Seat ${seatId} not found in event ${event.id} seat_details.`);
+        }
+
+        await prisma.order.update({
+            where: { id: parseInt(order_id, 10) },
+            data: {
+                seat_ids: JSON.stringify(updatedSeatIds),
+            },
+        });
+
+        // Update the event with the modified seat status
+        await prisma.event.update({
+            where: { id:  parseInt(order_id, 10)  },
+            data: {
+                seats: JSON.stringify(eventSeatDetails),
+            },
+        });
+
+        await prisma.canceledTicket.create({
+          data: {
+            order_id: parseInt(order_id, 10),
+            type: 'seat',
+            seat_id: seatId,
+            type_id: type_id,
+            ticketTypeName: ticketTypeName,
+          },
+        });
+        
+        req.session.success = `Seat ${seatId} cancelled successfully.`;
+        req.session.save(() => {
+            res.redirect(`/bookings/view/${order_id}`);
+        });
+
+    } catch (err) {
+        console.error("Error cancelling seat:", err);
+        req.session.error = 'An error occurred while cancelling the seat.';
+        req.session.save(() => {
+            res.redirect(`/bookings/view/${order_id}`);
+        });
+    }
+};

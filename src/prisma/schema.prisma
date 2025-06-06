@@ -127,3 +127,15 @@ model Order {
   status         String
   createdAt DateTime? @default(now())
 }
+
+
+model canceledTicket {
+  id             Int      @id @default(autoincrement())
+  order_id       Int
+  type     String 
+  seat_id      String?
+  type_id String?
+  ticketTypeName   String?
+  
+  createdAt DateTime? @default(now())
+}
