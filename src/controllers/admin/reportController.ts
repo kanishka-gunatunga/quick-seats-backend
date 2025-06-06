@@ -25,12 +25,19 @@ export const attendenceReport = async (req: Request, res: Response) => {
 
   const error = req.session.error;
   const success = req.session.success;
+  const formData = req.session.formData || {};
+  const validationErrors = req.session.validationErrors || {};
+
   req.session.error = undefined;
   req.session.success = undefined;
+  req.session.formData = undefined;
+  req.session.validationErrors = undefined;
 
   res.render('reports/attendence-report', {
     error,
     success,
     events,
+    formData,
+    validationErrors,
   });
 }; 
