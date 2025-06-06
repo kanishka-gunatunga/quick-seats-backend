@@ -1,95 +1,157 @@
 <%- include('../layouts/header.ejs') %>
 <div class="content-page">
-                <div class="content">
+    <div class="content">
 
-                    <div class="container-fluid">
+        <div class="container-fluid">
 
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h4 class="header-title">View Booking</h4>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="header-title">View Booking</h4>
 
-                                               
-                                                    <% if (success) { %>
-                                                        <div class="alert alert-success"><%= success %></div>
-                                                    <% } %>
-                                                    <% if (error) { %>
-                                                        <div class="alert alert-danger"><%= error %></div>
-                                                    <% } %>
+                            <% if (success) { %>
+                                <div class="alert alert-success"><%= success %></div>
+                            <% } %>
+                            <% if (error) { %>
+                                <div class="alert alert-danger"><%= error %></div>
+                            <% } %>
 
-                                                    <h4 class="mt-4">Order Details</h4>
-                                                    <div class="row">
-                                                       
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Date/Time</h5>
-                                                        <p><%= order.createdAt %></p>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Total</h5>
-                                                        <p><%= order.total %></p>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Status</h5>
-                                                            <p><%= order.status %></p>
-                                                        </div>
-                                                    </div>
-                                                        
-                                                        <h4 class="mt-4">Customer Details</h4>
-                                                    <div class="row">
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">First Name</h5>
-                                                            <p><%= order.first_name %></p>
-                                                        </div>
+                            <h4 class="mt-2">Order Details</h4>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Date/Time</h5>
+                                    <p><%= order.createdAt %></p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Total</h5>
+                                    <p>LKR <%= order.total %></p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Status</h5>
+                                    <p><%= order.status %></p>
+                                </div>
+                            </div>
 
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Last Name</h5>
-                                                            <p><%= order.last_name %></p>
-                                                        </div>
+                            <h4 class="mt-2">Customer Details</h4>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">First Name</h5>
+                                    <p><%= order.first_name %></p>
+                                </div>
 
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Email</h5>
-                                                            <p><%= order.email %></p>
-                                                        </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Last Name</h5>
+                                    <p><%= order.last_name %></p>
+                                </div>
 
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Contact Number</h5>
-                                                            <p><%= order.contact_number %></p>
-                                                        </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Email</h5>
+                                    <p><%= order.email %></p>
+                                </div>
 
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">NIC/Passport</h5>
-                                                            <p><%= order.nic_passport %></p>
-                                                        </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Contact Number</h5>
+                                    <p><%= order.contact_number %></p>
+                                </div>
 
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Country</h5>
-                                                            <p><%= order.country %></p>
-                                                        </div>
-                                                    </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">NIC/Passport</h5>
+                                    <p><%= order.nic_passport %></p>
+                                </div>
 
-                                                        <h4 class="mt-4">Event Details</h4>
-                                                    <div class="row">
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Event</h5>
-                                                            <p><%= order.event.name %></p>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Location</h5>
-                                                            <p><%= order.event.location %></p>
-                                                        </div>
-                                                        <div class="col-md-4 mb-3">
-                                                            <h5 class="font-600 m-b-5">Date/Time</h5>
-                                                            <p><%= order.event.start_date_time %></p>
-                                                        </div>
-                                                    </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Country</h5>
+                                    <p><%= order.country %></p>
+                                </div>
+                            </div>
 
-                                                   
-                                                
+                            <h4 class="mt-2">Event Details</h4>
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Event</h5>
+                                    <p><%= order.event.name %></p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Location</h5>
+                                    <p><%= order.event.location %></p>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <h5 class="font-600 m-b-5">Date/Time</h5>
+                                    <p><%= order.event.start_date_time %></p>
+                                </div>
+                            </div>
 
-                                    </div> </div> </div>
+                            <h4 class="mt-2">Booked Tickets</h4>
+
+                            <% if (order.seat_ids && order.seat_ids.length > 0) { %>
+                                <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
+                                <div class="row">
+                                    <% order.seat_ids.forEach(seatId => { %>
+                                        <div class="col-md-2 mb-3">
+                                            <div class="card">
+                                                <div class="card-body text-center">
+                                                    <h6><%= seatId %></h6>
+                                                    <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seatId %>? This action cannot be undone.');">
+                                                        <input type="hidden" name="seatId" value="<%= seatId %>">
+                                                        <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+
+                            <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
+                                <h5 class="mt-4">Tickets without Assigned Seats</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Ticket Type</th>
+                                                <th>Quantity Booked</th>
+                                                <th>Quantity Issued</th>
+                                                <th>Cancel Quantity</th>
+                                                <th>Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% order.tickets_without_seats.forEach(ticket => { %>
+                                                <tr>
+                                                    <td>
+                                                        <%
+                                                            const ticketType = event.ticket_types.find(tt => tt.id === ticket.ticket_type_id);
+                                                            if (ticketType) {
+                                                                %><%= ticketType.name %> (LKR <%= ticketType.price %>)<%
+                                                            } else {
+                                                                %>Unknown Ticket Type (ID: <%= ticket.ticket_type_id %>)<%
+                                                            }
+                                                        %>
+                                                    </td>
+                                                    <td><%= ticket.ticket_count %></td>
+                                                    <td><%= ticket.issued_count %></td>
+                                                    <td>
+                                                        <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST">
+                                                            <input type="hidden" name="ticketTypeId" value="<%= ticket.ticket_type_id %>">
+                                                            <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count %>" value="1" class="form-control" style="width: 100px; display: inline-block;">
+                                                    </td>
+                                                    <td>
+                                                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel Tickets</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <% } %>
+
                         </div>
-                        </div> </div>
-
+                    </div>
+                </div>
             </div>
-            <%- include('../layouts/footer.ejs') %>
+        </div>
+    </div>
+</div>
+<%- include('../layouts/footer.ejs') %>

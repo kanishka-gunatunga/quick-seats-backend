@@ -514,39 +514,83 @@ export const bookings = async (req: Request, res: Response) => {
   });
 }; 
 
-
 export const viewBooking = async (req: Request, res: Response) => {
   const order_id = req.params.id;
 
-  const order = await prisma.order.findUnique({
-    where: { id: parseInt(order_id as string, 10) },
-  });
-
-  if (!order) {
-    req.session.error = 'Order not found.';
-    req.session.save(() => {
-      return res.redirect('/bookings');
+  try {
+    const order = await prisma.order.findUnique({
+      where: { id: parseInt(order_id as string, 10) },
     });
-    return;
+
+    if (!order) {
+      req.session.error = 'Order not found.';
+      req.session.save(() => {
+        return res.redirect('/bookings');
+      });
+      return;
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: parseInt(order.event_id, 10) },
+    });
+
+    if (!event) {
+      req.session.error = 'Associated event not found for this order.';
+      req.session.save(() => {
+        return res.redirect('/bookings');
+      });
+      return;
+    }
+
+    // --- NEW: Fetch ticket types for the event separately ---
+    const ticketTypes = await prisma.ticketType.findMany({});
+    // --- END NEW ---
+
+    // Ensure tickets_without_seats is parsed if it's a JSON string
+    let ticketsWithoutSeats = order.tickets_without_seats;
+    if (typeof ticketsWithoutSeats === 'string') {
+      try {
+        ticketsWithoutSeats = JSON.parse(ticketsWithoutSeats);
+      } catch (e) {
+        console.error("Failed to parse tickets_without_seats:", e);
+        ticketsWithoutSeats = []; // Default to empty array on parse error
+      }
+    }
+
+    // Ensure seat_ids is parsed if it's a JSON string
+    let seatIds = order.seat_ids;
+    if (typeof seatIds === 'string') {
+      try {
+        seatIds = JSON.parse(seatIds);
+      } catch (e) {
+        console.error("Failed to parse seat_ids:", e);
+        seatIds = []; // Default to empty array on parse error
+      }
+    }
+
+    const orderWithParsedData = {
+      ...order,
+      event: event, 
+      tickets_without_seats: ticketsWithoutSeats,
+      seat_ids: seatIds,
+      ticketTypes: ticketTypes, 
+    };
+
+    const error = req.session.error;
+    const success = req.session.success;
+    req.session.error = undefined;
+    req.session.success = undefined;
+
+    res.render('booking/view-booking', {
+      error,
+      success,
+      order: orderWithParsedData,
+    });
+  } catch (err) {
+    console.error("Error fetching booking details:", err);
+    req.session.error = 'An error occurred while fetching booking details.';
+    req.session.save(() => {
+      res.redirect('/bookings');
+    });
   }
-
-  const event = await prisma.event.findUnique({
-    where: { id: parseInt(order.event_id, 10) }, 
-  });
-
-  const orderWithEvent = {
-    ...order,
-    event: event || null,
-  };
-
-  const error = req.session.error;
-  const success = req.session.success;
-  req.session.error = undefined;
-  req.session.success = undefined;
-
-  res.render('booking/view-booking', {
-    error,
-    success,
-    order: orderWithEvent, 
-  });
 };
