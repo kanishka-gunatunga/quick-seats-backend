@@ -19,15 +19,15 @@
 
                             <h4 class="mt-2">Order Details</h4>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Date/Time</h5>
                                     <p><%= order.createdAt %></p>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Total</h5>
                                     <p>LKR <%= order.total %></p>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Status</h5>
                                     <p><%= order.status %></p>
                                 </div>
@@ -35,32 +35,32 @@
 
                             <h4 class="mt-2">Customer Details</h4>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">First Name</h5>
                                     <p><%= order.first_name %></p>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Last Name</h5>
                                     <p><%= order.last_name %></p>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Email</h5>
                                     <p><%= order.email %></p>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Contact Number</h5>
                                     <p><%= order.contact_number %></p>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">NIC/Passport</h5>
                                     <p><%= order.nic_passport %></p>
                                 </div>
 
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Country</h5>
                                     <p><%= order.country %></p>
                                 </div>
@@ -68,15 +68,15 @@
 
                             <h4 class="mt-2">Event Details</h4>
                             <div class="row">
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Event</h5>
                                     <p><%= order.event.name %></p>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Location</h5>
                                     <p><%= order.event.location %></p>
                                 </div>
-                                <div class="col-md-4 mb-3">
+                                <div class="col-md-4 mb-2">
                                     <h5 class="font-600 m-b-5">Date/Time</h5>
                                     <p><%= order.event.start_date_time %></p>
                                 </div>
@@ -88,7 +88,7 @@
                             <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
                             <div class="row">
                                 <% order.seat_ids.forEach(seat => { %>
-                                    <div class="col-md-2 mb-3">
+                                    <div class="col-md-2 mb-2">
                                         <div class="card">
                                             <div class="card-body text-center">
                                                 <h6>Seat: <%= seat.seatId %></h6>
