@@ -105,61 +105,43 @@
                                 <% }) %>
                             </div>
                         <% } %>
-                            <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
-                                <h5 class="mt-4">Tickets without Assigned Seats</h5>
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-striped">
-                                        <thead>
+                           <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
+                            <h5>Tickets without Assigned Seats</h5>
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Ticket Type</th>
+                                            <th>Ordered Quantity</th>
+                                            <th>Issued Quantity</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% order.tickets_without_seats.forEach(ticket => { %>
                                             <tr>
-                                                <th>Ticket Type</th>
-                                                <th>Quantity Booked</th>
-                                                <th>Quantity Issued</th>
-                                                <th>Cancel Quantity</th>
-                                                <th>Action</th>
+                                                <td>
+                                                    <%= ticket.name %> (LKR <%= ticket.price %>)
+                                                </td>
+                                                <td><%= ticket.ticket_count %></td>
+                                                <td><%= ticket.issued_count %></td>
+                                                <td>
+                                                    <% if (ticket.ticket_count - ticket.issued_count > 0) { %>
+                                                        <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST" class="d-flex align-items-center">
+                                                            <input type="hidden" name="ticketTypeId" value="<%= ticket.ticket_type_id %>">
+                                                            <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count - ticket.issued_count %>" value="1" class="form-control me-2" style="width: 100px;">
+                                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel</button>
+                                                        </form>
+                                                    <% } else { %>
+                                                        <span class="text-muted">No cancellable tickets</span>
+                                                    <% } %>
+                                                </td>
                                             </tr>
-                                        </thead>
-                                        <tbody>
-                                          <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
-                                            <h5>Tickets without Assigned Seats</h5>
-                                            <div class="table-responsive">
-                                                <table class="table table-bordered table-hover">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Ticket Type</th>
-                                                            <th>Ordered Quantity</th>
-                                                            <th>Issued Quantity</th>
-                                                            <th>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <% order.tickets_without_seats.forEach(ticket => { %>
-                                                            <tr>
-                                                                <td>
-                                                                    <%= ticket.name %> (LKR <%= ticket.price %>)
-                                                                </td>
-                                                                <td><%= ticket.ticket_count %></td>
-                                                                <td><%= ticket.issued_count %></td>
-                                                                <td>
-                                                                    <% if (ticket.ticket_count - ticket.issued_count > 0) { %>
-                                                                        <form action="/bookings/cancel-tickets-without-seat/<%= order.id %>" method="POST" class="d-flex align-items-center">
-                                                                            <input type="hidden" name="ticketTypeId" value="<%= ticket.ticket_type_id %>">
-                                                                            <input type="number" name="cancelQuantity" min="1" max="<%= ticket.ticket_count - ticket.issued_count %>" value="1" class="form-control me-2" style="width: 100px;">
-                                                                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to cancel these tickets? This action cannot be undone.');">Cancel</button>
-                                                                        </form>
-                                                                    <% } else { %>
-                                                                        <span class="text-muted">No cancellable tickets</span>
-                                                                    <% } %>
-                                                                </td>
-                                                            </tr>
-                                                        <% }) %>
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        <% } %>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            <% } %>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <% } %>
 
                         </div>
                     </div>
