@@ -270,3 +270,127 @@ export const salesReport = async (req: Request, res: Response) => {
     validationErrors,
   });
 }; 
+
+
+
+export const salesReportPost = async (req: Request, res: Response) => {
+  // Define the schema for validation. All fields are optional as per the requirement.
+  const schema = z.object({
+    event: z.string().optional(),
+    start_date: z.string().optional(),
+    end_date: z.string().optional(),
+  });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    const errors = result.error.flatten().fieldErrors;
+    req.session.error = 'Please fix the errors below.';
+    req.session.formData = req.body;
+    req.session.validationErrors = errors;
+    return res.redirect('/sales-report');
+  }
+
+  const { event, start_date, end_date } = result.data;
+
+  try {
+    const whereClause: any = {};
+
+    // Build the where clause for Prisma query based on provided filters
+    if (event && event !== 'Select....') { // Assuming 'Select....' is the default option value
+      const eventId = Number(event);
+      if (!isNaN(eventId)) {
+        whereClause.event_id = eventId.toString(); // Assuming event_id in Order model is String
+      } else {
+        req.session.error = 'Invalid Event selection.';
+        req.session.formData = req.body;
+        req.session.validationErrors = { event: ['Invalid Event ID'] };
+        return res.redirect('/sales-report');
+      }
+    }
+
+    if (start_date || end_date) {
+      whereClause.createdAt = {};
+      if (start_date) {
+        whereClause.createdAt.gte = new Date(start_date);
+      }
+      if (end_date) {
+        // To include the entire end_date day, set the time to the end of the day
+        const endDateObj = new Date(end_date);
+        endDateObj.setHours(23, 59, 59, 999);
+        whereClause.createdAt.lte = endDateObj;
+      }
+    }
+
+    // Fetch orders based on the filters
+    const orders = await prisma.order.findMany({
+      where: whereClause,
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    if (orders.length === 0) {
+      req.session.error = 'No orders found for the selected criteria.';
+      req.session.formData = req.body;
+      return res.redirect('/sales-report');
+    }
+
+    // --- Generate Excel Report ---
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Orders Report');
+
+    // Define columns for the Excel sheet
+    worksheet.columns = [
+      { header: 'Order ID', key: 'id', width: 15 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'First Name', key: 'first_name', width: 20 },
+      { header: 'Last Name', key: 'last_name', width: 20 },
+      { header: 'Contact Number', key: 'contact_number', width: 20 },
+      { header: 'NIC/Passport', key: 'nic_passport', width: 20 },
+      { header: 'Country', key: 'country', width: 15 },
+      { header: 'Event ID', key: 'event_id', width: 15 },
+      { header: 'User ID', key: 'user_id', width: 15 },
+      { header: 'Sub Total', key: 'sub_total', width: 15 },
+      { header: 'Discount', key: 'discount', width: 15 },
+      { header: 'Total', key: 'total', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Order Date', key: 'createdAt', width: 20 },
+    ];
+
+    // Add rows to the worksheet
+    orders.forEach(order => {
+      worksheet.addRow({
+        id: order.id,
+        email: order.email,
+        first_name: order.first_name,
+        last_name: order.last_name,
+        contact_number: order.contact_number,
+        nic_passport: order.nic_passport,
+        country: order.country,
+        event_id: order.event_id,
+        user_id: order.user_id,
+        sub_total: order.sub_total,
+        discount: order.discount,
+        total: order.total,
+        status: order.status,
+        createdAt: order.createdAt ? order.createdAt.toLocaleString() : '', // Format date
+      });
+    });
+
+    // Set response headers for Excel download
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename=orders_report.xlsx');
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    console.error('Error generating orders report:', err);
+    req.session.error = 'An unexpected error occurred while generating the report.';
+    req.session.formData = req.body;
+    return res.redirect('/sales-report'); // Redirect back to the sales report page
+  } finally {
+    await prisma.$disconnect(); // Disconnect Prisma client
+  }
+};
