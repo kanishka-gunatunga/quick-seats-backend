@@ -271,7 +271,6 @@ export const salesReport = async (req: Request, res: Response) => {
   });
 }; 
 
-
 export const salesReportPost = async (req: Request, res: Response) => {
   // Define the schema for validation. All fields are optional as per the requirement.
   const schema = z.object({
@@ -359,7 +358,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
       { header: 'Order Date', key: 'createdAt', width: 20 },
     ];
 
-    // Fetch all ticket types once to use for lookup
+    // Fetch all ticket types once to use for lookup for tickets without seats
     const allTicketTypes = await prisma.ticketType.findMany({});
     const ticketTypeMap = new Map(allTicketTypes.map(type => [type.id, type.name]));
 
@@ -373,18 +372,21 @@ export const salesReportPost = async (req: Request, res: Response) => {
 
       // Process booked seats
       let bookedSeatsSummary = 'N/A';
+      // Ensure order.seat_ids is not null/undefined and is an array of strings
       if (order.seat_ids && Array.isArray(order.seat_ids) && eventDetails?.seats) {
         const seatIdsArray: string[] = order.seat_ids as string[]; // Cast to string array
-        const eventSeatsMap = new Map(
-          (eventDetails.seats as Array<any>).map((seat: any) => [seat.seatId, seat])
-        );
+        // eventDetails.seats is also a JSON array, cast it for iteration
+        const eventSeats: Array<any> = eventDetails.seats as Array<any>;
 
         const seatDetails: string[] = [];
-        for (const seatId of seatIdsArray) {
-          const seat = eventSeatsMap.get(seatId);
-          if (seat) {
-            const ticketTypeName = ticketTypeMap.get(seat.type_id) || 'Unknown Type';
-            seatDetails.push(`${seatId} (${ticketTypeName})`);
+        for (const bookedSeatId of seatIdsArray) {
+          // Find the matching seat in the eventDetails.seats array by seatId
+          const foundSeat = eventSeats.find((seat: any) => seat.seatId === bookedSeatId);
+
+          if (foundSeat) {
+            // Your eventDetails.seats already contains 'ticketTypeName' for each seat
+            const ticketTypeName = foundSeat.ticketTypeName || 'Unknown Type';
+            seatDetails.push(`${bookedSeatId} (${ticketTypeName})`);
           }
         }
         if (seatDetails.length > 0) {
@@ -396,12 +398,15 @@ export const salesReportPost = async (req: Request, res: Response) => {
 
       // Process tickets without seats
       let ticketsWithoutSeatsSummary = 'N/A';
+      // Ensure order.tickets_without_seats is not null/undefined and is an array
       if (order.tickets_without_seats && Array.isArray(order.tickets_without_seats)) {
-        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number }> =
-          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number }>;
+        // Cast to the expected array of objects for type safety
+        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number; issued_count: number }> =
+          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number; issued_count: number }>;
 
         const ticketDetails: string[] = [];
         for (const ticket of ticketsNoSeatsArray) {
+          // Use the pre-fetched ticketTypeMap to get the name from ticket_type_id
           const ticketTypeName = ticketTypeMap.get(ticket.ticket_type_id) || 'Unknown Type';
           ticketDetails.push(`${ticket.ticket_count} x ${ticketTypeName}`);
         }
