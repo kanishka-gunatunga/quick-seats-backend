@@ -381,7 +381,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
         const eventSeatsMap = new Map(
           (eventDetails.seats as Array<any>).map((seat: any) => [seat.seatId, seat])
         );
-
+        console.log('eventSeatsMap',eventSeatsMap);
         const seatDetails: string[] = [];
         for (const seatId of seatIdsArray) {
           const seat = eventSeatsMap.get(seatId);
