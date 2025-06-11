@@ -342,24 +342,30 @@ export const salesReportPost = async (req: Request, res: Response) => {
 
     // Define columns for the Excel sheet
     worksheet.columns = [
-      { header: 'Order ID', key: 'id', width: 15 },
-      { header: 'Email', key: 'email', width: 30 },
-      { header: 'First Name', key: 'first_name', width: 20 },
-      { header: 'Last Name', key: 'last_name', width: 20 },
-      { header: 'Contact Number', key: 'contact_number', width: 20 },
-      { header: 'NIC/Passport', key: 'nic_passport', width: 20 },
-      { header: 'Country', key: 'country', width: 15 },
-      { header: 'Event ID', key: 'event_id', width: 15 },
-      { header: 'User ID', key: 'user_id', width: 15 },
-      { header: 'Sub Total', key: 'sub_total', width: 15 },
-      { header: 'Discount', key: 'discount', width: 15 },
-      { header: 'Total', key: 'total', width: 15 },
-      { header: 'Status', key: 'status', width: 15 },
-      { header: 'Order Date', key: 'createdAt', width: 20 },
+      { header: 'Order ID', key: 'id'},
+      { header: 'Email', key: 'email'},
+      { header: 'First Name', key: 'first_name'},
+      { header: 'Last Name', key: 'last_name'},
+      { header: 'Contact Number', key: 'contact_number'},
+      { header: 'NIC/Passport', key: 'nic_passport'},
+      { header: 'Country', key: 'country'},
+      { header: 'Event', key: 'Event'},
+      { header: 'Customer', key: 'Customer'},
+      { header: 'Sub Total', key: 'sub_total'},
+      { header: 'Discount', key: 'discount'},
+      { header: 'Total', key: 'total'},
+      { header: 'Status', key: 'status'},
+      { header: 'Order Date', key: 'createdAt'},
     ];
 
-    // Add rows to the worksheet
-    orders.forEach(order => {
+    
+    for (const order of orders) { 
+      const eventDetails = await prisma.event.findUnique({
+        where: { id: Number(order.event_id) },
+      });
+      const user = await prisma.userDetails.findUnique({
+        where: { id: Number(order.user_id) },
+      });
       worksheet.addRow({
         id: order.id,
         email: order.email,
@@ -368,15 +374,15 @@ export const salesReportPost = async (req: Request, res: Response) => {
         contact_number: order.contact_number,
         nic_passport: order.nic_passport,
         country: order.country,
-        event_id: order.event_id,
-        user_id: order.user_id,
+        Event: eventDetails?.name, 
+        Customer: user?.first_name + ' ' + user?.last_name,
         sub_total: order.sub_total,
         discount: order.discount,
         total: order.total,
         status: order.status,
         createdAt: order.createdAt ? order.createdAt.toLocaleString() : '', // Format date
       });
-    });
+    }
 
     // Set response headers for Excel download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
