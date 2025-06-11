@@ -441,7 +441,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
         if (seatDetails.length > 0) {
           bookedSeatsSummary = seatDetails.join('; ');
         } else {
-          bookedSeatsSummary = 'No seats found for IDs';
+          bookedSeatsSummary = 'No seats found';
         }
       }
 
