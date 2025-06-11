@@ -22,7 +22,6 @@ interface Seat {
     ticketTypeName: string;
     type_id: number;
 }
-
 export const selectSeat = async (req: Request, res: Response) => {
     const schema = z.object({
         event_id: z.string().min(1, 'Event id is required'),
@@ -51,7 +50,24 @@ export const selectSeat = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
 
-        const seats: Array<{ seatId: string; status: string; [key: string]: any }> = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
+        // Ensure seats is an array by parsing if it's a string, or handling directly if it's already an array
+        let seats: Array<{ seatId: string; status: string; [key: string]: any }>;
+
+        if (typeof event.seats === 'string') {
+            try {
+                seats = JSON.parse(event.seats) as Array<{ seatId: string; status: string; [key: string]: any }>;
+            } catch (parseError) {
+                console.error("Failed to parse event.seats as JSON:", parseError);
+                return res.status(500).json({ message: "Failed to parse seat data from database." });
+            }
+        } else if (Array.isArray(event.seats)) {
+            seats = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
+        } else {
+            // Handle cases where event.seats is neither a string nor an array (e.g., an object not in array format)
+            console.error("event.seats is not a string or an array:", event.seats);
+            return res.status(500).json({ message: "Invalid format for seat data in database." });
+        }
+
 
         const seatIndex = seats.findIndex(seat => seat.seatId === seat_id);
 
@@ -70,7 +86,8 @@ export const selectSeat = async (req: Request, res: Response) => {
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
-                seats: seats,
+                // Ensure you're storing it back in the correct format (e.g., JSON string if that's how your DB expects it)
+                seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
             },
         });
 
@@ -84,7 +101,6 @@ export const selectSeat = async (req: Request, res: Response) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 };
-
 export const resetSeats = async (req: Request, res: Response) => {
     const schema = z.object({
         event_id: z.string().min(1, 'Event id is required'),
