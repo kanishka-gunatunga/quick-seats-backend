@@ -100,6 +100,7 @@ export const getAllEvents = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Failed to fetch events.' });
   }
 };
+
 export const getTrendingEvents = async (req: Request, res: Response) => {
   // 1. Fetch all active events
   const allActiveEvents = await prisma.event.findMany({
