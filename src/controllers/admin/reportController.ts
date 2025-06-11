@@ -270,7 +270,6 @@ export const salesReport = async (req: Request, res: Response) => {
     validationErrors,
   });
 }; 
-
 export const salesReportPost = async (req: Request, res: Response) => {
   // Define the schema for validation. All fields are optional as per the requirement.
   const schema = z.object({
@@ -299,7 +298,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
       const eventId = Number(event);
       if (!isNaN(eventId)) {
         // Assuming event_id in Order model is of type String but refers to an Int ID in Event model
-        whereClause.event_id = eventId.toString(); 
+        whereClause.event_id = eventId.toString();
       } else {
         req.session.error = 'Invalid Event selection.';
         req.session.formData = req.body;
@@ -372,17 +371,35 @@ export const salesReportPost = async (req: Request, res: Response) => {
       const user = await prisma.userDetails.findUnique({
         where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
       });
-       console.log('order.seat_ids',order.seat_ids);
-       console.log('eventDetails?.seats',eventDetails?.seats);
+
+      // --- CRUCIAL FIX: Safely parse eventDetails.seats if it's a JSON string ---
+      let processedEventSeats: any[] | null = null;
+      if (eventDetails?.seats) {
+        if (typeof eventDetails.seats === 'string') {
+          try {
+            processedEventSeats = JSON.parse(eventDetails.seats);
+          } catch (parseError) {
+            console.error('Error parsing eventDetails.seats JSON string:', parseError);
+            // If parsing fails, treat it as empty or invalid data
+            processedEventSeats = null;
+          }
+        } else if (Array.isArray(eventDetails.seats)) {
+          // If it's already an array, use it directly
+          processedEventSeats = eventDetails.seats;
+        }
+      }
+      // --- End CRUCIAL FIX ---
+
       // Process booked seats
       let bookedSeatsSummary = 'N/A';
-      // Ensure eventDetails and its seats property exist and are an array
-      if (order.seat_ids && Array.isArray(order.seat_ids) && eventDetails?.seats && Array.isArray(eventDetails.seats)) {
+      // Now, use processedEventSeats in your condition and subsequent logic
+      if (order.seat_ids && Array.isArray(order.seat_ids) && processedEventSeats && Array.isArray(processedEventSeats)) {
         const seatIdsArray: string[] = order.seat_ids as string[];
         const eventSeatsMap = new Map(
-          (eventDetails.seats as Array<any>).map((seat: any) => [seat.seatId, seat])
+          (processedEventSeats as Array<any>).map((seat: any) => [seat.seatId, seat])
         );
-        console.log('eventSeatsMap',eventSeatsMap);
+        // console.log('eventSeatsMap', eventSeatsMap); // You can re-enable this for debugging if needed
+
         const seatDetails: string[] = [];
         for (const seatId of seatIdsArray) {
           const seat = eventSeatsMap.get(seatId);
