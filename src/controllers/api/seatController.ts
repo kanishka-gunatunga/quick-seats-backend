@@ -137,7 +137,25 @@ export const resetSeats = async (req: Request, res: Response) => {
         if (!event || event.seats === null) {
             return res.status(404).json({ message: 'Event not found or has no seat data.' });
         }
-        let seats: Array<{ seatId: string; status: string; [key: string]: any }> = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
+
+        // --- Start of fix ---
+        let seats: Array<{ seatId: string; status: string; [key: string]: any }>;
+
+        if (typeof event.seats === 'string') {
+            try {
+                seats = JSON.parse(event.seats) as Array<{ seatId: string; status: string; [key: string]: any }>;
+            } catch (parseError) {
+                console.error("Failed to parse event.seats as JSON in resetSeats:", parseError);
+                return res.status(500).json({ message: "Failed to parse seat data from database." });
+            }
+        } else if (Array.isArray(event.seats)) {
+            seats = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
+        } else {
+            console.error("event.seats is not a string or an array in resetSeats:", event.seats);
+            return res.status(500).json({ message: "Invalid format for seat data in database." });
+        }
+        // --- End of fix ---
+
         const updatedSeatIds: string[] = [];
         const notFoundSeatIds: string[] = [];
 
@@ -158,11 +176,12 @@ export const resetSeats = async (req: Request, res: Response) => {
                 notFoundSeatIds: notFoundSeatIds,
             });
         }
-        
+
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
-                seats: seats,
+                // Ensure you're storing it back in the correct format (e.g., JSON string if that's how your DB expects it)
+                seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
             },
         });
 
