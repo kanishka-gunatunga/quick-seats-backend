@@ -372,7 +372,39 @@ export const salesReportPost = async (req: Request, res: Response) => {
         where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
       });
 
-      // --- CRUCIAL FIX: Safely parse eventDetails.seats if it's a JSON string ---
+      // --- CRUCIAL FIX: Safely parse ALL JSON fields that are arrays ---
+
+      // Process order.seat_ids
+      let parsedOrderSeatIds: string[] | null = null;
+      if (order.seat_ids) {
+        if (typeof order.seat_ids === 'string') {
+          try {
+            parsedOrderSeatIds = JSON.parse(order.seat_ids);
+          } catch (parseError) {
+            console.error('Error parsing order.seat_ids JSON string:', parseError);
+            parsedOrderSeatIds = null;
+          }
+        } else if (Array.isArray(order.seat_ids)) {
+          parsedOrderSeatIds = order.seat_ids as string[];
+        }
+      }
+
+      // Process order.tickets_without_seats
+      let parsedTicketsWithoutSeats: Array<{ ticket_type_id: number; ticket_count: number }> | null = null;
+      if (order.tickets_without_seats) {
+        if (typeof order.tickets_without_seats === 'string') {
+          try {
+            parsedTicketsWithoutSeats = JSON.parse(order.tickets_without_seats);
+          } catch (parseError) {
+            console.error('Error parsing order.tickets_without_seats JSON string:', parseError);
+            parsedTicketsWithoutSeats = null;
+          }
+        } else if (Array.isArray(order.tickets_without_seats)) {
+          parsedTicketsWithoutSeats = order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number }>;
+        }
+      }
+
+      // Process eventDetails.seats
       let processedEventSeats: any[] | null = null;
       if (eventDetails?.seats) {
         if (typeof eventDetails.seats === 'string') {
@@ -380,25 +412,23 @@ export const salesReportPost = async (req: Request, res: Response) => {
             processedEventSeats = JSON.parse(eventDetails.seats);
           } catch (parseError) {
             console.error('Error parsing eventDetails.seats JSON string:', parseError);
-            // If parsing fails, treat it as empty or invalid data
             processedEventSeats = null;
           }
         } else if (Array.isArray(eventDetails.seats)) {
-          // If it's already an array, use it directly
           processedEventSeats = eventDetails.seats;
         }
       }
       // --- End CRUCIAL FIX ---
 
+
       // Process booked seats
       let bookedSeatsSummary = 'N/A';
-      // Now, use processedEventSeats in your condition and subsequent logic
-      if (order.seat_ids && Array.isArray(order.seat_ids) && processedEventSeats && Array.isArray(processedEventSeats)) {
-        const seatIdsArray: string[] = order.seat_ids as string[];
+      // Use parsedOrderSeatIds and processedEventSeats in the condition
+      if (parsedOrderSeatIds && Array.isArray(parsedOrderSeatIds) && processedEventSeats && Array.isArray(processedEventSeats)) {
+        const seatIdsArray: string[] = parsedOrderSeatIds; // Use the parsed array
         const eventSeatsMap = new Map(
           (processedEventSeats as Array<any>).map((seat: any) => [seat.seatId, seat])
         );
-        // console.log('eventSeatsMap', eventSeatsMap); // You can re-enable this for debugging if needed
 
         const seatDetails: string[] = [];
         for (const seatId of seatIdsArray) {
@@ -417,12 +447,10 @@ export const salesReportPost = async (req: Request, res: Response) => {
 
       // Process tickets without seats
       let ticketsWithoutSeatsSummary = 'N/A';
-      if (order.tickets_without_seats && Array.isArray(order.tickets_without_seats)) {
-        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number }> =
-          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number }>;
-
+      // Use parsedTicketsWithoutSeats in the condition
+      if (parsedTicketsWithoutSeats && Array.isArray(parsedTicketsWithoutSeats)) {
         const ticketDetails: string[] = [];
-        for (const ticket of ticketsNoSeatsArray) {
+        for (const ticket of parsedTicketsWithoutSeats) { // Use the parsed array
           const ticketTypeName = ticketTypeMap.get(ticket.ticket_type_id) || 'Unknown Type';
           ticketDetails.push(`${ticket.ticket_count} x ${ticketTypeName}`);
         }
@@ -461,10 +489,10 @@ export const salesReportPost = async (req: Request, res: Response) => {
     res.end();
 
   } catch (err) {
-    console.error('Error generating orders report:', err);
+    console.error('Error generating sales report:', err);
     req.session.error = 'An unexpected error occurred while generating the report.';
     req.session.formData = req.body;
-    return res.redirect('/sales-report'); // Redirect back to the sales report page
+    return res.redirect('/sales-report');
   } finally {
     await prisma.$disconnect(); // Disconnect Prisma client
   }
