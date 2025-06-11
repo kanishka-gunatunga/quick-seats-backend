@@ -272,6 +272,7 @@ export const salesReport = async (req: Request, res: Response) => {
 }; 
 
 export const salesReportPost = async (req: Request, res: Response) => {
+  // Define the schema for validation. All fields are optional as per the requirement.
   const schema = z.object({
     event: z.string().optional(),
     start_date: z.string().optional(),
@@ -293,10 +294,12 @@ export const salesReportPost = async (req: Request, res: Response) => {
   try {
     const whereClause: any = {};
 
-    if (event && event !== 'Select....') {
+    // Build the where clause for Prisma query based on provided filters
+    if (event && event !== 'Select....') { // Assuming 'Select....' is the default option value
       const eventId = Number(event);
       if (!isNaN(eventId)) {
-        whereClause.event_id = eventId.toString();
+        // Assuming event_id in Order model is of type String but refers to an Int ID in Event model
+        whereClause.event_id = eventId.toString(); 
       } else {
         req.session.error = 'Invalid Event selection.';
         req.session.formData = req.body;
@@ -311,12 +314,14 @@ export const salesReportPost = async (req: Request, res: Response) => {
         whereClause.createdAt.gte = new Date(start_date);
       }
       if (end_date) {
+        // To include the entire end_date day, set the time to the end of the day
         const endDateObj = new Date(end_date);
         endDateObj.setHours(23, 59, 59, 999);
         whereClause.createdAt.lte = endDateObj;
       }
     }
 
+    // Fetch orders based on the filters without including relations
     const orders = await prisma.order.findMany({
       where: whereClause,
       orderBy: {
@@ -333,6 +338,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Orders Report');
 
+    // Define columns for the Excel sheet
     worksheet.columns = [
       { header: 'Order ID', key: 'id', width: 15 },
       { header: 'Email', key: 'email', width: 30 },
@@ -343,8 +349,8 @@ export const salesReportPost = async (req: Request, res: Response) => {
       { header: 'Country', key: 'country', width: 15 },
       { header: 'Event', key: 'Event', width: 25 },
       { header: 'Customer', key: 'Customer', width: 25 },
-      { header: 'Booked Seats', key: 'booked_seats', width: 40 },
-      { header: 'Tickets Without Seats', key: 'tickets_without_seats_summary', width: 40 },
+      { header: 'Booked Seats', key: 'booked_seats', width: 40 }, // New column for seats
+      { header: 'Tickets Without Seats', key: 'tickets_without_seats_summary', width: 40 }, // New column for tickets without seats
       { header: 'Sub Total', key: 'sub_total', width: 15 },
       { header: 'Discount', key: 'discount', width: 15 },
       { header: 'Total', key: 'total', width: 15 },
@@ -352,87 +358,61 @@ export const salesReportPost = async (req: Request, res: Response) => {
       { header: 'Order Date', key: 'createdAt', width: 20 },
     ];
 
+    // Fetch all ticket types once to use for lookup
     const allTicketTypes = await prisma.ticketType.findMany({});
     const ticketTypeMap = new Map(allTicketTypes.map(type => [type.id, type.name]));
-    console.log('--- Fetched Ticket Types Map ---');
-    console.log(ticketTypeMap); // Verify ticket types are loaded
 
     for (const order of orders) {
-      console.log(`\n--- Processing Order ID: ${order.id} ---`);
-      console.log('Order event_id:', order.event_id);
-      console.log('Order user_id:', order.user_id);
-      console.log('Order seat_ids:', order.seat_ids);
-      console.log('Order tickets_without_seats:', order.tickets_without_seats);
-
-
+      // Manually fetch event details for each order
       const eventDetails = await prisma.event.findUnique({
-        where: { id: Number(order.event_id) },
+        where: { id: Number(order.event_id) }, // Convert event_id to a number for lookup
       });
-      console.log('Fetched eventDetails for order:', eventDetails?.id ? eventDetails.name : 'Not Found');
-      console.log('Event Seats from eventDetails:', eventDetails?.seats);
 
+      // Manually fetch user details for each order
       const user = await prisma.userDetails.findUnique({
-        where: { id: Number(order.user_id) },
+        where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
       });
-      console.log('Fetched userDetails for order:', user?.id ? user.first_name : 'Not Found');
 
-
-      // --- Process booked seats ---
+      // Process booked seats
       let bookedSeatsSummary = 'N/A';
-      // Type guard for order.seat_ids and eventDetails.seats
+      // Ensure eventDetails and its seats property exist and are an array
       if (order.seat_ids && Array.isArray(order.seat_ids) && eventDetails?.seats && Array.isArray(eventDetails.seats)) {
-        const seatIdsArray: string[] = order.seat_ids as string[]; // Explicitly cast if Prisma's Json type is problematic
-        const eventSeats: Array<any> = eventDetails.seats as Array<any>; // Explicitly cast
-
-        console.log('seatIdsArray (from order):', seatIdsArray);
-        console.log('eventSeats (from eventDetails):', eventSeats);
+        const seatIdsArray: string[] = order.seat_ids as string[];
+        const eventSeatsMap = new Map(
+          (eventDetails.seats as Array<any>).map((seat: any) => [seat.seatId, seat])
+        );
 
         const seatDetails: string[] = [];
-        for (const bookedSeatId of seatIdsArray) {
-          // Find the matching seat in the eventDetails.seats array by seatId
-          const foundSeat = eventSeats.find((seat: any) => seat.seatId === bookedSeatId);
-          console.log(`Searching for seatId ${bookedSeatId}:`, foundSeat ? 'Found' : 'Not Found');
-
-          if (foundSeat) {
-            // Your eventDetails.seats already contains 'ticketTypeName' for each seat
-            const ticketTypeName = foundSeat.ticketTypeName || 'Unknown Type (from seat)';
-            seatDetails.push(`${bookedSeatId} (${ticketTypeName})`);
+        for (const seatId of seatIdsArray) {
+          const seat = eventSeatsMap.get(seatId);
+          if (seat) {
+            const ticketTypeName = ticketTypeMap.get(seat.type_id) || 'Unknown Type';
+            seatDetails.push(`${seatId} (${ticketTypeName})`);
           }
         }
         if (seatDetails.length > 0) {
           bookedSeatsSummary = seatDetails.join('; ');
         } else {
-          bookedSeatsSummary = 'No seats found for provided IDs in event details'; // More specific message
+          bookedSeatsSummary = 'No seats found for IDs';
         }
-        console.log('Final bookedSeatsSummary:', bookedSeatsSummary);
-      } else {
-          console.log('Condition for booked_seats not met. order.seat_ids:', order.seat_ids, 'eventDetails?.seats:', eventDetails?.seats);
       }
 
-      // --- Process tickets without seats ---
+      // Process tickets without seats
       let ticketsWithoutSeatsSummary = 'N/A';
-      // Type guard for order.tickets_without_seats
       if (order.tickets_without_seats && Array.isArray(order.tickets_without_seats)) {
-        // Cast to the expected array of objects for type safety
-        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number; issued_count: number }> =
-          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number; issued_count: number }>;
-        
-        console.log('ticketsNoSeatsArray (from order):', ticketsNoSeatsArray);
+        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number }> =
+          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number }>;
 
         const ticketDetails: string[] = [];
         for (const ticket of ticketsNoSeatsArray) {
-          // Use the pre-fetched ticketTypeMap to get the name from ticket_type_id
-          const ticketTypeName = ticketTypeMap.get(ticket.ticket_type_id) || 'Unknown Type (from map)';
+          const ticketTypeName = ticketTypeMap.get(ticket.ticket_type_id) || 'Unknown Type';
           ticketDetails.push(`${ticket.ticket_count} x ${ticketTypeName}`);
         }
         if (ticketDetails.length > 0) {
           ticketsWithoutSeatsSummary = ticketDetails.join('; ');
         } else {
-          ticketsWithoutSeatsSummary = 'No tickets without seats found in order data'; // More specific message
+          ticketsWithoutSeatsSummary = 'No tickets without seats found';
         }
-        console.log('Final ticketsWithoutSeatsSummary:', ticketsWithoutSeatsSummary);
-      } else {
-          console.log('Condition for tickets_without_seats not met. order.tickets_without_seats:', order.tickets_without_seats);
       }
 
       worksheet.addRow({
@@ -443,8 +423,8 @@ export const salesReportPost = async (req: Request, res: Response) => {
         contact_number: order.contact_number,
         nic_passport: order.nic_passport,
         country: order.country,
-        Event: eventDetails?.name,
-        Customer: user?.first_name + ' ' + user?.last_name,
+        Event: eventDetails?.name, // Use optional chaining in case eventDetails is null
+        Customer: user ? `${user.first_name} ${user.last_name}` : 'N/A', // Use ternary for customer name
         booked_seats: bookedSeatsSummary,
         tickets_without_seats_summary: ticketsWithoutSeatsSummary,
         sub_total: order.sub_total,
@@ -455,6 +435,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
       });
     }
 
+    // Set response headers for Excel download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=orders_report.xlsx');
 
@@ -465,8 +446,8 @@ export const salesReportPost = async (req: Request, res: Response) => {
     console.error('Error generating orders report:', err);
     req.session.error = 'An unexpected error occurred while generating the report.';
     req.session.formData = req.body;
-    return res.redirect('/sales-report');
+    return res.redirect('/sales-report'); // Redirect back to the sales report page
   } finally {
-    await prisma.$disconnect();
+    await prisma.$disconnect(); // Disconnect Prisma client
   }
 };
