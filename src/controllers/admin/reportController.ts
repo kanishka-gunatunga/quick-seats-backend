@@ -270,6 +270,7 @@ export const salesReport = async (req: Request, res: Response) => {
     validationErrors,
   });
 }; 
+
 export const salesReportPost = async (req: Request, res: Response) => {
   // Define the schema for validation. All fields are optional as per the requirement.
   const schema = z.object({
@@ -360,6 +361,7 @@ export const salesReportPost = async (req: Request, res: Response) => {
     // Fetch all ticket types once to use for lookup
     const allTicketTypes = await prisma.ticketType.findMany({});
     const ticketTypeMap = new Map(allTicketTypes.map(type => [type.id, type.name]));
+    let overallTotal = 0;
 
     for (const order of orders) {
       // Manually fetch event details for each order
@@ -479,8 +481,18 @@ export const salesReportPost = async (req: Request, res: Response) => {
         status: order.status,
         createdAt: order.createdAt ? order.createdAt.toLocaleString() : '', // Format date
       });
+
+      overallTotal += order.total;
     }
 
+    worksheet.addRow({}); // Add an empty row for spacing
+    worksheet.addRow({
+      id: 'Overall Total:',
+      total: overallTotal,
+    });
+    worksheet.getCell('B' + worksheet.rowCount).font = { bold: true }; // Make "Overall Total" bold
+    worksheet.getCell('O' + worksheet.rowCount).font = { bold: true }; // Make the total value bold
+    
     // Set response headers for Excel download
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', 'attachment; filename=orders_report.xlsx');
