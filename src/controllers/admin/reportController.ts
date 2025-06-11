@@ -372,7 +372,8 @@ export const salesReportPost = async (req: Request, res: Response) => {
       const user = await prisma.userDetails.findUnique({
         where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
       });
-
+       console.log('order.seat_ids',order.seat_ids);
+       console.log('eventDetails?.seats',eventDetails?.seats);
       // Process booked seats
       let bookedSeatsSummary = 'N/A';
       // Ensure eventDetails and its seats property exist and are an array
