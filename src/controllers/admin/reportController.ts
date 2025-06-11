@@ -248,3 +248,25 @@ export const attendenceReportPost = async (req: Request, res: Response) => {
     return res.redirect('/attendence-report');
   }
 };
+
+export const salesReport = async (req: Request, res: Response) => {
+  const events = await prisma.event.findMany({ });
+
+  const error = req.session.error;
+  const success = req.session.success;
+  const formData = req.session.formData || {};
+  const validationErrors = req.session.validationErrors || {};
+
+  req.session.error = undefined;
+  req.session.success = undefined;
+  req.session.formData = undefined;
+  req.session.validationErrors = undefined;
+
+  res.render('reports/sales-report', {
+    error,
+    success,
+    events,
+    formData,
+    validationErrors,
+  });
+}; 

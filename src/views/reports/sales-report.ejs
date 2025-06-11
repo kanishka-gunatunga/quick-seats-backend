@@ -1,0 +1,63 @@
+<%- include('../layouts/header.ejs') %>
+<style>
+svg{
+width: 100%;
+height: auto; 
+}
+</style>
+<div class="content-page">
+                <div class="content">
+
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Sales Report</h4>
+
+                                                <form class="mt-4" method="POST" action="/attendence-report">
+                                                    <% if (success) { %>
+                                                        <div class="alert alert-success"><%= success %></div>
+                                                    <% } %>
+                                                    <% if (error) { %>
+                                                        <div class="alert alert-danger"><%= error %></div>
+                                                    <% } %>
+
+                                                    <div class="row">
+                                                         <div class="col-md-4 mb-3">
+                                                            <label class="form-label">Start Date</label>
+                                                           <input type="date"  name="start_date" class="form-control " placeholder="Start Date " >
+                                                            <% if (validationErrors?.start_date) { %>
+                                                                <small class="text-danger"><%= validationErrors.start_date[0] %></small>
+                                                            <% } %>
+                                                        </div>
+                                                         <div class="col-md-4 mb-3">
+                                                            <label class="form-label">End Date</label>
+                                                           <input type="date"  name="end_date" class="form-control " placeholder="End Date " >
+                                                            <% if (validationErrors?.end_date) { %>
+                                                                <small class="text-danger"><%= validationErrors.end_date[0] %></small>
+                                                            <% } %>
+                                                        </div>
+                                                        <div class="col-md-4 mb-3">
+                                                            <label class="form-label">Event</label>
+                                                            <select class="form-control" data-toggle="select2" name="event" id="eventSelect" data-width="100%">
+                                                                    <option>Select....</option>
+                                                                    <% events.forEach(event => { %>
+                                                                        <option value="<%= event.id %>" ><%= event.name %></option>
+                                                                    <% }); %>
+                                                            </select>
+                                                            <% if (validationErrors?.event) { %>
+                                                                <small class="text-danger"><%= validationErrors.event[0] %></small>
+                                                            <% } %>
+                                                        </div>
+                                                    </div> 
+                                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                                </form>
+
+                                    </div> </div> </div>
+                        </div>
+                        </div> </div>
+
+            </div>
+            <%- include('../layouts/footer.ejs') %>
