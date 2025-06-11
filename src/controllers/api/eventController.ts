@@ -244,7 +244,6 @@ export const getUpcomingEvents = async (req: Request, res: Response) => {
     events:enhancedEvents
   });
 };
-
 export const getEventDetails = async (req: Request, res: Response) => {
   try {
     const slug = req.params.slug;
@@ -256,6 +255,12 @@ export const getEventDetails = async (req: Request, res: Response) => {
     if (!event) {
       return res.status(404).json({ error: 'Event not found' });
     }
+
+    // --- Debugging: Check raw data types and values ---
+    console.log('Raw event.artist_details:', event.artist_details, typeof event.artist_details);
+    console.log('Raw event.ticket_details:', event.ticket_details, typeof event.ticket_details);
+    // --- End Debugging ---
+
 
     const artistIds: number[] = Array.isArray(event.artist_details)
       ? event.artist_details.map(Number)
@@ -273,11 +278,31 @@ export const getEventDetails = async (req: Request, res: Response) => {
       };
     });
 
-    const ticketDetails: any[] = Array.isArray(event.ticket_details)
-      ? event.ticket_details
-      : [];
+    let ticketDetails: any[] = [];
+    const rawTicketDetails = event.ticket_details; // Store the raw value
 
-    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId);
+    // Robustly handle ticket_details, assuming it might be a JSON string or an array
+    if (typeof rawTicketDetails === 'string') {
+      try {
+        const parsed = JSON.parse(rawTicketDetails);
+        if (Array.isArray(parsed)) {
+          ticketDetails = parsed;
+        } else {
+          console.warn('ticket_details is a string but not a JSON array:', rawTicketDetails);
+        }
+      } catch (e) {
+        console.error('Error parsing event.ticket_details as JSON string:', e);
+        // If it fails to parse, assume it's not a valid JSON array string
+      }
+    } else if (Array.isArray(rawTicketDetails)) {
+      ticketDetails = rawTicketDetails;
+    } else if (rawTicketDetails !== null && rawTicketDetails !== undefined) {
+        console.warn('event.ticket_details is neither an array nor a string:', rawTicketDetails);
+    }
+    // If it's null/undefined or an invalid format, ticketDetails remains []
+
+    const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId).filter(id => id !== undefined); // Ensure valid IDs
+
     const ticketTypes = await prisma.ticketType.findMany({
       where: { id: { in: ticketTypeIds } },
     });
@@ -300,9 +325,10 @@ export const getEventDetails = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching event details:', error);
     return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    await prisma.$disconnect();
   }
 };
-
 
 export const getEventSeats = async (req: Request, res: Response) => {
   try {
