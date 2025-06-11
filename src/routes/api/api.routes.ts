@@ -1,7 +1,7 @@
 import express from 'express';
 import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,
 validateOtp, resetPassword,resendOtp } from '../../controllers/api/userController';
-import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats } from '../../controllers/api/eventController';
+import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout} from '../../controllers/api/checkoutController';
 import { selectSeat,resetSeats} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
@@ -25,6 +25,8 @@ router.get('/get-all-events', getAllEvents);
 router.get('/get-trending-events', getTrendingEvents);
 router.get('/get-upcoming-events', getUpcomingEvents);
 router.get('/get-event-details/:slug', getEventDetails);
+router.get('/get-locations', getLocations);
+router.get('/get-artists', getArtists);
 
 //Booking
 router.post('/select-seat', selectSeat);

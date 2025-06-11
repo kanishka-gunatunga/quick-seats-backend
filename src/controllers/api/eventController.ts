@@ -293,3 +293,34 @@ export const getEventSeats = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+
+export const getLocations = async (req: Request, res: Response) => {
+  try {
+  
+    const locations = [
+      "BMICH",
+      "Nelum Pokuna",
+      "Musaeus College",
+      "Bishop Collage"
+    ];
+    return res.json(locations);
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const getArtists = async (req: Request, res: Response) => {
+  try {
+  
+    const artists = await prisma.artist.findMany({
+      where: { status : 'active' },
+    });
+
+    return res.json(artists);
+  } catch (error) {
+    console.error('Error fetching event details:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
