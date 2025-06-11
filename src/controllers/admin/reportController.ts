@@ -272,7 +272,6 @@ export const salesReport = async (req: Request, res: Response) => {
 }; 
 
 
-
 export const salesReportPost = async (req: Request, res: Response) => {
   // Define the schema for validation. All fields are optional as per the requirement.
   const schema = z.object({
@@ -342,30 +341,77 @@ export const salesReportPost = async (req: Request, res: Response) => {
 
     // Define columns for the Excel sheet
     worksheet.columns = [
-      { header: 'Order ID', key: 'id'},
-      { header: 'Email', key: 'email'},
-      { header: 'First Name', key: 'first_name'},
-      { header: 'Last Name', key: 'last_name'},
-      { header: 'Contact Number', key: 'contact_number'},
-      { header: 'NIC/Passport', key: 'nic_passport'},
-      { header: 'Country', key: 'country'},
-      { header: 'Event', key: 'Event'},
-      { header: 'Customer', key: 'Customer'},
-      { header: 'Sub Total', key: 'sub_total'},
-      { header: 'Discount', key: 'discount'},
-      { header: 'Total', key: 'total'},
-      { header: 'Status', key: 'status'},
-      { header: 'Order Date', key: 'createdAt'},
+      { header: 'Order ID', key: 'id', width: 15 },
+      { header: 'Email', key: 'email', width: 30 },
+      { header: 'First Name', key: 'first_name', width: 20 },
+      { header: 'Last Name', key: 'last_name', width: 20 },
+      { header: 'Contact Number', key: 'contact_number', width: 20 },
+      { header: 'NIC/Passport', key: 'nic_passport', width: 20 },
+      { header: 'Country', key: 'country', width: 15 },
+      { header: 'Event', key: 'Event', width: 25 },
+      { header: 'Customer', key: 'Customer', width: 25 },
+      { header: 'Booked Seats', key: 'booked_seats', width: 40 }, // New column for seats
+      { header: 'Tickets Without Seats', key: 'tickets_without_seats_summary', width: 40 }, // New column for tickets without seats
+      { header: 'Sub Total', key: 'sub_total', width: 15 },
+      { header: 'Discount', key: 'discount', width: 15 },
+      { header: 'Total', key: 'total', width: 15 },
+      { header: 'Status', key: 'status', width: 15 },
+      { header: 'Order Date', key: 'createdAt', width: 20 },
     ];
 
-    
-    for (const order of orders) { 
+    // Fetch all ticket types once to use for lookup
+    const allTicketTypes = await prisma.ticketType.findMany({});
+    const ticketTypeMap = new Map(allTicketTypes.map(type => [type.id, type.name]));
+
+    for (const order of orders) {
       const eventDetails = await prisma.event.findUnique({
         where: { id: Number(order.event_id) },
       });
       const user = await prisma.userDetails.findUnique({
         where: { id: Number(order.user_id) },
       });
+
+      // Process booked seats
+      let bookedSeatsSummary = 'N/A';
+      if (order.seat_ids && Array.isArray(order.seat_ids) && eventDetails?.seats) {
+        const seatIdsArray: string[] = order.seat_ids as string[]; // Cast to string array
+        const eventSeatsMap = new Map(
+          (eventDetails.seats as Array<any>).map((seat: any) => [seat.seatId, seat])
+        );
+
+        const seatDetails: string[] = [];
+        for (const seatId of seatIdsArray) {
+          const seat = eventSeatsMap.get(seatId);
+          if (seat) {
+            const ticketTypeName = ticketTypeMap.get(seat.type_id) || 'Unknown Type';
+            seatDetails.push(`${seatId} (${ticketTypeName})`);
+          }
+        }
+        if (seatDetails.length > 0) {
+          bookedSeatsSummary = seatDetails.join('; ');
+        } else {
+          bookedSeatsSummary = 'No seats found for IDs';
+        }
+      }
+
+      // Process tickets without seats
+      let ticketsWithoutSeatsSummary = 'N/A';
+      if (order.tickets_without_seats && Array.isArray(order.tickets_without_seats)) {
+        const ticketsNoSeatsArray: Array<{ ticket_type_id: number; ticket_count: number }> =
+          order.tickets_without_seats as Array<{ ticket_type_id: number; ticket_count: number }>;
+
+        const ticketDetails: string[] = [];
+        for (const ticket of ticketsNoSeatsArray) {
+          const ticketTypeName = ticketTypeMap.get(ticket.ticket_type_id) || 'Unknown Type';
+          ticketDetails.push(`${ticket.ticket_count} x ${ticketTypeName}`);
+        }
+        if (ticketDetails.length > 0) {
+          ticketsWithoutSeatsSummary = ticketDetails.join('; ');
+        } else {
+          ticketsWithoutSeatsSummary = 'No tickets without seats found';
+        }
+      }
+
       worksheet.addRow({
         id: order.id,
         email: order.email,
@@ -374,8 +420,10 @@ export const salesReportPost = async (req: Request, res: Response) => {
         contact_number: order.contact_number,
         nic_passport: order.nic_passport,
         country: order.country,
-        Event: eventDetails?.name, 
+        Event: eventDetails?.name,
         Customer: user?.first_name + ' ' + user?.last_name,
+        booked_seats: bookedSeatsSummary,
+        tickets_without_seats_summary: ticketsWithoutSeatsSummary,
         sub_total: order.sub_total,
         discount: order.discount,
         total: order.total,
