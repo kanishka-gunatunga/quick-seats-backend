@@ -661,12 +661,10 @@ export const viewBooking = async (req: Request, res: Response) => {
 };
 export const cancelSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
-    // Expecting an array of objects for canceledSeats from the hidden input
     const { canceledSeats: canceledSeatsString } = req.body;
     let canceledSeats: Array<{ seatId: string; type_id: string; ticketTypeName: string; price: number; color?: string }>;
 
     try {
-        // Parse the JSON string from the hidden input. This should always be an array of objects.
         canceledSeats = JSON.parse(canceledSeatsString);
     } catch (e) {
         console.error("Failed to parse canceledSeats from request body:", e);
@@ -701,7 +699,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
         }
 
         // --- Start Robust Parsing for order.seat_ids ---
-        // Ensure orderSeatDetails is always an array of objects with 'seatId'
         let orderSeatDetails: Array<{ seatId: string; type_id?: string; ticketTypeName?: string; price?: number; color?: string }> = [];
         if (typeof order.seat_ids === 'string') {
             try {
@@ -709,39 +706,31 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 if (Array.isArray(parsed)) {
                     orderSeatDetails = parsed.map((seat: any) => {
                         if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
-                            return seat; // Already an object with seatId
+                            return seat;
                         } else if (typeof seat === 'string') {
-                            // If it's a string, convert to minimal object
                             return { seatId: seat };
                         }
-                        return {}; // Fallback for unexpected types
-                    }).filter(seat => 'seatId' in seat); // Filter out objects without seatId
+                        return {};
+                    }).filter(seat => 'seatId' in seat);
                 }
             } catch (e) {
                 console.warn("Failed to parse order.seat_ids as JSON string. Attempting direct assignment if it's a string array:", e);
-                // If parsing as JSON string fails, it might be a direct string array if Prisma mapping changed.
-                // This 'catch' might not be strictly needed if `Array.isArray(order.seat_ids)` handles it below.
             }
         } else if (Array.isArray(order.seat_ids)) {
-            // This handles cases where Prisma already returns an array (e.g., Json[] without stringify)
             orderSeatDetails = order.seat_ids.map((seat: any) => {
                 if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
-                    return seat; // Already an object with seatId
+                    return seat;
                 } else if (typeof seat === 'string') {
-                    // If it's a string, convert to minimal object
                     return { seatId: seat };
                 }
-                return {}; // Fallback for unexpected types
-            }).filter(seat => 'seatId' in seat); // Filter out objects without seatId
+                return {};
+            }).filter(seat => 'seatId' in seat);
         }
-        // Ensure orderSeatDetails is an array for safety
         if (!Array.isArray(orderSeatDetails)) {
             orderSeatDetails = [];
         }
         // --- End Robust Parsing for order.seat_ids ---
 
-
-        // Get the event associated with the order to update seat status
         const event = await prisma.event.findUnique({
             where: { id: parseInt(order.event_id, 10) },
         });
@@ -755,7 +744,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
         }
 
         // --- Start Robust Parsing for event.seats ---
-        // Ensure eventSeatDetails is always an array of objects with 'seatId' and 'status'
         let eventSeatDetails: Array<{ seatId: string; status: string; [key: string]: any }> = [];
         if (typeof event.seats === 'string') {
             try {
@@ -765,8 +753,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
                         if (typeof seat === 'object' && seat !== null && 'seatId' in seat && 'status' in seat) {
                             return seat;
                         } else if (typeof seat === 'string') {
-                            // If event.seats might store simple string IDs, convert to minimal object
-                            return { seatId: seat, status: 'unknown' }; // Assign default status
+                            return { seatId: seat, status: 'unknown' };
                         }
                         return {};
                     }).filter(seat => 'seatId' in seat);
@@ -784,7 +771,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 return {};
             }).filter(seat => 'seatId' in seat);
         }
-        // Ensure eventSeatDetails is an array for safety
         if (!Array.isArray(eventSeatDetails)) {
             eventSeatDetails = [];
         }
@@ -794,32 +780,25 @@ export const cancelSeat = async (req: Request, res: Response) => {
         const successfullyCancelledRecords: any[] = [];
         let totalAmountReduced = 0;
 
-        // Create a Set of seat IDs to cancel for efficient lookup
-        // CanceledSeats from frontend should already be objects with seatId
         const seatIdsToCancelSet = new Set(canceledSeats.map(seat => seat.seatId));
 
-        // Filter out the seats that are being cancelled from the order's seat_ids
-        // orderSeatDetails now guaranteed to have objects with seatId
         const newOrderSeatDetails = orderSeatDetails.filter(seat => {
             return !seatIdsToCancelSet.has(seat.seatId);
         });
 
-        // Iterate through the selected seats to cancel
         for (const seatToCancel of canceledSeats) {
             const { seatId, type_id, ticketTypeName, price } = seatToCancel;
 
-            // Ensure price is a number for calculation
-            const seatPrice = parseFloat(price.toString()); // Convert to string first for safety
+            const seatPrice = parseFloat(price.toString());
             if (isNaN(seatPrice)) {
                 console.warn(`Invalid price for seat ${seatId}. Skipping price reduction for this seat.`);
                 continue;
             }
 
-            // Find and update the status of the seat in event.seats
             let seatFoundInEvent = false;
             eventSeatDetails = eventSeatDetails.map(seat => {
                 if (seat.seatId === seatId) {
-                    seat.status = "available"; // Mark seat as available
+                    seat.status = "available";
                     seatFoundInEvent = true;
                 }
                 return seat;
@@ -829,7 +808,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 console.warn(`Seat ${seatId} was selected for cancellation but not found in event ${event.id} seat_details. Skipping event seat update for this seat.`);
             }
 
-            // Add to successfully cancelled records and update total amount reduced
             successfullyCancelledRecords.push({
                 order_id: parseInt(order_id, 10),
                 type: 'seat',
@@ -850,18 +828,15 @@ export const cancelSeat = async (req: Request, res: Response) => {
             return;
         }
 
-        // Calculate new total and subtotal for the order
         const currentSubTotal = parseFloat(order.sub_total.toString());
         const currentTotal = parseFloat(order.total.toString());
         const newSubTotal = currentSubTotal - totalAmountReduced;
         const newTotal = currentTotal - totalAmountReduced;
 
-        // Perform database updates for order, event, and canceled tickets
         await prisma.order.update({
             where: { id: parseInt(order_id, 10) },
             data: {
-                // Ensure seat_ids is always stored as a stringified JSON array of objects
-                seat_ids: JSON.stringify(newOrderSeatDetails.map(seat => seat.seatId)),
+                seat_ids: JSON.stringify(newOrderSeatDetails.map(seat => seat.seatId)), // Store only seatId strings
                 sub_total: newSubTotal,
                 total: newTotal,
             },
@@ -870,7 +845,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
         await prisma.event.update({
             where: { id: parseInt(order.event_id, 10) },
             data: {
-                // Ensure seats is always stored as a stringified JSON array of objects
                 seats: JSON.stringify(eventSeatDetails),
             },
         });
@@ -881,6 +855,30 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 skipDuplicates: true,
             });
         }
+
+        // Prepare data for the cancellation email
+        const cancellationDetails = successfullyCancelledRecords.map(record => ({
+            seatId: record.seat_id,
+            ticketTypeName: record.ticketTypeName,
+            price: record.price,
+        }));
+
+        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-notification.ejs');
+        const emailHtml = await ejs.renderFile(templatePath, {
+            first_name: order.first_name,
+            event_name: event.name,
+            order_id: order.id,
+            cancellationDetails: cancellationDetails,
+            totalAmountReduced: totalAmountReduced.toFixed(2),
+        });
+
+        // --- Send email ---
+        await transporter.sendMail({
+            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+            to: order.email,
+            subject: `Your Event Ticket Cancellation for ${event.name}`,
+            html: emailHtml,
+        });
 
         req.session.success = `Successfully cancelled seat(s): ${cancelledSeatIdsForMessage.join(', ')}. Total amount reduced by Rs. ${totalAmountReduced.toFixed(2)}.`;
         req.session.save(() => {
