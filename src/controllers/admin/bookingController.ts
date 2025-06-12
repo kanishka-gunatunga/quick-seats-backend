@@ -659,10 +659,11 @@ export const viewBooking = async (req: Request, res: Response) => {
     });
   }
 };
+
 export const cancelSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
     // Expecting an array of objects for canceledSeats
-    const { canceledSeats } = req.body; // canceledSeats should be like [{ seatId: 'A1', type_id: '1', ticketTypeName: 'VIP' }, ...]
+    const { canceledSeats } = req.body; // canceledSeats should be like [{ seatId: 'A1', type_id: '1', ticketTypeName: 'VIP', price: 100 }, ...]
 
     if (!canceledSeats || !Array.isArray(canceledSeats) || canceledSeats.length === 0) {
         req.session.error = 'No seats selected for cancellation.';
@@ -686,7 +687,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
         }
 
         // Parse seat_ids from the order
-        let orderSeatIds: any[] = []; // Changed to 'any[]' to accommodate objects if they were previously stored
+        let orderSeatIds: any[] = [];
         if (typeof order.seat_ids === 'string') {
             try {
                 orderSeatIds = JSON.parse(order.seat_ids);
@@ -734,19 +735,27 @@ export const cancelSeat = async (req: Request, res: Response) => {
 
         const cancelledSeatIds: string[] = [];
         const successfullyCancelledRecords: any[] = [];
+        let totalAmountReduced = 0; // Initialize a variable to track the total amount to reduce
 
         for (const seatToCancel of canceledSeats) {
-            const { seatId, type_id, ticketTypeName, price } = seatToCancel;
+            const { seatId, type_id, ticketTypeName, price } = seatToCancel; // Destructure price here
+
+            // Ensure price is a number for calculation
+            const seatPrice = parseFloat(price);
+            if (isNaN(seatPrice)) {
+                console.warn(`Invalid price for seat ${seatId}. Skipping price reduction for this seat.`);
+                continue; // Skip this seat's price if invalid
+            }
 
             // Remove seat from order.seat_ids
             const initialOrderSeatCount = orderSeatIds.length;
-            const updatedOrderSeatIds = orderSeatIds.filter((seat: any) => seat.seatId !== seatId); // Assuming seat objects in order.seat_ids
-            
+            const updatedOrderSeatIds = orderSeatIds.filter((seat: any) => seat.seatId !== seatId);
+
             if (updatedOrderSeatIds.length === initialOrderSeatCount) {
                 console.warn(`Seat ${seatId} not found in order ${order_id} seat_ids. Skipping.`);
                 continue; // Skip to the next seat if not found in order
             }
-            orderSeatIds = updatedOrderSeatIds; // Update the main array for subsequent iterations
+            orderSeatIds = updatedOrderSeatIds;
 
             // Mark seat as available in event.seats
             let seatFoundInEvent = false;
@@ -769,9 +778,10 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 seat_id: seatId,
                 type_id: type_id,
                 ticketTypeName: ticketTypeName,
-                price: price,
+                price: seatPrice, // Store the price in the canceled ticket record
             });
             cancelledSeatIds.push(seatId);
+            totalAmountReduced += seatPrice; // Add the price of the cancelled seat to the total reduction
         }
 
         if (cancelledSeatIds.length === 0) {
@@ -782,11 +792,17 @@ export const cancelSeat = async (req: Request, res: Response) => {
             return;
         }
 
-        // Perform database updates
+        // Calculate new total and subtotal for the order
+        const newSubTotal = (parseFloat(order.sub_total.toString()) - totalAmountReduced);
+        const newTotal = (parseFloat(order.total.toString()) - totalAmountReduced);
+
+        // Perform database updates for order, event, and canceled tickets
         await prisma.order.update({
             where: { id: parseInt(order_id, 10) },
             data: {
                 seat_ids: JSON.stringify(orderSeatIds),
+                sub_total: newSubTotal, // Update sub_total
+                total: newTotal,       // Update total
             },
         });
 
@@ -797,13 +813,12 @@ export const cancelSeat = async (req: Request, res: Response) => {
             },
         });
 
-        // Create multiple canceledTicket entries
         await prisma.canceledTicket.createMany({
             data: successfullyCancelledRecords,
-            skipDuplicates: true, // Optional: skips records if they already exist based on unique constraints
+            skipDuplicates: true,
         });
-        
-        req.session.success = `Successfully cancelled seat(s): ${cancelledSeatIds.join(', ')}.`;
+
+        req.session.success = `Successfully cancelled seat(s): ${cancelledSeatIds.join(', ')}. Total amount reduced by Rs. ${totalAmountReduced.toFixed(2)}.`;
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
@@ -816,7 +831,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
         });
     }
 };
-
 
 export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
