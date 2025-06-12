@@ -111,68 +111,7 @@
                                 <input type="hidden" id="canceledSeatsData" name="canceledSeats">
                             </form>
 
-                            <script>
-                                function confirmCancel() {
-                                    const checkboxes = document.querySelectorAll('input[name="selectedSeats"]:checked');
-                                    if (checkboxes.length === 0) {
-                                        // Using a custom modal or message box instead of alert()
-                                        showCustomMessage('Please select at least one seat to cancel.', 'warning');
-                                        return false;
-                                    }
-
-                                    const seatIdsToCancel = Array.from(checkboxes).map(checkbox => {
-                                        return JSON.parse(checkbox.value);
-                                    });
-
-                                    // Set the value of the hidden input field
-                                    document.getElementById('canceledSeatsData').value = JSON.stringify(seatIdsToCancel);
-
-                                    // Custom confirmation dialog
-                                    // Replace this with your actual custom modal implementation
-                                    return new Promise((resolve) => {
-                                        showCustomConfirm(`Are you sure you want to cancel ${checkboxes.length} selected seat(s)? This action cannot be undone.`, (result) => {
-                                            resolve(result);
-                                        });
-                                    });
-                                }
-
-                                function toggleSelectAll() {
-                                    const checkboxes = document.querySelectorAll('input[name="selectedSeats"]');
-                                    const selectAllButton = document.querySelector('.btn-secondary');
-                                    let allChecked = true;
-
-                                    // Check if all are already checked
-                                    checkboxes.forEach(checkbox => {
-                                        if (!checkbox.checked) {
-                                            allChecked = false;
-                                        }
-                                    });
-
-                                    checkboxes.forEach(checkbox => {
-                                        checkbox.checked = !allChecked;
-                                    });
-
-                                    selectAllButton.textContent = allChecked ? 'Select All' : 'Deselect All';
-                                }
-
-                                // Placeholder for custom message box/modal functions
-                                // You should replace these with your actual UI components
-                                function showCustomMessage(message, type) {
-                                    // Example: A simple div that appears
-                                    const messageDiv = document.createElement('div');
-                                    messageDiv.className = `alert alert-${type} mt-3`;
-                                    messageDiv.textContent = message;
-                                    document.body.prepend(messageDiv); // Or append to a specific container
-                                    setTimeout(() => messageDiv.remove(), 3000); // Remove after 3 seconds
-                                }
-
-                                function showCustomConfirm(message, callback) {
-                                    // Example: Using a simple JS confirm for illustration,
-                                    // but you should replace this with a proper UI modal.
-                                    const result = window.confirm(message); // Replace with your modal
-                                    callback(result);
-                                }
-                            </script>
+                            
                         <% } %>
                            <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
                             <h5>Tickets without Assigned Seats</h5>
@@ -244,3 +183,66 @@
     </div>
 </div>
 <%- include('../layouts/footer.ejs') %>
+
+<script>
+    function confirmCancel() {
+        const checkboxes = document.querySelectorAll('input[name="selectedSeats"]:checked');
+        if (checkboxes.length === 0) {
+            // Using a custom modal or message box instead of alert()
+            showCustomMessage('Please select at least one seat to cancel.', 'warning');
+            return false;
+        }
+
+        const seatIdsToCancel = Array.from(checkboxes).map(checkbox => {
+            return JSON.parse(checkbox.value);
+        });
+
+        // Set the value of the hidden input field
+        document.getElementById('canceledSeatsData').value = JSON.stringify(seatIdsToCancel);
+
+        // Custom confirmation dialog
+        // Replace this with your actual custom modal implementation
+        return new Promise((resolve) => {
+            showCustomConfirm(`Are you sure you want to cancel ${checkboxes.length} selected seat(s)? This action cannot be undone.`, (result) => {
+                resolve(result);
+            });
+        });
+    }
+
+    function toggleSelectAll() {
+        const checkboxes = document.querySelectorAll('input[name="selectedSeats"]');
+        const selectAllButton = document.querySelector('.btn-secondary');
+        let allChecked = true;
+
+        // Check if all are already checked
+        checkboxes.forEach(checkbox => {
+            if (!checkbox.checked) {
+                allChecked = false;
+            }
+        });
+
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = !allChecked;
+        });
+
+        selectAllButton.textContent = allChecked ? 'Select All' : 'Deselect All';
+    }
+
+    // Placeholder for custom message box/modal functions
+    // You should replace these with your actual UI components
+    function showCustomMessage(message, type) {
+        // Example: A simple div that appears
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `alert alert-${type} mt-3`;
+        messageDiv.textContent = message;
+        document.body.prepend(messageDiv); // Or append to a specific container
+        setTimeout(() => messageDiv.remove(), 3000); // Remove after 3 seconds
+    }
+
+    function showCustomConfirm(message, callback) {
+        // Example: Using a simple JS confirm for illustration,
+        // but you should replace this with a proper UI modal.
+        const result = window.confirm(message); // Replace with your modal
+        callback(result);
+    }
+</script>
