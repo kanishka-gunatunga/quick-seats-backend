@@ -894,11 +894,11 @@ export const cancelSeat = async (req: Request, res: Response) => {
     }
 };
 
-
 export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
     const { cancelQuantity, ticketTypeId, ticketTypeName } = req.body;
 
+    // Validate incoming data
     if (!cancelQuantity || !ticketTypeId || !ticketTypeName) {
         req.session.error = 'Missing cancellation quantity, ticket type ID, or ticket type name.';
         req.session.save(() => {
@@ -918,6 +918,7 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
     }
 
     try {
+        // Fetch the order from the database
         const order = await prisma.order.findUnique({
             where: { id: parseInt(order_id, 10) },
         });
@@ -930,7 +931,7 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             return;
         }
 
-        // --- Update order's tickets_without_seats ---
+        // --- Robustly parse order.tickets_without_seats ---
         let ticketsWithoutSeats: { issued_count: number; ticket_count: number; ticket_type_id: number }[] = [];
         if (typeof order.tickets_without_seats === 'string') {
             try {
@@ -947,13 +948,17 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             ticketsWithoutSeats = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number }[];
         }
 
+        // Find and update the specific ticket type in the order's tickets_without_seats
         let ticketFoundInOrder = false;
+        let originalTicketCount = 0;
         const updatedTicketsWithoutSeats = ticketsWithoutSeats.map(ticket => {
             if (ticket.ticket_type_id === parseInt(ticketTypeId, 10)) {
+                originalTicketCount = ticket.ticket_count;
                 if (ticket.ticket_count < quantityToCancel) {
                     req.session.error = `Cannot cancel ${quantityToCancel} tickets. Only ${ticket.ticket_count} available for cancellation for ${ticketTypeName}.`;
                     req.session.save(() => {
-                        throw new Error("Insufficient tickets to cancel in order."); 
+                        // Throwing an error here will catch in the outer try/catch
+                        throw new Error("Insufficient tickets to cancel in order.");
                     });
                 }
                 ticketFoundInOrder = true;
@@ -973,7 +978,7 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             return;
         }
 
-        // Get the event associated with the order to update ticket details
+        // Fetch the event associated with the order to update its ticket details
         const event = await prisma.event.findUnique({
             where: { id: parseInt(order.event_id, 10) },
         });
@@ -986,7 +991,7 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             return;
         }
 
-        // --- Update event's ticket_details ---
+        // --- Robustly parse event.ticket_details ---
         let eventTicketDetails: { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[] = [];
         if (typeof event.ticket_details === 'string') {
             try {
@@ -1003,16 +1008,19 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number }[];
         }
 
+        // Find the ticket type in event's ticket_details and get its price
+        let ticketPrice = 0;
         let ticketFoundInEvent = false;
         const updatedEventTicketDetails = eventTicketDetails.map(detail => {
             if (detail.ticketTypeId === parseInt(ticketTypeId, 10)) {
+                ticketPrice = detail.price; // Get the price for calculation
                 if (detail.bookedTicketCount < quantityToCancel) {
-                     console.warn(`Attempted to cancel ${quantityToCancel} tickets but only ${detail.bookedTicketCount} were marked as booked for ticket type ${ticketTypeName} in event.`);
+                   console.warn(`Attempted to cancel ${quantityToCancel} tickets but only ${detail.bookedTicketCount} were marked as booked for ticket type ${ticketTypeName} in event.`);
                 }
                 ticketFoundInEvent = true;
                 return {
                     ...detail,
-                    bookedTicketCount: Math.max(0, detail.bookedTicketCount - quantityToCancel), 
+                    bookedTicketCount: Math.max(0, detail.bookedTicketCount - quantityToCancel),
                 };
             }
             return detail;
@@ -1020,12 +1028,27 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
 
         if (!ticketFoundInEvent) {
              console.warn(`Ticket type ${ticketTypeName} (ID: ${ticketTypeId}) not found in event ${event.id} ticket_details.`);
+             req.session.error = `Ticket type ${ticketTypeName} not found in event details. Cannot proceed with cancellation.`;
+             req.session.save(() => {
+                 return res.redirect(`/booking/view/${order_id}`);
+             });
+             return;
         }
 
+        // Calculate the total amount to be reduced from the order
+        const totalAmountReduced = quantityToCancel * ticketPrice;
+        const currentSubTotal = parseFloat(order.sub_total.toString());
+        const currentTotal = parseFloat(order.total.toString());
+        const newSubTotal = currentSubTotal - totalAmountReduced;
+        const newTotal = currentTotal - totalAmountReduced;
+
+        // Perform database updates for order, event, and canceled tickets record
         await prisma.order.update({
             where: { id: parseInt(order_id, 10) },
             data: {
                 tickets_without_seats: JSON.stringify(updatedTicketsWithoutSeats),
+                sub_total: newSubTotal, // Update sub_total
+                total: newTotal,       // Update total
             },
         });
 
@@ -1036,25 +1059,58 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             },
         });
 
+        // Record the cancellation in canceledTicket model
         await prisma.canceledTicket.create({
             data: {
                 order_id: parseInt(order_id, 10),
-                type: 'no seat', 
+                type: 'no seat', // Indicates this is a ticket without a specific seat
                 type_id: ticketTypeId,
                 ticketTypeName: ticketTypeName,
                 quantity: quantityToCancel,
+                price: Number(totalAmountReduced), // Store the total price for these tickets
             },
         });
 
-        req.session.success = `${quantityToCancel} x ${ticketTypeName} tickets cancelled successfully.`;
+        // Prepare data for the cancellation email (using the same template)
+        const nonSeatTicketsCancellationDetails = [{
+            ticketTypeName: ticketTypeName,
+            quantity: quantityToCancel,
+            pricePerTicket: ticketPrice.toFixed(2), // Price per individual ticket
+            totalPrice: totalAmountReduced.toFixed(2), // Total price for this cancellation batch
+        }];
+
+        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-notification.ejs');
+        const emailHtml = await ejs.renderFile(templatePath, {
+            first_name: order.first_name,
+            event_name: event.name,
+            order_id: order.id,
+            // Send an empty array for 'cancellationDetails' as it's intended for seat cancellations
+            cancellationDetails: [],
+            // Pass the details for non-seat tickets under a new variable
+            nonSeatTicketsCancellationDetails: nonSeatTicketsCancellationDetails,
+            totalAmountReduced: totalAmountReduced.toFixed(2), // Total amount for the email summary
+            isSeatCancellation: false, // Flag to indicate it's not a seat cancellation
+        });
+
+        // --- Send email notification ---
+        await transporter.sendMail({
+            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+            to: order.email,
+            subject: `Your Event Ticket Cancellation for ${event.name}`,
+            html: emailHtml,
+        });
+
+        // Set success message and redirect
+        req.session.success = `${quantityToCancel} x ${ticketTypeName} tickets cancelled successfully. Total amount reduced by Rs. ${totalAmountReduced.toFixed(2)}.`;
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
 
     } catch (err: any) {
         console.error("Error cancelling tickets without seat:", err);
+        // Only set error message if not already set by an earlier thrown error
         if (!req.session.error) {
-            req.session.error = 'An error occurred while cancelling the tickets.';
+            req.session.error = 'An error occurred while cancelling the tickets without seats. Please try again.';
         }
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
