@@ -863,7 +863,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
             price: record.price,
         }));
 
-        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-notification.ejs');
+        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-template.ejs');
         const emailHtml = await ejs.renderFile(templatePath, {
             first_name: order.first_name,
             event_name: event.name,
