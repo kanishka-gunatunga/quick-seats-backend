@@ -76,7 +76,21 @@
                 <% }); %>
                 <p><b>Total Amount Reduced from your Order:</b> Rs. <%= totalAmountReduced %></p>
             <% } else { %>
-                <p>No specific seat details were provided for cancellation.</p>
+               
+            <% } %>
+
+             <% if (nonSeatTicketsCancellationDetails && nonSeatTicketsCancellationDetails.length > 0) { %>
+                <% nonSeatTicketsCancellationDetails.forEach((ticket) => { %>
+                     <div class="detail-item">
+                        <p><strong>Ticket Type:</strong> <%= ticket.ticketTypeName %></p>
+                        <p><strong>Quantity Cancelled:</strong> <%= ticket.quantity %></p>
+                        <p><strong>Price per Ticket:</strong> Rs. <%= ticket.pricePerTicket %></p>
+                        <p><strong>Total for this Ticket Type:</strong> Rs. <%= ticket.totalPrice %></p>
+                    </div>
+                <% }); %>
+                <p><b>Total Amount Reduced from your Order:</b> Rs. <%= totalAmountReduced %></p>
+            <% } else { %>
+               
             <% } %>
         </div>
 

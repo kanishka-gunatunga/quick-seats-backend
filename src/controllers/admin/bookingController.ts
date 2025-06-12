@@ -1079,17 +1079,14 @@ export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
             totalPrice: totalAmountReduced.toFixed(2), // Total price for this cancellation batch
         }];
 
-        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-notification.ejs');
+        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-template.ejs');
         const emailHtml = await ejs.renderFile(templatePath, {
             first_name: order.first_name,
             event_name: event.name,
             order_id: order.id,
-            // Send an empty array for 'cancellationDetails' as it's intended for seat cancellations
             cancellationDetails: [],
-            // Pass the details for non-seat tickets under a new variable
             nonSeatTicketsCancellationDetails: nonSeatTicketsCancellationDetails,
             totalAmountReduced: totalAmountReduced.toFixed(2), // Total amount for the email summary
-            isSeatCancellation: false, // Flag to indicate it's not a seat cancellation
         });
 
         // --- Send email notification ---
