@@ -751,7 +751,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
 
             // Remove seat from order.seat_ids
             const initialOrderSeatCount = orderSeatIds.length;
-            const updatedOrderSeatIds = orderSeatIds.filter((seat: any) => seat.seatId !== seatId);
+            const updatedOrderSeatIds = orderSeatIds.filter((seat: any) => seatId !== seatId);
 
             if (updatedOrderSeatIds.length === initialOrderSeatCount) {
                 console.warn(`Seat ${seatId} not found in order ${order_id} seat_ids. Skipping.`);
