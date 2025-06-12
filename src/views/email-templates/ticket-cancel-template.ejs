@@ -74,11 +74,8 @@
                         <p><strong>Refund Amount:</strong> Rs. <%= seat.price.toFixed(2) %></p>
                     </div>
                 <% }); %>
-                <p><b>Total Amount Reduced from your Order:</b> Rs. <%= totalAmountReduced %></p>
             <% } else { %>
-               
             <% } %>
-
              <% if (nonSeatTicketsCancellationDetails && nonSeatTicketsCancellationDetails.length > 0) { %>
                 <% nonSeatTicketsCancellationDetails.forEach((ticket) => { %>
                      <div class="detail-item">
@@ -88,10 +85,11 @@
                         <p><strong>Total for this Ticket Type:</strong> Rs. <%= ticket.totalPrice %></p>
                     </div>
                 <% }); %>
-                <p><b>Total Amount Reduced from your Order:</b> Rs. <%= totalAmountReduced %></p>
+                
             <% } else { %>
                
             <% } %>
+            <p><b>Total Amount Reduced from your Order:</b> Rs. <%= totalAmountReduced %></p>
         </div>
 
         <p>Your order total has been adjusted accordingly. If you have any questions or need further assistance, please don't hesitate to contact us.</p>
