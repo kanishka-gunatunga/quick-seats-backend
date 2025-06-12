@@ -477,13 +477,23 @@ export const addBookingPost = async (req: Request, res: Response) => {
         
     }
 };
-
 export const bookings = async (req: Request, res: Response) => {
-  const orders = await prisma.order.findMany({ });
+  const statusFilter = req.query.status;
+  let orders;
 
-   const eventIds = [...new Set(orders.map(order => parseInt(order.event_id, 10)))];
+  if (statusFilter) {
+    orders = await prisma.order.findMany({
+      where: {
+        status: statusFilter.toString(),
+      },
+    });
+  } else {
+    orders = await prisma.order.findMany({});
+  }
 
-   const events = await prisma.event.findMany({
+  const eventIds = [...new Set(orders.map(order => parseInt(order.event_id, 10)))];
+
+  const events = await prisma.event.findMany({
     where: {
       id: {
         in: eventIds,
@@ -491,7 +501,7 @@ export const bookings = async (req: Request, res: Response) => {
     },
   });
 
-  const eventMap = new Map<number, string>(); 
+  const eventMap = new Map<number, string>();
   events.forEach(event => {
     eventMap.set(event.id, event.name);
   });
@@ -510,10 +520,9 @@ export const bookings = async (req: Request, res: Response) => {
   res.render('booking/bookings', {
     error,
     success,
-    orders: ordersWithEventNames, 
+    orders: ordersWithEventNames,
   });
-}; 
-
+};
 export const viewBooking = async (req: Request, res: Response) => {
   const order_id = req.params.id;
 

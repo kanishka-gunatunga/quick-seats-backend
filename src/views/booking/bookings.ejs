@@ -22,6 +22,25 @@
                                                     <div class="alert alert-danger"><%= error %></div>
                                                 <% } %>
 
+                                         <form class="mt-4" method="get" action="/bookings">
+
+                                                    <div class="row">
+                                                      
+                                                        <div class="col-md-4 mb-3">
+                                                            <label class="form-label">Status</label>
+                                                            <select class="form-control" data-toggle="select2" name="status" id="status" data-width="100%">
+                                                                    <option selected hidden disabled>Select....</option>
+                                                                    <option value="pending">Pending</option>
+                                                                    <option value="cancelled">Cancelled</option>
+                                                                    <option value="completed">Completed</option>
+                                                                    <option value="failed">Failed</option>
+                                                            </select>
+                                        
+                                                        </div>
+                                                    </div> 
+                                                    <button type="submit" class="btn btn-primary">Submit</button>
+                                                </form>
+
                                          <div class="row">
                                             <div class="col-12">
                                                 <div class="card">
