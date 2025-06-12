@@ -778,7 +778,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 order_id: parseInt(order_id, 10),
                 type: 'seat',
                 seat_id: seatId,
-                type_id: type_id,
+                type_id: String(type_id),
                 ticketTypeName: ticketTypeName,
                 price: seatPrice, // Store the price in the canceled ticket record
             });
