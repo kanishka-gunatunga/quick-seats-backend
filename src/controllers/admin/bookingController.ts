@@ -663,23 +663,21 @@ export const cancelSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
     // Expecting an array of objects for canceledSeats from the hidden input
     const { canceledSeats: canceledSeatsString } = req.body;
-    let canceledSeats: any[] = []; // Initialize as an empty array for safety
+    let canceledSeats: Array<{ seatId: string; type_id: string; ticketTypeName: string; price: number; color?: string }>;
 
     try {
-        // Parse the JSON string from the hidden input.
-        // It's crucial that canceledSeatsString is a valid JSON array string.
+        // Parse the JSON string from the hidden input. This should always be an array of objects.
         canceledSeats = JSON.parse(canceledSeatsString);
     } catch (e) {
         console.error("Failed to parse canceledSeats from request body:", e);
-        req.session.error = 'Invalid seat cancellation data provided. Please try again.';
+        req.session.error = 'Invalid seat cancellation data provided.';
         req.session.save(() => {
             return res.redirect(`/booking/view/${order_id}`);
         });
         return;
     }
 
-    console.log(`[cancelSeat] Received cancellation request for Order ID: ${order_id}`);
-    console.log('[cancelSeat] Parsed canceledSeats:', canceledSeats);
+    console.log('canceledSeats received from frontend:', canceledSeats);
 
     if (!canceledSeats || !Array.isArray(canceledSeats) || canceledSeats.length === 0) {
         req.session.error = 'No seats selected for cancellation.';
@@ -690,7 +688,6 @@ export const cancelSeat = async (req: Request, res: Response) => {
     }
 
     try {
-        // 1. Fetch the Order
         const order = await prisma.order.findUnique({
             where: { id: parseInt(order_id, 10) },
         });
@@ -698,37 +695,53 @@ export const cancelSeat = async (req: Request, res: Response) => {
         if (!order) {
             req.session.error = 'Order not found.';
             req.session.save(() => {
-                return res.redirect('/bookings'); // Redirect to a general bookings list if order not found
+                return res.redirect('/bookings');
             });
             return;
         }
-        console.log('[cancelSeat] Order found:', order.id);
 
-        // Parse seat_ids from the order. This should be an array of objects.
-        let orderSeatDetails: any[] = [];
+        // --- Start Robust Parsing for order.seat_ids ---
+        // Ensure orderSeatDetails is always an array of objects with 'seatId'
+        let orderSeatDetails: Array<{ seatId: string; type_id?: string; ticketTypeName?: string; price?: number; color?: string }> = [];
         if (typeof order.seat_ids === 'string') {
             try {
-                orderSeatDetails = JSON.parse(order.seat_ids);
+                const parsed = JSON.parse(order.seat_ids);
+                if (Array.isArray(parsed)) {
+                    orderSeatDetails = parsed.map((seat: any) => {
+                        if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
+                            return seat; // Already an object with seatId
+                        } else if (typeof seat === 'string') {
+                            // If it's a string, convert to minimal object
+                            return { seatId: seat };
+                        }
+                        return {}; // Fallback for unexpected types
+                    }).filter(seat => 'seatId' in seat); // Filter out objects without seatId
+                }
             } catch (e) {
-                console.error("Failed to parse seat_ids from order.seat_ids (string):", e);
-                req.session.error = 'An error occurred while processing order seat data.';
-                req.session.save(() => {
-                    return res.redirect(`/booking/view/${order_id}`);
-                });
-                return;
+                console.warn("Failed to parse order.seat_ids as JSON string. Attempting direct assignment if it's a string array:", e);
+                // If parsing as JSON string fails, it might be a direct string array if Prisma mapping changed.
+                // This 'catch' might not be strictly needed if `Array.isArray(order.seat_ids)` handles it below.
             }
         } else if (Array.isArray(order.seat_ids)) {
-            // If already an array (e.g., from direct database access or previous operation)
-            orderSeatDetails = order.seat_ids;
+            // This handles cases where Prisma already returns an array (e.g., Json[] without stringify)
+            orderSeatDetails = order.seat_ids.map((seat: any) => {
+                if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
+                    return seat; // Already an object with seatId
+                } else if (typeof seat === 'string') {
+                    // If it's a string, convert to minimal object
+                    return { seatId: seat };
+                }
+                return {}; // Fallback for unexpected types
+            }).filter(seat => 'seatId' in seat); // Filter out objects without seatId
         }
-        // Ensure orderSeatDetails is an array for safety, even if parsing fails or data is null/undefined
+        // Ensure orderSeatDetails is an array for safety
         if (!Array.isArray(orderSeatDetails)) {
             orderSeatDetails = [];
         }
-        console.log('[cancelSeat] Original orderSeatDetails:', orderSeatDetails);
+        // --- End Robust Parsing for order.seat_ids ---
 
 
-        // 2. Fetch the Associated Event
+        // Get the event associated with the order to update seat status
         const event = await prisma.event.findUnique({
             where: { id: parseInt(order.event_id, 10) },
         });
@@ -736,177 +749,153 @@ export const cancelSeat = async (req: Request, res: Response) => {
         if (!event) {
             req.session.error = 'Associated event not found.';
             req.session.save(() => {
-                return res.redirect(`/booking/view/${order_id}`); // Stay on the order view but show error
+                return res.redirect(`/booking/view/${order_id}`);
             });
             return;
         }
-        console.log('[cancelSeat] Event found:', event.id);
 
-        // Parse event's seat_details. This should also be an array of objects.
-        let eventSeatDetails: any[] = [];
+        // --- Start Robust Parsing for event.seats ---
+        // Ensure eventSeatDetails is always an array of objects with 'seatId' and 'status'
+        let eventSeatDetails: Array<{ seatId: string; status: string; [key: string]: any }> = [];
         if (typeof event.seats === 'string') {
             try {
-                eventSeatDetails = JSON.parse(event.seats);
+                const parsed = JSON.parse(event.seats);
+                if (Array.isArray(parsed)) {
+                    eventSeatDetails = parsed.map((seat: any) => {
+                        if (typeof seat === 'object' && seat !== null && 'seatId' in seat && 'status' in seat) {
+                            return seat;
+                        } else if (typeof seat === 'string') {
+                            // If event.seats might store simple string IDs, convert to minimal object
+                            return { seatId: seat, status: 'unknown' }; // Assign default status
+                        }
+                        return {};
+                    }).filter(seat => 'seatId' in seat);
+                }
             } catch (e) {
-                console.error("Failed to parse event.seats (string):", e);
-                req.session.error = 'An error occurred while processing event seat data.';
-                req.session.save(() => {
-                    return res.redirect(`/booking/view/${order_id}`);
-                });
-                return;
+                console.warn("Failed to parse event.seats as JSON string. Attempting direct assignment if it's a string array:", e);
             }
         } else if (Array.isArray(event.seats)) {
-            eventSeatDetails = event.seats;
+            eventSeatDetails = event.seats.map((seat: any) => {
+                if (typeof seat === 'object' && seat !== null && 'seatId' in seat && 'status' in seat) {
+                    return seat;
+                } else if (typeof seat === 'string') {
+                    return { seatId: seat, status: 'unknown' };
+                }
+                return {};
+            }).filter(seat => 'seatId' in seat);
         }
         // Ensure eventSeatDetails is an array for safety
         if (!Array.isArray(eventSeatDetails)) {
             eventSeatDetails = [];
         }
-        console.log('[cancelSeat] Original eventSeatDetails:', eventSeatDetails);
+        // --- End Robust Parsing for event.seats ---
 
-
+        const cancelledSeatIdsForMessage: string[] = [];
         const successfullyCancelledRecords: any[] = [];
-        const cancelledSeatIdsForMessage: string[] = []; // Just for the success message
         let totalAmountReduced = 0;
 
-        // Create a Set of seat IDs from the `canceledSeats` array for efficient lookup.
-        // This set contains the `seatId` strings you intend to cancel.
-        const seatIdsToCancelSet = new Set(canceledSeats.map((seat: any) => seat.seatId));
-        console.log('[cancelSeat] Seat IDs identified for cancellation:', [...seatIdsToCancelSet]);
+        // Create a Set of seat IDs to cancel for efficient lookup
+        // CanceledSeats from frontend should already be objects with seatId
+        const seatIdsToCancelSet = new Set(canceledSeats.map(seat => seat.seatId));
 
-
-        // --- STEP 1: Filter out the cancelled seats from the order's seat_ids ---
-        // This creates the new array that will replace the original order.seat_ids
-        const newOrderSeatDetails = orderSeatDetails.filter((seat: any) => {
-            // If the seat's ID is in the `seatIdsToCancelSet`, it means it should be removed.
-            // So, we keep seats whose IDs are *not* in the set.
+        // Filter out the seats that are being cancelled from the order's seat_ids
+        // orderSeatDetails now guaranteed to have objects with seatId
+        const newOrderSeatDetails = orderSeatDetails.filter(seat => {
             return !seatIdsToCancelSet.has(seat.seatId);
         });
-        console.log('[cancelSeat] New orderSeatDetails (after filtering):', newOrderSeatDetails);
 
-
-        // --- STEP 2: Process each seat requested for cancellation ---
-        // This loop updates event seat status and prepares canceled ticket records.
+        // Iterate through the selected seats to cancel
         for (const seatToCancel of canceledSeats) {
             const { seatId, type_id, ticketTypeName, price } = seatToCancel;
 
-            // Ensure price is a valid number before using it in calculations.
-            const seatPrice = parseFloat(price);
+            // Ensure price is a number for calculation
+            const seatPrice = parseFloat(price.toString()); // Convert to string first for safety
             if (isNaN(seatPrice)) {
-                console.warn(`[cancelSeat] Invalid price "${price}" for seat ${seatId}. Skipping price reduction and cancellation record for this seat.`);
-                continue; // Skip this specific seat if its price is invalid
+                console.warn(`Invalid price for seat ${seatId}. Skipping price reduction for this seat.`);
+                continue;
             }
 
-            // Verify if this seat actually exists in the original order's seat_ids.
-            // This prevents issues if the frontend sends a seatId that wasn't genuinely purchased.
-            const wasSeatInOriginalOrder = orderSeatDetails.some((s: any) => s.seatId === seatId);
-
-            if (wasSeatInOriginalOrder) {
-                // Mark seat as 'available' in event.seats
-                let seatFoundInEventMap = false;
-                eventSeatDetails = eventSeatDetails.map(seat => {
-                    if (seat.seatId === seatId) {
-                        seat.status = "available"; // Change status to available
-                        seatFoundInEventMap = true;
-                    }
-                    return seat;
-                });
-
-                if (!seatFoundInEventMap) {
-                    console.warn(`[cancelSeat] Seat ${seatId} was in order but NOT found in event ${event.id}'s seat map. Event seat status not updated.`);
+            // Find and update the status of the seat in event.seats
+            let seatFoundInEvent = false;
+            eventSeatDetails = eventSeatDetails.map(seat => {
+                if (seat.seatId === seatId) {
+                    seat.status = "available"; // Mark seat as available
+                    seatFoundInEvent = true;
                 }
+                return seat;
+            });
 
-                // Prepare record for CanceledTicket table
-                successfullyCancelledRecords.push({
-                    order_id: parseInt(order_id, 10),
-                    type: 'seat', // You might use 'ticket_with_seat' for more specificity if needed
-                    seat_id: seatId,
-                    type_id: String(type_id), // Ensure type_id is stored correctly (e.g., as a string if it's a UUID)
-                    ticketTypeName: ticketTypeName,
-                    price: seatPrice, // Store the price at cancellation time
-                    canceledAt: new Date(), // Add a timestamp for cancellation
-                });
-                cancelledSeatIdsForMessage.push(seatId); // Add to the list for the success message
-                totalAmountReduced += seatPrice; // Add the price of this successfully cancelled seat
-            } else {
-                console.warn(`[cancelSeat] Attempted to cancel seat ${seatId} which was not found in the original order ${order_id} seat_ids. Skipping.`);
+            if (!seatFoundInEvent) {
+                console.warn(`Seat ${seatId} was selected for cancellation but not found in event ${event.id} seat_details. Skipping event seat update for this seat.`);
             }
+
+            // Add to successfully cancelled records and update total amount reduced
+            successfullyCancelledRecords.push({
+                order_id: parseInt(order_id, 10),
+                type: 'seat',
+                seat_id: seatId,
+                type_id: String(type_id),
+                ticketTypeName: ticketTypeName,
+                price: seatPrice,
+            });
+            cancelledSeatIdsForMessage.push(seatId);
+            totalAmountReduced += seatPrice;
         }
 
-        console.log('[cancelSeat] Total amount to reduce:', totalAmountReduced.toFixed(2));
-        console.log('[cancelSeat] Number of successfully processed cancellation records:', successfullyCancelledRecords.length);
-
-
         if (successfullyCancelledRecords.length === 0) {
-            req.session.error = 'No valid seats were found in this booking to cancel after processing.';
+            req.session.error = 'No valid seats were found in this booking to cancel or an error occurred during processing.';
             req.session.save(() => {
                 return res.redirect(`/booking/view/${order_id}`);
             });
             return;
         }
 
-        // 3. Calculate new total and subtotal for the order
-        // Safely parse current totals, providing a default of 0 if they are null/undefined or non-numeric
-        const currentSubTotal = parseFloat(order.sub_total?.toString() || '0');
-        const currentTotal = parseFloat(order.total?.toString() || '0');
+        // Calculate new total and subtotal for the order
+        const currentSubTotal = parseFloat(order.sub_total.toString());
+        const currentTotal = parseFloat(order.total.toString());
+        const newSubTotal = currentSubTotal - totalAmountReduced;
+        const newTotal = currentTotal - totalAmountReduced;
 
-        // Subtract the total reduced amount. Use Math.max(0, ...) to prevent negative totals.
-        const newSubTotal = Math.max(0, currentSubTotal - totalAmountReduced);
-        const newTotal = Math.max(0, currentTotal - totalAmountReduced);
+        // Perform database updates for order, event, and canceled tickets
+        await prisma.order.update({
+            where: { id: parseInt(order_id, 10) },
+            data: {
+                // Ensure seat_ids is always stored as a stringified JSON array of objects
+                seat_ids: JSON.stringify(newOrderSeatDetails),
+                sub_total: newSubTotal,
+                total: newTotal,
+            },
+        });
 
-        console.log(`[cancelSeat] Current SubTotal: ${currentSubTotal}, Current Total: ${currentTotal}`);
-        console.log(`[cancelSeat] New SubTotal: ${newSubTotal}, New Total: ${newTotal}`);
+        await prisma.event.update({
+            where: { id: parseInt(order.event_id, 10) },
+            data: {
+                // Ensure seats is always stored as a stringified JSON array of objects
+                seats: JSON.stringify(eventSeatDetails),
+            },
+        });
 
+        if (successfullyCancelledRecords.length > 0) {
+            await prisma.canceledTicket.createMany({
+                data: successfullyCancelledRecords,
+                skipDuplicates: true,
+            });
+        }
 
-        // --- STEP 3: Perform database updates in a transaction (optional but recommended for atomicity) ---
-        // For simplicity, directly updating here. For more complex operations, consider Prisma transactions.
-        await prisma.$transaction([
-            // Update the Order record
-            prisma.order.update({
-                where: { id: parseInt(order_id, 10) },
-                data: {
-                    // Store the filtered array back into seat_ids (as a string)
-                    seat_ids: JSON.stringify(newOrderSeatDetails),
-                    sub_total: newSubTotal,
-                    total: newTotal,
-                },
-            }),
-
-            // Update the Event record with the changed seat statuses
-            prisma.event.update({
-                where: { id: parseInt(order.event_id, 10) },
-                data: {
-                    seats: JSON.stringify(eventSeatDetails),
-                },
-            }),
-
-            // Create entries in the CanceledTicket table for each successfully cancelled seat
-            // Only create if there are records to insert
-            ...(successfullyCancelledRecords.length > 0 ? [
-                prisma.canceledTicket.createMany({
-                    data: successfullyCancelledRecords,
-                    skipDuplicates: true, // Useful to prevent errors if run multiple times
-                })
-            ] : [])
-        ]);
-
-        console.log('[cancelSeat] Database updates completed successfully.');
-
-
-        // 4. Set success message and redirect
         req.session.success = `Successfully cancelled seat(s): ${cancelledSeatIdsForMessage.join(', ')}. Total amount reduced by Rs. ${totalAmountReduced.toFixed(2)}.`;
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
 
     } catch (err) {
-        console.error("[cancelSeat] Error during seat cancellation process:", err);
-        req.session.error = 'An unexpected error occurred while cancelling the seat(s). Please check the server logs for more details.';
+        console.error("Error cancelling seat(s):", err);
+        req.session.error = 'An error occurred while cancelling the seat(s). Please try again.';
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
     }
 };
+
 
 export const cancelTicketsWithoutSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
