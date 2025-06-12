@@ -478,13 +478,14 @@ export const addBookingPost = async (req: Request, res: Response) => {
     }
 };
 export const bookings = async (req: Request, res: Response) => {
-  const statusFilter = req.query.status;
+  const selectedStatus = req.query.status as string; // Cast to string
+
   let orders;
 
-  if (statusFilter) {
+  if (selectedStatus && selectedStatus !== 'all') {
     orders = await prisma.order.findMany({
       where: {
-        status: statusFilter.toString(),
+        status: selectedStatus,
       },
     });
   } else {
@@ -508,7 +509,7 @@ export const bookings = async (req: Request, res: Response) => {
 
   const ordersWithEventNames = orders.map(order => ({
     ...order,
-    event_id: parseInt(order.event_id, 10),
+    event_id: parseInt(order.event_id, 10), 
     eventName: eventMap.get(parseInt(order.event_id, 10)) || 'Unknown Event',
   }));
 
@@ -521,6 +522,7 @@ export const bookings = async (req: Request, res: Response) => {
     error,
     success,
     orders: ordersWithEventNames,
+    selectedStatus: selectedStatus || 'all', 
   });
 };
 export const viewBooking = async (req: Request, res: Response) => {
