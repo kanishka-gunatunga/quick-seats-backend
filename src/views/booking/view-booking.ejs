@@ -95,7 +95,7 @@
                                             <div class="card">
                                                 <div class="card-body text-center">
                                                     <input type="checkbox" name="selectedSeats" class="form-check-input float-start"
-                                                        value="<%= JSON.stringify({ seatId: seat.seatId, type_id: seat.type_id, ticketTypeName: seat.ticketTypeName }) %>">
+                                                        value="<%= JSON.stringify({ seatId: seat.seatId, type_id: seat.type_id, ticketTypeName: seat.ticketTypeName, price: seat.price }) %>">
                                                     <h6>Seat: <%= seat.seatId %></h6>
                                                     <p>Ticket Type: <span style="font-weight: bold; color: <%= seat.color %>;"><%= seat.ticketTypeName %></span></p>
                                                     <p>Price: Rs. <%= seat.price %></p>

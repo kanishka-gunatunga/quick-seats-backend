@@ -736,7 +736,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
         const successfullyCancelledRecords: any[] = [];
 
         for (const seatToCancel of canceledSeats) {
-            const { seatId, type_id, ticketTypeName } = seatToCancel;
+            const { seatId, type_id, ticketTypeName, price } = seatToCancel;
 
             // Remove seat from order.seat_ids
             const initialOrderSeatCount = orderSeatIds.length;
@@ -769,6 +769,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
                 seat_id: seatId,
                 type_id: type_id,
                 ticketTypeName: ticketTypeName,
+                price: price,
             });
             cancelledSeatIds.push(seatId);
         }
