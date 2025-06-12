@@ -1143,63 +1143,119 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         }
 
         // --- Fetch all ticket types for lookup ---
-        // This is crucial for getting accurate ticket type names.
         const ticketTypes = await prisma.ticketType.findMany({});
         const ticketTypeNameMap = new Map<number, string>();
         ticketTypes.forEach(type => {
-            // Option 1: Provide a fallback string if type.name is null
-            ticketTypeNameMap.set(type.id, type.name || 'Unnamed Ticket Type'); 
-            // Or simply: ticketTypeNameMap.set(type.id, type.name || '');
+            ticketTypeNameMap.set(type.id, type.name || 'Unnamed Ticket Type');
         });
 
+        let totalAmountReduced = 0;
+        const cancellationDetails: any[] = []; // For seated tickets
+        const nonSeatTicketsCancellationDetails: any[] = []; // For non-seated tickets
+
         // --- Handle Assigned Seats Cancellation ---
-        let seatIdsInOrder: string[] = []; 
+        let orderSeatDetails: Array<{ seatId: string; type_id?: string; ticketTypeName?: string; price?: number; color?: string }> = [];
         if (typeof order.seat_ids === 'string') {
             try {
-                seatIdsInOrder = JSON.parse(order.seat_ids);
+                const parsed = JSON.parse(order.seat_ids);
+                if (Array.isArray(parsed)) {
+                    orderSeatDetails = parsed.map((seat: any) => {
+                        if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
+                            return seat;
+                        } else if (typeof seat === 'string') {
+                            // If only seatId string is stored, we need to infer type_id and price
+                            // This might require fetching ticket type details from the event or globally
+                            // For simplicity, we'll try to find it in eventSeatDetails later
+                            return { seatId: seat };
+                        }
+                        return {};
+                    }).filter(seat => 'seatId' in seat);
+                }
             } catch (e) {
-                console.error("Failed to parse seat_ids from order during full cancellation:", e);
-                // Continue, but log the error. We don't want this to block the whole cancellation if it's malformed.
+                console.error("Failed to parse seat_ids from order during full cancellation (JSON string):", e);
             }
         } else if (Array.isArray(order.seat_ids)) {
-            seatIdsInOrder = order.seat_ids as string[];
+            orderSeatDetails = order.seat_ids.map((seat: any) => {
+                if (typeof seat === 'object' && seat !== null && 'seatId' in seat) {
+                    return seat;
+                } else if (typeof seat === 'string') {
+                    return { seatId: seat };
+                }
+                return {};
+            }).filter(seat => 'seatId' in seat);
         }
 
-        let eventSeatDetails: { seatId: string; status: string; price: number; type_id: number; color: string }[] = [];
+        let eventSeatDetails: Array<{ seatId: string; status: string; price: number; type_id: number; color: string }> = [];
         if (typeof event.seats === 'string') {
             try {
                 eventSeatDetails = JSON.parse(event.seats);
             } catch (e) {
-                console.error("Failed to parse event seat_details during full cancellation:", e);
+                console.error("Failed to parse event seat_details during full cancellation (JSON string):", e);
             }
         } else if (Array.isArray(event.seats)) {
             eventSeatDetails = event.seats as { seatId: string; status: string; price: number; type_id: number; color: string }[];
         }
 
-        for (const seatIdToCancel of seatIdsInOrder) {
+        // Iterate through all seats currently in the order
+        for (const seatInOrder of orderSeatDetails) {
+            const seatIdToCancel = seatInOrder.seatId;
             let ticketTypeNameForCanceledSeat: string = 'N/A';
             let typeIdForCanceledSeat: number = 0;
+            let priceForCanceledSeat: number = 0;
 
             const seatInEvent = eventSeatDetails.find(eventSeat => eventSeat.seatId === seatIdToCancel);
+
             if (seatInEvent) {
+                // Update event seat status to available
                 seatInEvent.status = "available";
                 typeIdForCanceledSeat = seatInEvent.type_id;
-                // Use the map to get the ticket type name
+                priceForCanceledSeat = seatInEvent.price;
                 ticketTypeNameForCanceledSeat = ticketTypeNameMap.get(typeIdForCanceledSeat) || `Type ${typeIdForCanceledSeat}`;
+
+                totalAmountReduced += priceForCanceledSeat;
+
+                // Add to cancellation details for email
+                cancellationDetails.push({
+                    seatId: seatIdToCancel,
+                    ticketTypeName: ticketTypeNameForCanceledSeat,
+                    price: priceForCanceledSeat,
+                });
+
+                // Record in canceledTicket model
+                await prisma.canceledTicket.create({
+                    data: {
+                        order_id: parseInt(order_id, 10),
+                        type: 'seat',
+                        seat_id: seatIdToCancel,
+                        type_id: String(typeIdForCanceledSeat),
+                        ticketTypeName: ticketTypeNameForCanceledSeat,
+                        quantity: 1,
+                        price: priceForCanceledSeat,
+                    },
+                });
             } else {
                 console.warn(`Seat ${seatIdToCancel} not found in event ${event.id} seat_details during full cancellation.`);
+                // If seat not found in event details, try to use details from orderSeatDetails if available
+                if (seatInOrder.price) {
+                    totalAmountReduced += parseFloat(seatInOrder.price.toString());
+                    cancellationDetails.push({
+                        seatId: seatIdToCancel,
+                        ticketTypeName: seatInOrder.ticketTypeName || 'N/A',
+                        price: seatInOrder.price,
+                    });
+                     await prisma.canceledTicket.create({
+                        data: {
+                            order_id: parseInt(order_id, 10),
+                            type: 'seat',
+                            seat_id: seatIdToCancel,
+                            type_id: seatInOrder.type_id || '0', // Fallback
+                            ticketTypeName: seatInOrder.ticketTypeName || 'N/A',
+                            quantity: 1,
+                            price: parseFloat(seatInOrder.price.toString()),
+                        },
+                    });
+                }
             }
-
-            await prisma.canceledTicket.create({
-                data: {
-                    order_id: parseInt(order_id, 10),
-                    type: 'seat',
-                    seat_id: seatIdToCancel,
-                    type_id: String(typeIdForCanceledSeat),
-                    ticketTypeName: ticketTypeNameForCanceledSeat,
-                    quantity: 1, // Always 1 for a single seat
-                },
-            });
         }
 
         await prisma.event.update({
@@ -1215,7 +1271,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             try {
                 ticketsWithoutSeatsInOrder = JSON.parse(order.tickets_without_seats);
             } catch (e) {
-                console.error("Failed to parse tickets_without_seats from order during full cancellation:", e);
+                console.error("Failed to parse tickets_without_seats from order during full cancellation (JSON string):", e);
             }
         } else if (Array.isArray(order.tickets_without_seats)) {
             ticketsWithoutSeatsInOrder = order.tickets_without_seats as { issued_count: number; ticket_count: number; ticket_type_id: number; name?: string }[];
@@ -1226,7 +1282,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
             try {
                 eventTicketDetails = JSON.parse(event.ticket_details);
             } catch (e) {
-                console.error("Failed to parse event ticket_details during full cancellation:", e);
+                console.error("Failed to parse event ticket_details during full cancellation (JSON string):", e);
             }
         } else if (Array.isArray(event.ticket_details)) {
             eventTicketDetails = event.ticket_details as { price: number; ticketCount: number; ticketTypeId: number; hasTicketCount: boolean; bookedTicketCount: number; name?: string }[];
@@ -1235,12 +1291,13 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         for (const ticket of ticketsWithoutSeatsInOrder) {
             const quantityToCancel = ticket.ticket_count;
             const ticketTypeId = ticket.ticket_type_id;
-            // Use the map to get the ticket type name, overriding ticket.name if present
-            const ticketTypeName = ticketTypeNameMap.get(ticketTypeId) || 'N/A'; 
+            const ticketTypeName = ticketTypeNameMap.get(ticketTypeId) || 'N/A';
 
             if (quantityToCancel > 0) {
+                let ticketPrice = 0;
                 const ticketTypeFoundAndUpdated = eventTicketDetails.some(detail => {
                     if (detail.ticketTypeId === ticketTypeId) {
+                        ticketPrice = detail.price;
                         detail.bookedTicketCount = Math.max(0, detail.bookedTicketCount - quantityToCancel);
                         return true;
                     }
@@ -1251,6 +1308,17 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                     console.warn(`Ticket type ${ticketTypeName} (ID: ${ticketTypeId}) not found in event ${event.id} ticket_details during full cancellation.`);
                 }
 
+                const totalTicketsPrice = quantityToCancel * ticketPrice;
+                totalAmountReduced += totalTicketsPrice;
+
+                // Add to non-seat tickets cancellation details for email
+                nonSeatTicketsCancellationDetails.push({
+                    ticketTypeName: ticketTypeName,
+                    quantity: quantityToCancel,
+                    pricePerTicket: ticketPrice.toFixed(2),
+                    totalPrice: totalTicketsPrice.toFixed(2),
+                });
+
                 await prisma.canceledTicket.create({
                     data: {
                         order_id: parseInt(order_id, 10),
@@ -1258,6 +1326,7 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
                         type_id: String(ticketTypeId),
                         ticketTypeName: ticketTypeName,
                         quantity: quantityToCancel,
+                        price: Number(totalTicketsPrice),
                     },
                 });
             }
@@ -1271,23 +1340,48 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         });
 
         // --- Finalize Order Cancellation ---
+        const currentSubTotal = parseFloat(order.sub_total.toString());
+        const currentTotal = parseFloat(order.total.toString());
+        const newSubTotal = currentSubTotal - totalAmountReduced;
+        const newTotal = currentTotal - totalAmountReduced;
+
         await prisma.order.update({
             where: { id: parseInt(order_id, 10) },
             data: {
                 seat_ids: JSON.stringify([]), // Clear all assigned seats
                 tickets_without_seats: JSON.stringify([]), // Clear all unassigned tickets
                 status: 'cancelled', // Update order status to 'cancelled'
+                sub_total: newSubTotal, // Update sub_total
+                total: newTotal,       // Update total
             },
         });
 
-        req.session.success = `Booking ${order_id} and all associated tickets have been cancelled successfully.`;
+        // --- Send email ---
+        const templatePath = path.join(__dirname, '../../views/email-templates/ticket-cancel-template.ejs');
+        const emailHtml = await ejs.renderFile(templatePath, {
+            first_name: order.first_name,
+            event_name: event.name,
+            order_id: order.id,
+            cancellationDetails: cancellationDetails,
+            nonSeatTicketsCancellationDetails: nonSeatTicketsCancellationDetails,
+            totalAmountReduced: totalAmountReduced.toFixed(2),
+        });
+
+        await transporter.sendMail({
+            from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+            to: order.email,
+            subject: `Your Event Ticket Cancellation for ${event.name}`,
+            html: emailHtml,
+        });
+
+        req.session.success = `Booking ${order_id} and all associated tickets have been cancelled successfully. Total amount reduced by Rs. ${totalAmountReduced.toFixed(2)}.`;
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
 
     } catch (err: any) {
         console.error("Error cancelling entire booking:", err);
-        req.session.error = 'An error occurred while cancelling the entire booking.';
+        req.session.error = 'An error occurred while cancelling the entire booking. Please try again.';
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
