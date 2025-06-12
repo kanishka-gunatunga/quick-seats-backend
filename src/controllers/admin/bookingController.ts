@@ -664,7 +664,7 @@ export const cancelSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
     // Expecting an array of objects for canceledSeats
     const { canceledSeats } = req.body; // canceledSeats should be like [{ seatId: 'A1', type_id: '1', ticketTypeName: 'VIP', price: 100 }, ...]
-
+    console.log('canceledSeats',canceledSeats);
     if (!canceledSeats || !Array.isArray(canceledSeats) || canceledSeats.length === 0) {
         req.session.error = 'No seats selected for cancellation.';
         req.session.save(() => {
