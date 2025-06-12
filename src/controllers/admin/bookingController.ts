@@ -659,13 +659,13 @@ export const viewBooking = async (req: Request, res: Response) => {
     });
   }
 };
-
 export const cancelSeat = async (req: Request, res: Response) => {
     const order_id = req.params.id;
-    const { seatId,type_id,ticketTypeName} = req.body;
+    // Expecting an array of objects for canceledSeats
+    const { canceledSeats } = req.body; // canceledSeats should be like [{ seatId: 'A1', type_id: '1', ticketTypeName: 'VIP' }, ...]
 
-    if (!seatId) {
-        req.session.error = 'Missing seat ID to cancel.';
+    if (!canceledSeats || !Array.isArray(canceledSeats) || canceledSeats.length === 0) {
+        req.session.error = 'No seats selected for cancellation.';
         req.session.save(() => {
             return res.redirect(`/booking/view/${order_id}`);
         });
@@ -686,31 +686,20 @@ export const cancelSeat = async (req: Request, res: Response) => {
         }
 
         // Parse seat_ids from the order
-        let seatIds: string[] = [];
+        let orderSeatIds: any[] = []; // Changed to 'any[]' to accommodate objects if they were previously stored
         if (typeof order.seat_ids === 'string') {
             try {
-                seatIds = JSON.parse(order.seat_ids);
+                orderSeatIds = JSON.parse(order.seat_ids);
             } catch (e) {
                 console.error("Failed to parse seat_ids from order:", e);
-                req.session.error = 'An error occurred while processing seat data.';
+                req.session.error = 'An error occurred while processing order seat data.';
                 req.session.save(() => {
                     return res.redirect(`/booking/view/${order_id}`);
                 });
                 return;
             }
         } else if (Array.isArray(order.seat_ids)) {
-            seatIds = order.seat_ids as string[];
-        }
-
-        const initialSeatCount = seatIds.length;
-        const updatedSeatIds = seatIds.filter(id => id !== seatId);
-
-        if (updatedSeatIds.length === initialSeatCount) {
-            req.session.error = `Seat ${seatId} not found in this booking.`;
-            req.session.save(() => {
-                return res.redirect(`/booking/view/${order_id}`);
-            });
-            return;
+            orderSeatIds = order.seat_ids;
         }
 
         // Get the event associated with the order to update seat status
@@ -743,53 +732,84 @@ export const cancelSeat = async (req: Request, res: Response) => {
             eventSeatDetails = event.seats;
         }
 
+        const cancelledSeatIds: string[] = [];
+        const successfullyCancelledRecords: any[] = [];
 
-  
-        const seatFoundInEvent = eventSeatDetails.some(seat => {
-            if (seat.seatId === seatId) {
-                seat.status = "available";
-                return true;
+        for (const seatToCancel of canceledSeats) {
+            const { seatId, type_id, ticketTypeName } = seatToCancel;
+
+            // Remove seat from order.seat_ids
+            const initialOrderSeatCount = orderSeatIds.length;
+            const updatedOrderSeatIds = orderSeatIds.filter((seat: any) => seat.seatId !== seatId); // Assuming seat objects in order.seat_ids
+            
+            if (updatedOrderSeatIds.length === initialOrderSeatCount) {
+                console.warn(`Seat ${seatId} not found in order ${order_id} seat_ids. Skipping.`);
+                continue; // Skip to the next seat if not found in order
             }
-            return false;
-        });
+            orderSeatIds = updatedOrderSeatIds; // Update the main array for subsequent iterations
 
-        if (!seatFoundInEvent) {
-             console.warn(`Seat ${seatId} not found in event ${event.id} seat_details.`);
+            // Mark seat as available in event.seats
+            let seatFoundInEvent = false;
+            eventSeatDetails = eventSeatDetails.map(seat => {
+                if (seat.seatId === seatId) {
+                    seat.status = "available";
+                    seatFoundInEvent = true;
+                }
+                return seat;
+            });
+
+            if (!seatFoundInEvent) {
+                console.warn(`Seat ${seatId} not found in event ${event.id} seat_details. Skipping event seat update.`);
+            }
+
+            // Prepare for CanceledTicket creation
+            successfullyCancelledRecords.push({
+                order_id: parseInt(order_id, 10),
+                type: 'seat',
+                seat_id: seatId,
+                type_id: type_id,
+                ticketTypeName: ticketTypeName,
+            });
+            cancelledSeatIds.push(seatId);
         }
 
+        if (cancelledSeatIds.length === 0) {
+            req.session.error = 'No valid seats were found in this booking to cancel.';
+            req.session.save(() => {
+                return res.redirect(`/booking/view/${order_id}`);
+            });
+            return;
+        }
+
+        // Perform database updates
         await prisma.order.update({
             where: { id: parseInt(order_id, 10) },
             data: {
-                seat_ids: JSON.stringify(updatedSeatIds),
+                seat_ids: JSON.stringify(orderSeatIds),
             },
         });
 
-        // Update the event with the modified seat status
         await prisma.event.update({
-            where: { id:  parseInt(order.event_id, 10)  },
+            where: { id: parseInt(order.event_id, 10) },
             data: {
                 seats: JSON.stringify(eventSeatDetails),
             },
         });
 
-        await prisma.canceledTicket.create({
-          data: {
-            order_id: parseInt(order_id, 10),
-            type: 'seat',
-            seat_id: seatId,
-            type_id: type_id,
-            ticketTypeName: ticketTypeName,
-          },
+        // Create multiple canceledTicket entries
+        await prisma.canceledTicket.createMany({
+            data: successfullyCancelledRecords,
+            skipDuplicates: true, // Optional: skips records if they already exist based on unique constraints
         });
         
-        req.session.success = `Seat ${seatId} cancelled successfully.`;
+        req.session.success = `Successfully cancelled seat(s): ${cancelledSeatIds.join(', ')}.`;
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });
 
     } catch (err) {
-        console.error("Error cancelling seat:", err);
-        req.session.error = 'An error occurred while cancelling the seat.';
+        console.error("Error cancelling seat(s):", err);
+        req.session.error = 'An error occurred while cancelling the seat(s).';
         req.session.save(() => {
             res.redirect(`/booking/view/${order_id}`);
         });

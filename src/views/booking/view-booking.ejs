@@ -88,25 +88,91 @@
 
                            <% if (order.seat_ids && order.seat_ids.length > 0) { %>
                             <h5>Tickets with Assigned Seats (<%= order.seat_ids.length %>)</h5>
-                            <div class="row">
-                                <% order.seat_ids.forEach(seat => { %>
-                                    <div class="col-md-2 mb-2">
-                                        <div class="card">
-                                            <div class="card-body text-center">
-                                                <h6>Seat: <%= seat.seatId %></h6>
-                                                <p>Ticket Type: <span style="font-weight: bold; color: <%= seat.color %>;"><%= seat.ticketTypeName %></span></p>
-                                                <p>Price: Rs. <%= seat.price %></p>
-                                                <form action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirm('Are you sure you want to cancel seat <%= seat.seatId %>? This action cannot be undone.');">
-                                                    <input type="hidden" name="seatId" value="<%= seat.seatId %>">
-                                                     <input type="hidden" name="type_id" value="<%= seat.type_id %>">
-                                                     <input type="hidden" name="ticketTypeName" value="<%= seat.ticketTypeName %>">
-                                                    <button type="submit" class="btn btn-danger btn-sm mt-2">Cancel Seat</button>
-                                                </form>
+                            <form id="cancelSeatsForm" action="/bookings/cancel-seat/<%= order.id %>" method="POST" onsubmit="return confirmCancel();">
+                                <div class="row">
+                                    <% order.seat_ids.forEach(seat => { %>
+                                        <div class="col-md-2 mb-2">
+                                            <div class="card">
+                                                <div class="card-body text-center">
+                                                    <input type="checkbox" name="selectedSeats" class="form-check-input float-start"
+                                                        value="<%= JSON.stringify({ seatId: seat.seatId, type_id: seat.type_id, ticketTypeName: seat.ticketTypeName }) %>">
+                                                    <h6>Seat: <%= seat.seatId %></h6>
+                                                    <p>Ticket Type: <span style="font-weight: bold; color: <%= seat.color %>;"><%= seat.ticketTypeName %></span></p>
+                                                    <p>Price: Rs. <%= seat.price %></p>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                <% }) %>
-                            </div>
+                                    <% }) %>
+                                </div>
+                                <div class="mt-3 text-center">
+                                    <button type="button" class="btn btn-secondary me-2" onclick="toggleSelectAll()">Select All</button>
+                                    <button type="submit" class="btn btn-danger">Cancel Selected Seats</button>
+                                </div>
+                                <input type="hidden" id="canceledSeatsData" name="canceledSeats">
+                            </form>
+
+                            <script>
+                                function confirmCancel() {
+                                    const checkboxes = document.querySelectorAll('input[name="selectedSeats"]:checked');
+                                    if (checkboxes.length === 0) {
+                                        // Using a custom modal or message box instead of alert()
+                                        showCustomMessage('Please select at least one seat to cancel.', 'warning');
+                                        return false;
+                                    }
+
+                                    const seatIdsToCancel = Array.from(checkboxes).map(checkbox => {
+                                        return JSON.parse(checkbox.value);
+                                    });
+
+                                    // Set the value of the hidden input field
+                                    document.getElementById('canceledSeatsData').value = JSON.stringify(seatIdsToCancel);
+
+                                    // Custom confirmation dialog
+                                    // Replace this with your actual custom modal implementation
+                                    return new Promise((resolve) => {
+                                        showCustomConfirm(`Are you sure you want to cancel ${checkboxes.length} selected seat(s)? This action cannot be undone.`, (result) => {
+                                            resolve(result);
+                                        });
+                                    });
+                                }
+
+                                function toggleSelectAll() {
+                                    const checkboxes = document.querySelectorAll('input[name="selectedSeats"]');
+                                    const selectAllButton = document.querySelector('.btn-secondary');
+                                    let allChecked = true;
+
+                                    // Check if all are already checked
+                                    checkboxes.forEach(checkbox => {
+                                        if (!checkbox.checked) {
+                                            allChecked = false;
+                                        }
+                                    });
+
+                                    checkboxes.forEach(checkbox => {
+                                        checkbox.checked = !allChecked;
+                                    });
+
+                                    selectAllButton.textContent = allChecked ? 'Select All' : 'Deselect All';
+                                }
+
+                                // Placeholder for custom message box/modal functions
+                                // You should replace these with your actual UI components
+                                function showCustomMessage(message, type) {
+                                    // Example: A simple div that appears
+                                    const messageDiv = document.createElement('div');
+                                    messageDiv.className = `alert alert-${type} mt-3`;
+                                    messageDiv.textContent = message;
+                                    document.body.prepend(messageDiv); // Or append to a specific container
+                                    setTimeout(() => messageDiv.remove(), 3000); // Remove after 3 seconds
+                                }
+
+                                function showCustomConfirm(message, callback) {
+                                    // Example: Using a simple JS confirm for illustration,
+                                    // but you should replace this with a proper UI modal.
+                                    const result = window.confirm(message); // Replace with your modal
+                                    callback(result);
+                                }
+                            </script>
                         <% } %>
                            <% if (order.tickets_without_seats && order.tickets_without_seats.length > 0) { %>
                             <h5>Tickets without Assigned Seats</h5>
