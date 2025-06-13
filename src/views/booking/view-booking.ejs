@@ -150,29 +150,40 @@
                             </div>
                         <% } %>
 
-                        <h4 class="mt-2">Cancelations</h4>
-                         <div class="table-responsive">
-                            <table class="table table-bordered table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Seat or No Seat</th>
-                                        <th>Ticket Type</th>
-                                        <th>Seat ID</th>
-                                        <th>Quantity</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                        <% order.cancells.forEach(cancel => { %>
-                                <tr>
-                                    <td>
-                                        <%= cancel.type %>
-                                    </td>
-                                    <td><%= cancel.ticketTypeName %></td>
-                                    <td><%= cancel.seat_id ?? '-' %></td>
-                                    <td><%= cancel.quantity ?? '-' %></td>
-                                  
-                                    </tr>
-                        <% }) %>
+                       <h4 class="mt-2">Cancellations</h4>
+                        <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                            <tr>
+                                <th>Seat or No Seat</th>
+                                <th>Ticket Type</th>
+                                <th>Seat ID(s)</th>
+                                <th>Quantity</th>
+                                <th>Price</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <% // 'order.cancells' here should be the 'finalCancells' array passed from your backend %>
+                            <% order.cancells.forEach(cancel => { %>
+                            <tr>
+                                <td>
+                                <%= cancel.type %>
+                                </td>
+                                <td><%= cancel.ticketTypeName %></td>
+                                <td>
+                                <% // Display seat IDs if available, otherwise '-' %>
+                                <% if (cancel.type === 'seat' && cancel.seat_ids && cancel.seat_ids.length > 0) { %>
+                                    <%= cancel.seat_ids.join(', ') %>
+                                <% } else { %>
+                                    -
+                                <% } %>
+                                </td>
+                                <td><%= cancel.quantity %></td>
+                                <td><%= cancel.price.toFixed(2) %></td>
+                            </tr>
+                            <% }) %>
+                            </tbody>
+                        </table>
                         </div>
                     </div>
                 </div>

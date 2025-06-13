@@ -554,8 +554,55 @@ export const viewBooking = async (req: Request, res: Response) => {
     }
 
     const cancells = await prisma.canceledTicket.findMany({
-      where: { order_id:  parseInt(order_id, 10)  },
+    where: { order_id: parseInt(order_id, 10) },
     });
+
+    // Define a type for the aggregated ticket structure
+    interface AggregatedCancel {
+    type: string;
+    ticketTypeName: string;
+    quantity: number;
+    price: number;
+    seat_ids: string[];
+    }
+
+    // Aggregate the data to group by ticketTypeName
+    const aggregatedCancells = cancells.reduce((acc: Record<string, AggregatedCancel>, cancel) => {
+    // Ensure ticketTypeName is a string; handle cases where it might be null/undefined
+    const key: string = cancel.ticketTypeName || 'Unknown Ticket Type'; // Provides a fallback if ticketTypeName is null
+
+    if (!acc[key]) {
+        acc[key] = {
+        type: cancel.type,
+        ticketTypeName: key,
+        quantity: 0,
+        price: 0,
+        seat_ids: [],
+        };
+    }
+
+    // Add quantity, handling nulls
+    if (cancel.quantity !== null) {
+        acc[key].quantity += cancel.quantity;
+    } else {
+        acc[key].quantity += 1;
+    }
+
+    // Add price, handling nulls
+    if (cancel.price !== null) {
+        acc[key].price += cancel.price;
+    }
+
+    // Collect seat IDs if it's a 'seat' type and seat_id exists
+    if (cancel.type === 'seat' && cancel.seat_id) {
+        acc[key].seat_ids.push(cancel.seat_id);
+    }
+
+    return acc;
+    }, {} as Record<string, AggregatedCancel>); // <-- This is the key change!
+
+    // Convert the aggregated object back to an array for easier iteration in EJS
+    const finalCancells = Object.values(aggregatedCancells);
 
     const ticketTypes = await prisma.ticketType.findMany({});
 
@@ -649,7 +696,7 @@ export const viewBooking = async (req: Request, res: Response) => {
       tickets_without_seats: enrichedTicketsWithoutSeats,
       seat_ids: seatsWithDetails,
       ticketTypes: ticketTypes, 
-      cancells: cancells,
+      cancells: finalCancells,
     };
 
     const error = req.session.error;
