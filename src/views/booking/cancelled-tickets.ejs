@@ -36,6 +36,7 @@
                                                                     <th>Seat ID</th>
                                                                     <th>Quantity</th>
                                                                     <th>Price</th>
+                                                                    <th>Date</th>
                                                                 </tr>
                                                             </thead>
 
@@ -48,6 +49,7 @@
                                                                     <td><%= ticket.seat_id ? ticket.seat_id : 'N/A' %></td>
                                                                     <td><%= ticket.quantity ? ticket.quantity : 'N/A' %></td>
                                                                     <td><%= ticket.price %></td>
+                                                                    <td><%= ticket.createdAt %></td>
                                                                 </tr>
                                                                 <% }) %>
                                                             </tbody>
