@@ -3,7 +3,7 @@ import { login, register, updateProfileSettings, updateSecuritySettings,bookingH
 validateOtp, resetPassword,resendOtp } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout} from '../../controllers/api/checkoutController';
-import { selectSeat,resetSeats} from '../../controllers/api/seatController';
+import { selectSeat,resetSeats,unselectSeat} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
 
@@ -32,7 +32,7 @@ router.get('/get-artists', getArtists);
 router.post('/select-seat', selectSeat);
 router.post('/reset-seats', resetSeats);
 router.get('/get-event-seats/:id', getEventSeats);
-
+router.post('/unselect-seat', unselectSeat);
 
 //Checkout
 router.post('/checkout', checkout);
