@@ -1,0 +1,76 @@
+<%- include('../layouts/header.ejs') %>
+<!-- ============================================================== -->
+            <!-- Start Page Content here -->
+            <!-- ============================================================== -->
+         
+            <div class="content-page">
+                <div class="content">
+
+                    <!-- Start Content-->
+                    <div class="container-fluid">
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h4 class="header-title">Cancelled Tickets</h4>
+                                                <% if (success) { %>
+                                                    <div class="alert alert-success"><%= success %></div>
+                                                <% } %>
+                                                <% if (error) { %>
+                                                    <div class="alert alert-danger"><%= error %></div>
+                                                <% } %>
+
+                                         <div class="row">
+                                            <div class="col-12">
+                                                <div class="card">
+                                                    <div class="card-body table-responsive">
+                                                       
+                    
+                                                        <table id="responsive-datatable" class="table table-bordered table-bordered dt-responsive nowrap">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Event</th>
+                                                                    <th>Ticket Type</th>
+                                                                    <th>Is Seat Ticket</th>
+                                                                    <th>Seat ID</th>
+                                                                    <th>Quantity</th>
+                                                                    <th>Price</th>
+                                                                </tr>
+                                                            </thead>
+
+                                                            <tbody>
+                                                                <% tickets.forEach(ticket => { %>
+                                                                <tr>
+                                                                    <td><%= ticket.eventName %></td>
+                                                                    <td><%= ticket.ticketTypeName %></td>
+                                                                    <td><%= ticket.type === 'seat' ? 'Yes' : 'No' %></td>
+                                                                    <td><%= ticket.seat_id ? ticket.seat_id : 'N/A' %></td>
+                                                                    <td><%= ticket.quantity ? ticket.quantity : 'N/A' %></td>
+                                                                    <td><%= ticket.price %></td>
+                                                                </tr>
+                                                                <% }) %>
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            
+                                            </div>
+                                        </div> <!-- end row -->   
+
+                                    </div> <!-- end card-body -->
+                                </div> <!-- end card -->
+                            </div>
+                        </div>
+                        <!-- end row -->        
+                        
+                    
+                    </div> <!-- container -->
+
+                </div>
+
+            </div>
+            <!-- ============================================================== -->
+            <!-- End Page content -->
+            <!-- ============================================================== -->
+<%- include('../layouts/footer.ejs') %>

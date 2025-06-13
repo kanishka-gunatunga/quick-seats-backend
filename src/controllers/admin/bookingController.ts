@@ -1400,40 +1400,32 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
 };
 
 export const cancelledTickets = async (req: Request, res: Response) => {
-  const selectedStatus = req.query.status as string; // Cast to string
+  const tickets = await prisma.canceledTicket.findMany({});
 
-  let orders;
+  const ticketsWithDetails = await Promise.all(
+    tickets.map(async (ticket: any) => {
+      const order = await prisma.order.findUnique({
+        where: {
+          id: ticket.order_id,
+        },
+      });
 
-  if (selectedStatus && selectedStatus !== 'all') {
-    orders = await prisma.order.findMany({
-      where: {
-        status: selectedStatus,
-      },
-    });
-  } else {
-    orders = await prisma.order.findMany({});
-  }
+      let event = null;
+      if (order && order.event_id) {
+        event = await prisma.event.findUnique({
+          where: {
+            id: Number(order.event_id),
+          },
+        });
+      }
 
-  const eventIds = [...new Set(orders.map(order => parseInt(order.event_id, 10)))];
-
-  const events = await prisma.event.findMany({
-    where: {
-      id: {
-        in: eventIds,
-      },
-    },
-  });
-
-  const eventMap = new Map<number, string>();
-  events.forEach(event => {
-    eventMap.set(event.id, event.name);
-  });
-
-  const ordersWithEventNames = orders.map(order => ({
-    ...order,
-    event_id: parseInt(order.event_id, 10), 
-    eventName: eventMap.get(parseInt(order.event_id, 10)) || 'Unknown Event',
-  }));
+      return {
+        ...ticket,
+        eventName: event ? event.name : 'N/A',
+        location: event ? event.location : 'N/A',
+      };
+    })
+  );
 
   const error = req.session.error;
   const success = req.session.success;
@@ -1443,6 +1435,6 @@ export const cancelledTickets = async (req: Request, res: Response) => {
   res.render('booking/cancelled-tickets', {
     error,
     success,
-    orders: ordersWithEventNames,
+    tickets: ticketsWithDetails, 
   });
 };
