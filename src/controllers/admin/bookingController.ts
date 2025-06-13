@@ -1398,3 +1398,51 @@ export const cancelEntireBooking = async (req: Request, res: Response) => {
         });
     }
 };
+
+export const cancelledTickets = async (req: Request, res: Response) => {
+  const selectedStatus = req.query.status as string; // Cast to string
+
+  let orders;
+
+  if (selectedStatus && selectedStatus !== 'all') {
+    orders = await prisma.order.findMany({
+      where: {
+        status: selectedStatus,
+      },
+    });
+  } else {
+    orders = await prisma.order.findMany({});
+  }
+
+  const eventIds = [...new Set(orders.map(order => parseInt(order.event_id, 10)))];
+
+  const events = await prisma.event.findMany({
+    where: {
+      id: {
+        in: eventIds,
+      },
+    },
+  });
+
+  const eventMap = new Map<number, string>();
+  events.forEach(event => {
+    eventMap.set(event.id, event.name);
+  });
+
+  const ordersWithEventNames = orders.map(order => ({
+    ...order,
+    event_id: parseInt(order.event_id, 10), 
+    eventName: eventMap.get(parseInt(order.event_id, 10)) || 'Unknown Event',
+  }));
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  res.render('booking/cancelled-tickets', {
+    error,
+    success,
+    orders: ordersWithEventNames,
+  });
+};
