@@ -210,19 +210,8 @@ export const addEventPost = async (req: Request, res: Response) => {
 };
 
 export const events = async (req: Request, res: Response) => {
-  const eventsFromDb = await prisma.event.findMany({ });
-
-   const events = eventsFromDb.map(event => {
-    return {
-      ...event,
-      start_date_time_local: event.start_date_time
-        ? DateTime.fromJSDate(event.start_date_time).setZone("Asia/Colombo").toFormat("yyyy-MM-dd HH:mm:ss")
-        : 'N/A',
-      end_date_time_local: event.end_date_time
-        ? DateTime.fromJSDate(event.end_date_time).setZone("Asia/Colombo").toFormat("yyyy-MM-dd HH:mm:ss")
-        : 'N/A'
-    };
-  });
+  const events = await prisma.event.findMany({ });
+  
   const error = req.session.error;
   const success = req.session.success;
   req.session.error = undefined;
