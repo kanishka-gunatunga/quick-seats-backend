@@ -37,36 +37,20 @@ interface CybersourceParams {
     bill_to_phone: string;
     bill_to_address_country: string;
     return_url: string;
-    signature?: string; 
-    signed_field_names?: string
+    signature?: string;
+    signed_field_names?: string; // This will be set by the function, or passed in if fixed list
+    [key: string]: any; // Allow for other dynamic properties
 }
-function signCybersourceParams(params: { [key: string]: any }, secretKey: string): string {
+function signCybersourceParams(params: CybersourceParams, secretKey: string): string {
+    if (!params.signed_field_names) {
+        throw new Error("Missing 'signed_field_names' in parameters for signing.");
+    }
 
-    const fieldsToSign = [
-        "access_key",
-        "profile_id",
-        "transaction_uuid",
-        "signed_date_time",
-        "locale",
-        "transaction_type",
-        "reference_number",
-        "amount",
-        "currency",
-        "bill_to_email",
-        "bill_to_forename",
-        "bill_to_surname",
-        "bill_to_phone",
-        "bill_to_address_country",
-        "return_url",
-        "signed_field_names"
-    ];
+    const signedFieldNames = params.signed_field_names.split(',');
+    const dataToSignArray: string[] = [];
 
-    params.signed_field_names = fieldsToSign.join(',');
-
-    let dataToSignArray: string[] = [];
-    for (const field of fieldsToSign) {
-
-        const value = params[field] !== undefined && params[field] !== null ? params[field].toString() : '';
+    for (const field of signedFieldNames) {
+        const value = params[field] !== undefined && params[field] !== null ? String(params[field]) : '';
         dataToSignArray.push(`${field}=${value}`);
     }
 
@@ -74,8 +58,6 @@ function signCybersourceParams(params: { [key: string]: any }, secretKey: string
 
     const hmac = crypto.createHmac('sha256', secretKey);
     hmac.update(dataToSign);
-
-    // Return the base64 encoded digest of the HMAC.
     return hmac.digest('base64');
 }
 
@@ -236,7 +218,26 @@ export const checkout = async (req: Request, res: Response) => {
         const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL as string;
         const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL as string; // You'll need to define this in your .env
 
-        const paramsForCybersource: CybersourceParams = { // Apply the new interface here
+        const signedFieldNames = [
+            'access_key',
+            'amount',
+            'bill_to_address_country',
+            'bill_to_email',
+            'bill_to_forename',
+            'bill_to_phone',
+            'bill_to_surname',
+            'currency',
+            'locale',
+            'profile_id',
+            'reference_number',
+            'return_url',
+            'signed_date_time',
+            'transaction_type',
+            'transaction_uuid',
+            // Add any other fields you include in your Cybersource configuration for signing
+        ].join(',');
+
+        const paramsForCybersource: CybersourceParams = {
             access_key: CYBERSOURCE_ACCESS_KEY,
             profile_id: CYBERSOURCE_PROFILE_ID,
             transaction_uuid: transactionUuid,
@@ -252,11 +253,12 @@ export const checkout = async (req: Request, res: Response) => {
             bill_to_phone: contact_number,
             bill_to_address_country: country,
             return_url: `${FRONTEND_BASE_URL}/payment-status?orderId=${order.id}&transactionUuid=${transactionUuid}`,
-
+            signed_field_names: signedFieldNames, // IMPORTANT: Set this before signing
         };
 
         // Generate the signature
         paramsForCybersource.signature = signCybersourceParams(paramsForCybersource, CYBERSOURCE_SECRET_KEY);
+
 
         // Respond to the frontend with the redirect URL and parameters
         return res.status(200).json({
