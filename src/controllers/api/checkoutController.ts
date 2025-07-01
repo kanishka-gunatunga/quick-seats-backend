@@ -436,15 +436,39 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
                 return res.status(200).send('Payment processed, but event details missing for fulfillment.');
             }
 
-            const eventSeats: Seat[] = typeof event.seats === 'string'
-                ? JSON.parse(event.seats)
-                : event.seats || [];
-            const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
-                ? JSON.parse(event.ticket_details)
-                : event.ticket_details || [];
+             const eventSeats: Seat[] = typeof event.seats === 'string'
+            ? JSON.parse(event.seats)
+            : event.seats || []; // Ensure it's an array
 
-            const orderSeatIds: string[] = order.seat_ids ? JSON.parse(order.seat_ids).map(String) : [];
-            const orderTicketsWithoutSeats: TicketWithoutSeat[] = order.tickets_without_seats ? JSON.parse(order.tickets_without_seats) : [];
+            const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
+            ? JSON.parse(event.ticket_details)
+            : event.ticket_details || []; // Ensure it's an array
+
+            let orderSeatIds: string[] = [];
+            if (order.seat_ids !== null) {
+                try {
+                    const parsedSeatIds = JSON.parse(order.seat_ids as string); 
+                    if (Array.isArray(parsedSeatIds)) {
+                        orderSeatIds = parsedSeatIds.map((id: any) => String(id));
+                    }
+                } catch (e) {
+                    console.error("Failed to parse order.seat_ids:", e);
+                }
+            }
+
+            let orderTicketsWithoutSeats: TicketWithoutSeat[] = [];
+            if (order.tickets_without_seats !== null) {
+                try {
+                    const parsedTickets = JSON.parse(order.tickets_without_seats as string); 
+                    if (Array.isArray(parsedTickets) && parsedTickets.every((item: any) =>
+                        typeof item === 'object' && 'ticket_type_id' in item && 'ticket_count' in item
+                    )) {
+                        orderTicketsWithoutSeats = parsedTickets;
+                    }
+                } catch (e) {
+                    console.error("Failed to parse order.tickets_without_seats:", e);
+                }
+            }
 
             const groupedSeats: { [ticketTypeName: string]: string[] } = {};
             const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
@@ -524,7 +548,10 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             res.status(200).send('Payment successful and order fulfilled.');
 
         } else {
-            
+            await prisma.order.update({
+                where: { id: order.id },
+                data: { status: 'failed' },
+            });
             res.status(200).send('Payment failed, order status updated.');
         }
 
