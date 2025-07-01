@@ -229,7 +229,7 @@ export const checkout = async (req: Request, res: Response) => {
             transaction_type: 'sale', // or 'authorization'
             reference_number: order.id.toString(), // Use your internal order ID as reference
             amount: subTotal.toFixed(2), // Amount must be a string with 2 decimal places
-            currency: 'USD', // Or dynamically get from event/request
+            currency: 'LKR', // Or dynamically get from event/request
             bill_to_email: email,
             bill_to_forename: first_name,
             bill_to_surname: last_name,
