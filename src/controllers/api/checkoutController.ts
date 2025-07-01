@@ -41,25 +41,41 @@ interface CybersourceParams {
     signed_field_names?: string
 }
 function signCybersourceParams(params: { [key: string]: any }, secretKey: string): string {
-    // Sort keys alphabetically to ensure consistent signing
-    const signedFieldNames = Object.keys(params)
-        .sort()
-        .filter(key => key !== 'signature' && key !== 'signed_field_names') // Exclude signature and signed_field_names themselves
-        .join(',');
 
-    params.signed_field_names = signedFieldNames;
+    const fieldsToSign = [
+        "access_key",
+        "profile_id",
+        "transaction_uuid",
+        "signed_date_time",
+        "locale",
+        "transaction_type",
+        "reference_number",
+        "amount",
+        "currency",
+        "bill_to_email",
+        "bill_to_forename",
+        "bill_to_surname",
+        "bill_to_phone",
+        "bill_to_address_country",
+        "return_url",
+        "signed_field_names"
+    ];
 
-    let dataToSign = '';
-    const fields = signedFieldNames.split(',');
-    for (const field of fields) {
-        if (params[field] !== undefined) { // Ensure the field exists in params
-            dataToSign += `${field}=${params[field]},`;
-        }
+    params.signed_field_names = fieldsToSign.join(',');
+
+    let dataToSignArray: string[] = [];
+    for (const field of fieldsToSign) {
+
+        const value = params[field] !== undefined && params[field] !== null ? params[field].toString() : '';
+        dataToSignArray.push(`${field}=${value}`);
     }
-    dataToSign = dataToSign.slice(0, -1); // Remove trailing comma
+
+    const dataToSign = dataToSignArray.join(',');
 
     const hmac = crypto.createHmac('sha256', secretKey);
     hmac.update(dataToSign);
+
+    // Return the base64 encoded digest of the HMAC.
     return hmac.digest('base64');
 }
 
