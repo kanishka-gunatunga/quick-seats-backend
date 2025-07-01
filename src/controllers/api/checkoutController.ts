@@ -553,7 +553,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
                 data: { status: 'failed' },
             });
             res.status(200).send('Payment failed, order status updated.');
-        }
+        } 
 
     } catch (err) {
         console.error('Cybersource callback processing error:', err);
