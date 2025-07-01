@@ -4,7 +4,24 @@ import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
 const prisma = new PrismaClient();
+export const testPayment = async (req: Request, res: Response) => {
+  const error = req.session.error;
+  const success = req.session.success;
+  const formData = req.session.formData || {};
+  const validationErrors = req.session.validationErrors || {};
 
+  req.session.error = undefined;
+  req.session.success = undefined;
+  req.session.formData = undefined;
+  req.session.validationErrors = undefined;
+
+  res.render('test-payment', {
+    error,
+    success,
+    formData,
+    validationErrors,
+  });
+};
 export const addAdminGet = async (req: Request, res: Response) => {
   const error = req.session.error;
   const success = req.session.success;

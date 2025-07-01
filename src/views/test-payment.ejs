@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cybersource Redirect Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+            flex-direction: column;
+            text-align: center;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+        h1 {
+            color: #333;
+        }
+        p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .loading-spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        pre {
+            background-color: #e9e9e9;
+            padding: 15px;
+            border-radius: 5px;
+            text-align: left;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Initiating Payment...</h1>
+        <p>Please wait while we redirect you to the secure payment gateway.</p>
+        <div class="loading-spinner"></div>
+        <p>If you are not redirected automatically, please check the console for errors or ensure the form submission is not blocked by your browser's security settings.</p>
+
+        <form id="cybersourceForm" method="POST" action="https://secureacceptance.cybersource.com/silent/pay">
+            <input type="hidden" name="access_key" value="c67f137eaa723f67ba79013383430129">
+            <input type="hidden" name="profile_id" value="78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F">
+            <input type="hidden" name="transaction_uuid" value="9f28ec13-bb5c-4126-ac4b-0f074f413d08">
+            <input type="hidden" name="signed_date_time" value="2025-07-01T11:09:15Z">
+            <input type="hidden" name="locale" value="en-us">
+            <input type="hidden" name="transaction_type" value="sale">
+            <input type="hidden" name="reference_number" value="35">
+            <input type="hidden" name="amount" value="5000.00">
+            <input type="hidden" name="currency" value="USD">
+            <input type="hidden" name="bill_to_email" value="mepetam992@eduhed.com">
+            <input type="hidden" name="bill_to_forename" value="Alberto">
+            <input type="hidden" name="bill_to_surname" value="Clarke">
+            <input type="hidden" name="bill_to_phone" value="01124512">
+            <input type="hidden" name="bill_to_address_country" value="SL">
+            <input type="hidden" name="return_url" value="https://quick-seats-backend.vercel.app//payment-status?orderId=34&transactionUuid=7fb5a19d-7de5-4d48-9408-6129422ca80a">
+            <input type="hidden" name="signed_field_names" value="access_key,amount,bill_to_address_country,bill_to_email,bill_to_forename,bill_to_phone,bill_to_surname,currency,locale,profile_id,reference_number,return_url,signed_date_time,transaction_type,transaction_uuid">
+            <input type="hidden" name="signature" value="6WcmBsn3jPpxoABaQY/znm0F8APNEAILTD/WmQHm7Zc=">
+
+            <button type="submit" style="display:none;">Click here to proceed</button>
+        </form>
+
+        <h2>Response from your Backend:</h2>
+        <pre id="backendResponse">
+{
+    "message": "Proceed to payment gateway",
+    "redirectUrl": "https://secureacceptance.cybersource.com/silent/pay",
+    "params": {
+        "access_key": "c67f137eaa723f67ba79013383430129",
+        "profile_id": "78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F",
+        "transaction_uuid": "9f28ec13-bb5c-4126-ac4b-0f074f413d08",
+        "signed_date_time": "2025-07-01T11:09:15Z",
+        "locale": "en-us",
+        "transaction_type": "sale",
+        "reference_number": "35",
+        "amount": "5000.00",
+        "currency": "USD",
+        "bill_to_email": "mepetam992@eduhed.com",
+        "bill_to_forename": "Alberto",
+        "bill_to_surname": "Clarke",
+        "bill_to_phone": "01124512",
+        "bill_to_address_country": "SL",
+        "return_url": "https://quick-seats-backend.vercel.app//payment-status?orderId=35&transactionUuid=9f28ec13-bb5c-4126-ac4b-0f074f413d08",
+        "signed_field_names": "access_key,amount,bill_to_address_country,bill_to_email,bill_to_forename,bill_to_phone,bill_to_surname,currency,locale,profile_id,reference_number,return_url,signed_date_time,transaction_type,transaction_uuid",
+        "signature": "6WcmBsn3jPpxoABaQY/znm0F8APNEAILTD/WmQHm7Zc="
+    },
+    "order_id": 35
+}
+        </pre>
+    </div>
+
+    <script>
+        // Automatically submit the form when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('cybersourceForm').submit();
+        });
+    </script>
+</body>
+</html>

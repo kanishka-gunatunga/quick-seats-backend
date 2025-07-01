@@ -2,7 +2,7 @@ import express from 'express';
 import upload from '../../middlewares/upload';
 import { isAdminLoggedIn } from '../../middlewares/authAdmin';
 import { loginGet, loginPost, dashboard,logout } from '../../controllers/admin/userController';
-import { addAdminGet, addAdminPost, admins, activateAdmin, deactivateAdmin ,editAdminGet, editAdminPost } from '../../controllers/admin/adminController';
+import { addAdminGet, addAdminPost, admins, activateAdmin, deactivateAdmin ,editAdminGet, editAdminPost,testPayment } from '../../controllers/admin/adminController';
 import { addArtistGet, addArtistPost, artists, activateArtist, deactivateArtist ,editArtistGet, editArtistPost} from '../../controllers/admin/artistController';
 import { addTicketTypeGet, addTicketTypePost, ticketTypes, activateTicketType, deactivateTicketType ,editTicketTypeGet, editTicketTypePost} from '../../controllers/admin/ticketTypeController';
 import { addEventGet, addEventPost, events, activateEvent, deactivateEvent ,editEventGet, editEventPost, updateEventSeats, deleteGalleryMedia} from '../../controllers/admin/eventController';
@@ -77,12 +77,12 @@ router.post('/bookings/cancel-tickets-without-seat/:id', isAdminLoggedIn, cancel
 router.get('/bookings/cancel-booking/:id', cancelEntireBooking);
 router.get('/cancelled-tickets', isAdminLoggedIn, cancelledTickets);
 
-
-
 //Reports
 router.get('/order-report', isAdminLoggedIn, orderReport);
 router.get('/attendence-report', isAdminLoggedIn, attendenceReport);
 router.post('/attendence-report', isAdminLoggedIn, attendenceReportPost);
 router.get('/sales-report', isAdminLoggedIn, salesReport);
 router.post('/sales-report', isAdminLoggedIn, salesReportPost);
+
+router.get('/test-payment', testPayment);
 export default router;
