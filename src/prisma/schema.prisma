@@ -124,7 +124,8 @@ model Order {
   sub_total      Float
   discount       Float
   total          Float
-  status         String
+  status         String   @default("pending") // e.g., "pending", "completed", "failed", "cancelled"
+  cybersource_transaction_uuid String?  @unique 
   createdAt DateTime? @default(now())
 }
 
