@@ -62,18 +62,18 @@
 
         <form id="cybersourceForm" method="POST" action="https://testsecureacceptance.cybersource.com/pay">
             <input type="hidden" name="access_key" value="c67f137eaa723f67ba79013383430129">
-            <input type="hidden" name="amount" value="5000.00">
-            <input type="hidden" name="currency" value="LKR">
-            <input type="hidden" name="locale" value="en-us">
             <input type="hidden" name="profile_id" value="78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F">
-            <input type="hidden" name="reference_number" value="39">
-            <input type="hidden" name="return_url" value="https://quick-seats-backend.vercel.app/payment-status?orderId=34&transactionUuid=7fb5a19d-7de5-4d48-9408-6129422ca80a">
-            <input type="hidden" name="signed_date_time" value="2025-07-02T02:33:01Z">
+            <input type="hidden" name="transaction_uuid" value="68649c4c45868">
+            <input type="hidden" name="signed_field_names" value="access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency">
+            <input type="hidden" name="unsigned_field_names">
+            <input type="hidden" name="signed_date_time" value="2025-07-02T02:41:16Z">
+            <input type="hidden" name="locale" value="en">
             <input type="hidden" name="transaction_type" value="sale">
-            <input type="hidden" name="transaction_uuid" value="aedb276f-e454-4730-b576-b4e8ac45965c">
-            <input type="hidden" name="signed_field_names" value="access_key,amount,currency,locale,profile_id,reference_number,return_url,signed_date_time,transaction_type,transaction_uuid">
-            <input type="hidden" name="signature" value="C4PdTuYPvh2CVwu0xZ1RdC0d70riFypw6IXFNyA5Bxo=">
-
+            <input type="hidden" name="reference_number" value="1751424078998">
+            <input type="hidden" name="amount" value="100.00">
+            <input type="hidden" name="currency" value="USD">
+            <input type="hidden" name="signature" value="rYVxqPaFSLp5izAyG9XPWSjWTwxlAWbTz8u8RzJfK4A==">
+            <input type="hidden" id="submit" name="submit" value="Submit">
             <button type="submit" style="display:none;">Click here to proceed</button>
         </form>
 
