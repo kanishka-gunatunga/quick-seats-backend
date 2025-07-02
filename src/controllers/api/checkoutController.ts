@@ -44,10 +44,8 @@ function uniqId(prefix = '', more_entropy = false) {
 }
 function signCybersourceParams(params: CybersourceParams, secretKey: string): string {
     const signedFieldNames = params.signed_field_names!.split(',');
-    const dataToSignArray: string[] = signedFieldNames.map(
-        field => `${field}=${params[field] ?? ''}`
-    );
-    const dataToSign = dataToSignArray.join(',');
+    const dataToSign = signedFieldNames.map(field => `${field}=${params[field] ?? ''}`).join(',');
+
     return crypto.createHmac('sha256', secretKey).update(dataToSign).digest('base64');
 }
 
