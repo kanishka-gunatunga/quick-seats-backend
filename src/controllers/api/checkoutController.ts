@@ -20,45 +20,35 @@ interface TicketWithoutSeat {
     ticket_type_id: number;
     ticket_count: number;
 }
-
 interface CybersourceParams {
     access_key: string;
     profile_id: string;
     transaction_uuid: string;
+    signed_field_names: string;
+    unsigned_field_names: string; // Usually empty if unused
     signed_date_time: string;
     locale: string;
     transaction_type: string;
     reference_number: string;
     amount: string;
     currency: string;
-    bill_to_email: string;
-    bill_to_forename: string;
-    bill_to_surname: string;
-    bill_to_phone: string;
-    bill_to_address_country: string;
-    return_url: string;
     signature?: string;
-    signed_field_names?: string; // This will be set by the function, or passed in if fixed list
-    [key: string]: any; // Allow for other dynamic properties
+    [key: string]: any; 
+}
+
+function uniqId(prefix = '', more_entropy = false) {
+    const now = Date.now();
+    const sec = Math.floor(now / 1000).toString(16);
+    const usec = ((now % 1000) * 1000).toString().padStart(5, '0');
+    return prefix + sec + usec;
 }
 function signCybersourceParams(params: CybersourceParams, secretKey: string): string {
-    if (!params.signed_field_names) {
-        throw new Error("Missing 'signed_field_names' in parameters for signing.");
-    }
-
-    const signedFieldNames = params.signed_field_names.split(',');
-    const dataToSignArray: string[] = [];
-
-    for (const field of signedFieldNames) {
-        const value = params[field] !== undefined && params[field] !== null ? String(params[field]) : '';
-        dataToSignArray.push(`${field}=${value}`);
-    }
-
+    const signedFieldNames = params.signed_field_names!.split(',');
+    const dataToSignArray: string[] = signedFieldNames.map(
+        field => `${field}=${params[field] ?? ''}`
+    );
     const dataToSign = dataToSignArray.join(',');
-
-    const hmac = crypto.createHmac('sha256', secretKey);
-    hmac.update(dataToSign);
-    return hmac.digest('base64');
+    return crypto.createHmac('sha256', secretKey).update(dataToSign).digest('base64');
 }
 
 
@@ -182,7 +172,7 @@ export const checkout = async (req: Request, res: Response) => {
         }
 
         // Generate a unique transaction UUID for Cybersource
-        const transactionUuid = crypto.randomUUID();
+        const transactionUuid = uniqId();
 
         // Create the order in a 'pending' state
         const ticketsWithoutSeatsForOrder = tickets_without_seats.map(ticket => ({
@@ -220,40 +210,30 @@ export const checkout = async (req: Request, res: Response) => {
 
         const signedFieldNames = [
             'access_key',
-            'amount',
-            'bill_to_address_country',
-            'bill_to_email',
-            'bill_to_forename',
-            'bill_to_phone',
-            'bill_to_surname',
-            'currency',
-            'locale',
             'profile_id',
-            'reference_number',
-            'return_url',
-            'signed_date_time',
-            'transaction_type',
             'transaction_uuid',
-            // Add any other fields you include in your Cybersource configuration for signing
+            'signed_field_names',
+            'unsigned_field_names',
+            'signed_date_time',
+            'locale',
+            'transaction_type',
+            'reference_number',
+            'amount',
+            'currency'
         ].join(',');
 
         const paramsForCybersource: CybersourceParams = {
             access_key: CYBERSOURCE_ACCESS_KEY,
             profile_id: CYBERSOURCE_PROFILE_ID,
-            transaction_uuid: transactionUuid,
-            signed_date_time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), // ISO 8601 format
-            locale: 'en-us',
-            transaction_type: 'sale', // or 'authorization'
-            reference_number: order.id.toString(), // Use your internal order ID as reference
-            amount: subTotal.toFixed(2), // Amount must be a string with 2 decimal places
-            currency: 'LKR', // Or dynamically get from event/request
-            bill_to_email: email,
-            bill_to_forename: first_name,
-            bill_to_surname: last_name,
-            bill_to_phone: contact_number,
-            bill_to_address_country: country,
-            return_url: `${FRONTEND_BASE_URL}/payment-status?orderId=${order.id}&transactionUuid=${transactionUuid}`,
-            signed_field_names: signedFieldNames, // IMPORTANT: Set this before signing
+            transaction_uuid: uniqId(), // emulate PHP's uniqid()
+            signed_field_names: signedFieldNames,
+            unsigned_field_names: '', // leave blank if you’re not sending any unsigned fields
+            signed_date_time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
+            locale: 'en',
+            transaction_type: 'sale', // or 'authorization' based on your flow
+            reference_number: order.id.toString(),
+            amount: subTotal.toFixed(2),
+            currency: 'LKR',
         };
 
         // Generate the signature
