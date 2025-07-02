@@ -21,19 +21,24 @@ interface TicketWithoutSeat {
     ticket_count: number;
 }
 interface CybersourceParams {
-    access_key: string;
-    profile_id: string;
-    transaction_uuid: string;
-    signed_field_names: string;
-    unsigned_field_names: string; // Usually empty if unused
-    signed_date_time: string;
-    locale: string;
-    transaction_type: string;
-    reference_number: string;
-    amount: string;
-    currency: string;
-    signature?: string;
-    [key: string]: any; 
+  access_key: string;
+  profile_id: string;
+  transaction_uuid: string;
+  signed_field_names: string;
+  unsigned_field_names: string; // Usually empty
+  signed_date_time: string;
+  locale: string;
+  transaction_type: string;
+  reference_number: string;
+  amount: string;
+  currency: string;
+  bill_to_email: string;
+  bill_to_forename: string;
+  bill_to_surname: string;
+  bill_to_phone: string;
+  bill_to_address_country: string;
+  signature?: string;
+  [key: string]: any; // for any additional dynamic fields if needed
 }
 
 function uniqId(prefix = '', more_entropy = false) {
@@ -203,8 +208,7 @@ export const checkout = async (req: Request, res: Response) => {
         const CYBERSOURCE_SECRET_KEY = process.env.CYBERSOURCE_SECRET_KEY as string;
         const CYBERSOURCE_PROFILE_ID = process.env.CYBERSOURCE_PROFILE_ID as string;
         const CYBERSOURCE_SECURE_ACCEPTANCE_URL = process.env.CYBERSOURCE_SECURE_ACCEPTANCE_URL as string;
-        const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL as string;
-        const BACKEND_BASE_URL = process.env.BACKEND_BASE_URL as string; // You'll need to define this in your .env
+
 
         const signedFieldNames = [
             'access_key',
@@ -217,21 +221,31 @@ export const checkout = async (req: Request, res: Response) => {
             'transaction_type',
             'reference_number',
             'amount',
-            'currency'
+            'currency',
+            'bill_to_email',
+            'bill_to_forename',
+            'bill_to_surname',
+            'bill_to_phone',
+            'bill_to_address_country'
         ].join(',');
 
         const paramsForCybersource: CybersourceParams = {
             access_key: CYBERSOURCE_ACCESS_KEY,
             profile_id: CYBERSOURCE_PROFILE_ID,
-            transaction_uuid: uniqId(), // emulate PHP's uniqid()
+            transaction_uuid: transactionUuid, 
             signed_field_names: signedFieldNames,
-            unsigned_field_names: '', // leave blank if you’re not sending any unsigned fields
+            unsigned_field_names: '', 
             signed_date_time: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'),
             locale: 'en',
-            transaction_type: 'sale', // or 'authorization' based on your flow
+            transaction_type: 'sale', 
             reference_number: order.id.toString(),
             amount: subTotal.toFixed(2),
             currency: 'LKR',
+            bill_to_email: email,
+            bill_to_forename: first_name,
+            bill_to_surname: last_name,
+            bill_to_phone: contact_number,
+            bill_to_address_country: country,
         };
 
         // Generate the signature
