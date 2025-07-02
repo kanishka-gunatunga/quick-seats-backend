@@ -62,35 +62,19 @@
 
    
         <form id="cybersourceForm" action="https://testsecureacceptance.cybersource.com/pay" method="post">
-<fieldset id="confirmation">
-    <legend>Review Payment Details</legend>
-    <div>
-        <div><span class="fieldName">access_key</span><span class="fieldValue">c67f137eaa723f67ba79013383430129</span></div>
-<div><span class="fieldName">profile_id</span><span class="fieldValue">78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F</span></div>
-<div><span class="fieldName">transaction_uuid</span><span class="fieldValue">68649db261c25</span></div>
-<div><span class="fieldName">signed_field_names</span><span class="fieldValue">access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency</span></div>
-<div><span class="fieldName">unsigned_field_names</span><span class="fieldValue"></span></div>
-<div><span class="fieldName">signed_date_time</span><span class="fieldValue">2025-07-02T02:47:14Z</span></div>
-<div><span class="fieldName">locale</span><span class="fieldValue">en</span></div>
-<div><span class="fieldName">transaction_type</span><span class="fieldValue">authorization</span></div>
-<div><span class="fieldName">reference_number</span><span class="fieldValue">1751424797256</span></div>
-<div><span class="fieldName">amount</span><span class="fieldValue">100.00</span></div>
-<div><span class="fieldName">currency</span><span class="fieldValue">USD</span></div>
-<div><span class="fieldName">submit</span><span class="fieldValue">Submit</span></div>
-    </div>
-</fieldset>
+
     <input type="hidden" id="access_key" name="access_key" value="c67f137eaa723f67ba79013383430129">
 <input type="hidden" id="profile_id" name="profile_id" value="78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F">
-<input type="hidden" id="transaction_uuid" name="transaction_uuid" value="68649db261c25">
+<input type="hidden" id="transaction_uuid" name="transaction_uuid" value="f3e4d9a4-d81e-4320-82db-4305b13cc6ce">
 <input type="hidden" id="signed_field_names" name="signed_field_names" value="access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency">
 <input type="hidden" id="unsigned_field_names" name="unsigned_field_names" value="">
-<input type="hidden" id="signed_date_time" name="signed_date_time" value="2025-07-02T02:47:14Z">
-<input type="hidden" id="locale" name="locale" value="en">
-<input type="hidden" id="transaction_type" name="transaction_type" value="authorization">
-<input type="hidden" id="reference_number" name="reference_number" value="1751424797256">
-<input type="hidden" id="amount" name="amount" value="100.00">
-<input type="hidden" id="currency" name="currency" value="USD">
-<input type="hidden" id="signature" name="signature" value="ZfeQhRV0FBZAaSD3pOQj06JFZ8mmT8Wsdd6R3JFgUeA=">
+<input type="hidden" id="signed_date_time" name="signed_date_time" value="2025-07-02T02:55:22Z">
+<input type="hidden" id="locale" name="locale" value="en-us">
+<input type="hidden" id="transaction_type" name="transaction_type" value="sale">
+<input type="hidden" id="reference_number" name="reference_number" value="41">
+<input type="hidden" id="amount" name="amount" value="5000">
+<input type="hidden" id="currency" name="currency" value="LKR">
+<input type="hidden" id="signature" name="signature" value="lMy5jflIzYUySOmjCevtToHLUfLLmZH1NmGmpUqxIJw=">
 <button type="submit" style="display:none;">Click here to proceed</button>
 </form>
         <h2>Response from your Backend:</h2>
