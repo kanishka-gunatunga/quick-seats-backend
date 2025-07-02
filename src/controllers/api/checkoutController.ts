@@ -406,7 +406,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
 
     const {
         req_reference_number: orderId, // This is your internal order.id
-        transaction_uuid: cybersourceTransactionUuid, // Cybersource's UUID
+        req_transaction_uuid: cybersourceTransactionUuid, // Cybersource's UUID
         decision, // e.g., 'ACCEPT', 'DECLINE', 'REVIEW'
         reason_code: reasonCode,
         auth_amount: amount,
