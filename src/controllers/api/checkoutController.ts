@@ -37,6 +37,8 @@ interface CybersourceParams {
   bill_to_surname: string;
   bill_to_phone: string;
   bill_to_address_country: string;
+  bill_to_address_line1: string;
+  bill_to_address_city: string;
   signature?: string;
   [key: string]: any; // for any additional dynamic fields if needed
 }
@@ -62,7 +64,9 @@ export const checkout = async (req: Request, res: Response) => {
         contact_number: z.string().min(1, 'Contact number is required'),
         email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
         nic_passport: z.string().min(1, 'NIC/Passport is required'),
-        country: z.string().min(1, 'Country is required'),
+        country: z.string().min(1, 'Address is required'),
+        address: z.string().min(1, 'City is required'),
+        city: z.string().min(1, 'Country is required'),
         event_id: z.string().min(1, 'Event id is required'),
         user_id: z.string().min(1, 'User id is required'),
         seat_ids: z.preprocess((val) => {
@@ -106,6 +110,8 @@ export const checkout = async (req: Request, res: Response) => {
         contact_number,
         nic_passport,
         country,
+        address,
+        city,
         event_id,
         user_id,
         seat_ids = [],
@@ -191,6 +197,8 @@ export const checkout = async (req: Request, res: Response) => {
                 contact_number,
                 nic_passport,
                 country,
+                address,
+                city,
                 event_id: event_id,
                 user_id: user_id,
                 seat_ids: seat_ids.length > 0 ? JSON.stringify(seat_ids) : '[]',
@@ -226,7 +234,9 @@ export const checkout = async (req: Request, res: Response) => {
             'bill_to_forename',
             'bill_to_surname',
             'bill_to_phone',
-            'bill_to_address_country'
+            'bill_to_address_country',
+            'bill_to_address_line1',
+            'bill_to_address_city'
         ].join(',');
 
         const paramsForCybersource: CybersourceParams = {
@@ -246,6 +256,8 @@ export const checkout = async (req: Request, res: Response) => {
             bill_to_surname: last_name,
             bill_to_phone: contact_number,
             bill_to_address_country: country,
+            bill_to_address_line1: address,
+            bill_to_address_city: city,
         };
 
         // Generate the signature

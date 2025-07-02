@@ -116,7 +116,9 @@ model Order {
   last_name      String
   contact_number String
   nic_passport   String
-  country        String
+  country        String?
+  address        String?
+  city        String?
   event_id       String
   user_id        String
   seat_ids       Json?

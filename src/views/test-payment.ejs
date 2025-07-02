@@ -66,7 +66,7 @@
     <input type="hidden" id="access_key" name="access_key" value="c67f137eaa723f67ba79013383430129">
 <input type="hidden" id="profile_id" name="profile_id" value="78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F">
 <input type="hidden" id="transaction_uuid" name="transaction_uuid" value="6864ae29846000">
-<input type="hidden" id="signed_field_names" name="signed_field_names" value="access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency,bill_to_email,bill_to_forename,bill_to_surname,bill_to_phone,bill_to_address_country">
+<input type="hidden" id="signed_field_names" name="signed_field_names" value="access_key,profile_id,transaction_uuid,signed_field_names,unsigned_field_names,signed_date_time,locale,transaction_type,reference_number,amount,currency,bill_to_email,bill_to_forename,bill_to_surname,bill_to_phone,bill_to_address_country,bill_to_address_line1,bill_to_address_city">
 <input type="hidden" id="unsigned_field_names" name="unsigned_field_names" value="">
 <input type="hidden" id="signed_date_time" name="signed_date_time" value="2025-07-02T03:57:29Z">
 <input type="hidden" id="locale" name="locale" value="en">
@@ -79,36 +79,13 @@
 <input type="hidden" id="bill_to_surname" name="bill_to_surname" value="Clarke">
 <input type="hidden" id="bill_to_phone" name="bill_to_phone" value="01124512">
 <input type="hidden" id="bill_to_address_country" name="bill_to_address_country" value="SL">
+<input type="hidden" id="bill_to_address_line1" name="bill_to_address_line1" value="no 1, colombo">
+<input type="hidden" id="bill_to_address_city" name="bill_to_address_city" value="colombo">
 <input type="hidden" id="signature" name="signature" value="K/leNUfy1e+TVAWuBNivKs73F1buJq1Dk5VKeJzJhTg=">
 <button type="submit" style="display:none;">Click here to proceed</button>
 </form>
         <h2>Response from your Backend:</h2>
-        <pre id="backendResponse">
-{
-    "message": "Proceed to payment gateway",
-    "redirectUrl": "https://testsecureacceptance.cybersource.com/pay",
-    "params": {
-        "access_key": "c67f137eaa723f67ba79013383430129",
-        "profile_id": "78E1AE2F-98DF-48E3-AAF2-7B155AC70A8F",
-        "transaction_uuid": "6e69b131-cb1f-4f1e-a89f-5c641330d8f8",
-        "signed_date_time": "2025-07-01T11:45:41Z",
-        "locale": "en-us",
-        "transaction_type": "sale",
-        "reference_number": "36",
-        "amount": "5000.00",
-        "currency": "LKR",
-        "bill_to_email": "mepetam992@eduhed.com",
-        "bill_to_forename": "Alberto",
-        "bill_to_surname": "Clarke",
-        "bill_to_phone": "01124512",
-        "bill_to_address_country": "SL",
-        "return_url": "https://quick-seats-backend.vercel.app//payment-status?orderId=36&transactionUuid=6e69b131-cb1f-4f1e-a89f-5c641330d8f8",
-        "signed_field_names": "access_key,amount,bill_to_address_country,bill_to_email,bill_to_forename,bill_to_phone,bill_to_surname,currency,locale,profile_id,reference_number,return_url,signed_date_time,transaction_type,transaction_uuid",
-        "signature": "A277MdvGEIN2iRYGm5shl7RSEdnoX2ubzg+zG6c7OQ0="
-    },
-    "order_id": 36
-}
-        </pre>
+       
     </div>
 
     <script>
