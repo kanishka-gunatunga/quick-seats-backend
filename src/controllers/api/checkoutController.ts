@@ -153,7 +153,7 @@ export const checkout = async (req: Request, res: Response) => {
             if (!foundSeat) {
                 return res.status(400).json({ message: `Seat ${seatId} not found or invalid for this event.` });
             }
-            if (foundSeat.status !== 'available') {
+           if (foundSeat.status !== 'available' && foundSeat.status !== 'pending') {
                 return res.status(400).json({ message: `Seat ${seatId} is already ${foundSeat.status}.` });
             }
             subTotal += foundSeat.price;
