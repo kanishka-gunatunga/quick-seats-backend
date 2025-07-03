@@ -570,10 +570,73 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             res.status(200).send('Payment successful and order fulfilled.');
 
         } else {
+
             await prisma.order.update({
                 where: { id: order.id },
                 data: { status: 'failed' },
             });
+
+             const event = await prisma.event.findUnique({
+                where: { id: parseInt(order.event_id) },
+                select: {
+                    name: true,
+                    seats: true,
+                    ticket_details: true,
+                },
+            });
+
+            if (!event) {
+                console.error(`Event ${order.event_id} not found for order ${order.id}. Cannot update seats/tickets.`);
+                // Still acknowledge Cybersource, but log the error
+                return res.status(200).send('Payment processed, but event details missing for fulfillment.');
+            }
+
+            const eventSeats: Seat[] = typeof event.seats === 'string'
+            ? JSON.parse(event.seats)
+            : event.seats || [];
+
+            let orderSeatIds: string[] = [];
+            if (order.seat_ids !== null) {
+                try {
+                    const parsedSeatIds = JSON.parse(order.seat_ids as string); 
+                    if (Array.isArray(parsedSeatIds)) {
+                        orderSeatIds = parsedSeatIds.map((id: any) => String(id));
+                    }
+                } catch (e) {
+                    console.error("Failed to parse order.seat_ids:", e);
+                }
+            }
+
+            const groupedSeats: { [ticketTypeName: string]: string[] } = {};
+            const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
+
+
+            for (const seatId of orderSeatIds) {
+                const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
+                if (foundSeat) {
+                    const ticketTypeName = foundSeat.ticketTypeName;
+                    if (!groupedSeats[ticketTypeName]) {
+                        groupedSeats[ticketTypeName] = [];
+                    }
+                    groupedSeats[ticketTypeName].push(seatId.toString());
+                    seatDetailsMap[seatId.toString()] = { price: foundSeat.price, ticketTypeName: foundSeat.ticketTypeName, type_id: foundSeat.type_id };
+                }
+            }
+
+            const updatedSeats = eventSeats.map((seat: Seat) => {
+                if (orderSeatIds.includes(seat.seatId.toString())) {
+                    return { ...seat, status: 'available' };
+                }
+                return seat;
+            });
+
+             await prisma.event.update({
+                where: { id: parseInt(order.event_id) },
+                data: {
+                    seats: JSON.stringify(updatedSeats)
+                },
+            });
+
             res.status(200).send('Payment failed, order status updated.');
         } 
 
