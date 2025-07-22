@@ -276,3 +276,72 @@ export const resetSeats = async (req: Request, res: Response) => {
     }
 };
 
+type TicketDetail = {
+    price: number;
+    ticketCount: number | null;
+    ticketTypeId: number;
+    hasTicketCount: boolean;
+    bookedTicketCount: number;
+};
+export const checkSeatCount = async (req: Request, res: Response) => {
+    const schema = z.object({
+        event_id: z.string().min(1, 'Event id is required'),
+        ticket_type_id: z.string().min(1, 'Ticket type id is required'),
+        count: z.string().min(1, 'Count is required'),
+    });
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            message: 'Invalid input',
+            errors: result.error.flatten(),
+        });
+    }
+
+    const { event_id, ticket_type_id, count } = result.data;
+
+    try {
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(event_id) },
+            select: {
+                ticket_details: true,
+            },
+        });
+
+        if (!event || !event.ticket_details) {
+            return res.status(404).json({ message: 'Event not found or has no seat data.' });
+        }
+
+        // Cast the ticket_details to the expected array of objects
+        const ticketDetails = event.ticket_details as TicketDetail[];
+
+        const ticketTypeId = parseInt(ticket_type_id);
+        const requestedCount = parseInt(count);
+
+        const ticket = ticketDetails.find(t => t.ticketTypeId === ticketTypeId);
+
+        if (!ticket) {
+            return res.status(404).json({ message: 'Ticket type not found in event.' });
+        }
+
+        if (!ticket.hasTicketCount) {
+            return res.status(200).json({ message: 'Seats not avialble to book a ticket count', available: false });
+        }
+
+        const availableSeats = (ticket.ticketCount ?? 0) - ticket.bookedTicketCount;
+
+        if (availableSeats >= requestedCount) {
+            return res.status(200).json({ message: 'Seats available', available: true });
+        } else {
+            return res.status(200).json({
+                message: `Only ${availableSeats} seats are available.`,
+                available: false,
+            });
+        }
+
+    } catch (err) {
+        console.error('Seat selection error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
