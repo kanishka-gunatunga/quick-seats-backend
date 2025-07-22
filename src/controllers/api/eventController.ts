@@ -20,12 +20,13 @@ export const getAllEvents = async (req: Request, res: Response) => {
       where: {
         status: 'active',
         ...(location && { location: String(location) }),
-        ...(startDate && endDate && {
-          start_date_time: {
+         start_date_time: {
+          gt: new Date(), 
+          ...(startDate && endDate && {
             gte: new Date(String(startDate)),
             lte: new Date(String(endDate)),
-          }
-        })
+          })
+        }
       }
     });
 
@@ -104,9 +105,13 @@ export const getAllEvents = async (req: Request, res: Response) => {
 export const getTrendingEvents = async (req: Request, res: Response) => {
   // 1. Fetch all active events
   const allActiveEvents = await prisma.event.findMany({
-    where: { status: 'active' },
-  });
-
+  where: {
+    status: 'active',
+    start_date_time: {
+      gt: new Date(),
+    },
+  },
+});
   // 2. For each event, count the associated orders
   const eventsWithOrderCounts = await Promise.all(
     allActiveEvents.map(async (event) => {
