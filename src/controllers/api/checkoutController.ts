@@ -813,7 +813,7 @@ export const getCheckoutStatus = async (req: Request, res: Response) => {
 
 export const checkoutClientRedirect = async (req: Request, res: Response) => {
     const callbackData = req.body;
-    console.log('Cybersource Browser POST Callback Received:', callbackData); // Changed log for clarity
+    console.log('Cybersource Browser POST Callback Received:', callbackData); 
 
     const CYBERSOURCE_SECRET_KEY = process.env.CYBERSOURCE_SECRET_KEY as string;
 
@@ -866,10 +866,10 @@ export const checkoutClientRedirect = async (req: Request, res: Response) => {
     const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://your-nextjs-frontend.com'; // Make this configurable
 
     if (decision === 'ACCEPT') {
-        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=success&orderId=${orderId}`;
+        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=200&orderId=${orderId}`;
     } else {
         // For 'DECLINE', 'REVIEW', 'ERROR', or any other non-ACCEPT decision
-        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=failed&orderId=${orderId}&reasonCode=${reasonCode || 'UNKNOWN'}`;
+        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=403&orderId=${orderId}&reasonCode=${reasonCode || 'UNKNOWN'}`;
     }
 
     // Perform the HTTP 302 redirect to the frontend
