@@ -2,7 +2,7 @@ import express from 'express';
 import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,
 validateOtp, resetPassword,resendOtp } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
-import { checkout,cybersourceCallback,getCheckoutStatus} from '../../controllers/api/checkoutController';
+import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect} from '../../controllers/api/checkoutController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
@@ -39,5 +39,6 @@ router.post('/check-seat-count', checkSeatCount);
 router.post('/checkout', checkout);
 router.post('/cybersource-callback', cybersourceCallback);
 router.post('/get-checkout-status', getCheckoutStatus);
+router.post('/checkout-client-redirect', checkoutClientRedirect);
 export default router;
  

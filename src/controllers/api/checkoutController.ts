@@ -807,3 +807,72 @@ export const getCheckoutStatus = async (req: Request, res: Response) => {
     // Send the JSON response
     return res.status(200).json(responseDetails);
 };
+
+
+
+
+export const checkoutClientRedirect = async (req: Request, res: Response) => {
+    const callbackData = req.body;
+    console.log('Cybersource Browser POST Callback Received:', callbackData); // Changed log for clarity
+
+    const CYBERSOURCE_SECRET_KEY = process.env.CYBERSOURCE_SECRET_KEY as string;
+
+
+    const receivedSignature = callbackData.signature;
+    const signedFieldNames = callbackData.signed_field_names;
+
+    const callbackParams: { [key: string]: any } = {};
+    if (signedFieldNames) {
+        signedFieldNames.split(',').forEach((field: string) => {
+            if (callbackData[field] !== undefined) {
+                callbackParams[field] = callbackData[field];
+            }
+        });
+    } else {
+        // Fallback: If signed_field_names is somehow missing, include all relevant fields
+        // This is less secure; ensure signed_field_names is always present in Cybersource configuration
+        console.warn('signed_field_names missing from Cybersource browser callback. Processing all fields for signature verification. This is not recommended for production.');
+        for (const key in callbackData) {
+            if (key !== 'signature' && key !== 'signed_field_names') {
+                callbackParams[key] = callbackData[key];
+            }
+        }
+    }
+
+    const expectedSignature = signCybersourceParams(callbackParams, CYBERSOURCE_SECRET_KEY);
+
+    if (receivedSignature !== expectedSignature) {
+        console.error('Cybersource Browser Callback Signature Verification FAILED!');
+        console.error('Received Signature:', receivedSignature);
+        console.error('Expected Signature:', expectedSignature);
+        // Respond with 403 Forbidden if signature verification fails
+        // Important: A 403 will likely be displayed to the user by their browser.
+        // You might consider redirecting to a generic error page instead of a 403 for better UX.
+        return res.status(403).send('Signature verification failed.');
+    }
+
+    console.log('Cybersource Browser Callback Signature Verified Successfully!');
+
+    // Extract relevant data from the callback
+    const {
+        req_reference_number: orderId, // Your internal order ID
+        decision, // 'ACCEPT', 'DECLINE', 'REVIEW', 'ERROR'
+        reason_code: reasonCode, // More granular reason for the decision
+        // Add any other fields you want to pass to the frontend
+    } = callbackData;
+
+    // Construct the frontend redirect URL
+    let frontendRedirectUrl = '';
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://your-nextjs-frontend.com'; // Make this configurable
+
+    if (decision === 'ACCEPT') {
+        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=success&orderId=${orderId}`;
+    } else {
+        // For 'DECLINE', 'REVIEW', 'ERROR', or any other non-ACCEPT decision
+        frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=failed&orderId=${orderId}&reasonCode=${reasonCode || 'UNKNOWN'}`;
+    }
+
+    // Perform the HTTP 302 redirect to the frontend
+    console.log(`Redirecting user to frontend: ${frontendRedirectUrl}`);
+    res.redirect(302, frontendRedirectUrl);
+};
