@@ -127,6 +127,7 @@ model Order {
   discount       Float
   total          Float
   status         String   @default("pending") // e.g., "pending", "completed", "failed", "cancelled"
+  qr_code_urls Json?
   cybersource_transaction_uuid String?  @unique 
   createdAt DateTime? @default(now())
 }

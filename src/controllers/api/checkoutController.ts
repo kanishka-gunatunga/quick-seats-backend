@@ -6,6 +6,7 @@ import transporter from '../../services/mailTransporter';
 import ejs from 'ejs';
 import path from 'path';
 import crypto from 'crypto';
+import { put } from '@vercel/blob';
 
 const prisma = new PrismaClient();
 interface Seat {
@@ -437,10 +438,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             console.log(`Payment for Order ID ${order.id} (Cybersource UUID: ${cybersourceTransactionUuid}) was SUCCESSFUL.`);
 
             // Update order status to 'completed'
-            await prisma.order.update({
-                where: { id: order.id },
-                data: { status: 'completed' },
-            });
+           
 
             // Retrieve event details to update seats and ticket counts
             const event = await prisma.event.findUnique({
@@ -550,7 +548,29 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
 
             // Generate QR codes and attachments
             const { qrCodes, attachments } = await generateQRCodesAndAttachments(order, event, seatDetailsMap, groupedSeats, ticketsWithoutSeatsDetails);
+            const uploadedQrUrls: { filename: string; url: string }[] = [];
+            for (const qrCode of qrCodes) {
+                // Extract base64 data from the data URL
+                const base64Data = qrCode.qrCodeData.split("base64,")[1];
+                const buffer = Buffer.from(base64Data, 'base64');
 
+                const filename = `qr-${order.id}-${qrCode.ticketTypeName.replace(/\s+/g, '-')}-${qrCode.type}-${qrCode.seat_ids_for_type ? qrCode.seat_ids_for_type.join('-') : qrCode.type_id}.png`;
+
+                try {
+                    const { url } = await put(filename, buffer, {
+                        access: 'public', // Set to 'public' if QR codes should be accessible via URL
+                        addRandomSuffix: true, // Recommended to avoid filename collisions, especially with dynamic names
+                    });
+                    uploadedQrUrls.push({ filename, url });
+                    console.log(`Uploaded QR code ${filename} to Vercel Blob: ${url}`);
+                } catch (blobError) {
+                    console.error(`Failed to upload QR code ${filename} to Vercel Blob:`, blobError);
+                }
+            }
+             await prisma.order.update({
+                where: { id: order.id },
+                data: { status: 'completed',qr_code_urls: JSON.stringify(uploadedQrUrls) },
+            });
             // Prepare email content
             const booked_seats_details = Object.keys(groupedSeats).map(ticketTypeName => {
                 const seats = groupedSeats[ticketTypeName];
@@ -565,7 +585,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
 
             // Send email
             await sendQREmail(order.email, order.first_name, event.name, all_booked_details, qrCodes, attachments);
-
+            
             // Respond to Cybersource (important for acknowledging the callback)
             res.status(200).send('Payment successful and order fulfilled.');
 
