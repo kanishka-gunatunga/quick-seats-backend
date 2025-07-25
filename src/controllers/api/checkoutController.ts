@@ -7,7 +7,7 @@ import ejs from 'ejs';
 import path from 'path';
 import crypto from 'crypto';
 import { put } from '@vercel/blob';
-
+import axios from 'axios';
 const prisma = new PrismaClient();
 interface Seat {
     seatId: string | number;
@@ -582,7 +582,47 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             }).join('; ');
 
             const all_booked_details = [booked_seats_details, booked_tickets_without_seats_details].filter(Boolean).join('; ');
+            
+            const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
+            const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
+            const smsPassword = process.env.SMS_API_PASSWORD; // Store in environment variables
+            const smsAlias = process.env.SMS_API_ALIAS; // Store in environment variables, provide a default or make it mandatory
+            console.log('smsAlias',smsAlias); 
+            if (!smsUsername || !smsPassword) {
+            console.warn('SMS API credentials not fully configured. OTP will only be sent via email.');
+            } else {
+            try {
+                const smsResponse = await axios.post(
+                smsApiUrl,
+                {
+                    username: smsUsername,
+                    password: smsPassword,
+                    from: smsAlias,
+                    to: order.contact_number, // Use the contact_number from registration
+                    text: `Your booking is compelte: order ID #${order.id}`, // Your message
+                    mesageType: 1, // Promotional message type as per documentation
+                },
+                {
+                    headers: {
+                    'Content-Type': 'application/json',
+                    },
+                }
+                );
 
+                // You might want to log the SMS API response for debugging
+                console.log('SMS API Response:', smsResponse.data);
+
+                // Check SMS response for success (e.g., status 200)
+                if (smsResponse.status !== 200) {
+                console.error(`Failed to send SMS OTP. Status: ${smsResponse.status}, Data:`, smsResponse.data);
+                // Decide whether to return an error or continue registration
+                }
+            } catch (smsError) {
+                console.error('Error sending SMS OTP:', smsError);
+                // Decide whether to return an error or continue registration
+            }
+            }
+            // --- End Send OTP via SMS ---
             // Send email
             await sendQREmail(order.email, order.first_name, event.name, all_booked_details, qrCodes, attachments);
             
