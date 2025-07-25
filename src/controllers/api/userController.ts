@@ -498,8 +498,8 @@ export const forgotPassword = async (req: Request, res: Response) => {
     const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
     const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
     const smsPassword = process.env.SMS_API_PASSWORD; // Store in environment variables
-    const smsAlias = process.env.SMS_API_ALIAS || 'QuickSeats'; // Store in environment variables, provide a default or make it mandatory
-
+    const smsAlias = process.env.SMS_API_ALIAS; // Store in environment variables, provide a default or make it mandatory
+    console.log('smsAlias',smsAlias);
     if (!smsUsername || !smsPassword) {
       console.warn('SMS API credentials not fully configured. OTP will only be sent via email.');
     } else {
