@@ -794,6 +794,7 @@ export const getCheckoutStatus = async (req: Request, res: Response) => {
             firstName: order.first_name,
             lastName: order.last_name,
             email: order.email,
+            contact_number: order.contact_number,
         },
         event: {
             name: event.name,
