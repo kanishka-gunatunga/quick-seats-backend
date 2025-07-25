@@ -6,7 +6,7 @@ import { z } from 'zod';
 import transporter from '../../services/mailTransporter';
 import ejs from 'ejs';
 import path from 'path';
-
+import axios from 'axios';
 const JWT_SECRET = process.env.JWT_SECRET!;
 
 export const register = async (req: Request, res: Response) => {
@@ -80,6 +80,47 @@ export const register = async (req: Request, res: Response) => {
         html: emailHtml,
     });
 
+    const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
+    const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
+    const smsPassword = process.env.SMS_API_PASSWORD; // Store in environment variables
+    const smsAlias = process.env.SMS_API_ALIAS || 'QuickSeats'; // Store in environment variables, provide a default or make it mandatory
+
+    if (!smsUsername || !smsPassword) {
+      console.warn('SMS API credentials not fully configured. OTP will only be sent via email.');
+    } else {
+      try {
+        const smsResponse = await axios.post(
+          smsApiUrl,
+          {
+            username: smsUsername,
+            password: smsPassword,
+            from: smsAlias,
+            to: contact_number, // Use the contact_number from registration
+            text: `Your OTP for account confirmation is: ${otp}`, // Your message
+            mesageType: 1, // Promotional message type as per documentation
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        // You might want to log the SMS API response for debugging
+        console.log('SMS API Response:', smsResponse.data);
+
+        // Check SMS response for success (e.g., status 200)
+        if (smsResponse.status !== 200) {
+          console.error(`Failed to send SMS OTP. Status: ${smsResponse.status}, Data:`, smsResponse.data);
+          // Decide whether to return an error or continue registration
+        }
+      } catch (smsError) {
+        console.error('Error sending SMS OTP:', smsError);
+        // Decide whether to return an error or continue registration
+      }
+    }
+    // --- End Send OTP via SMS ---
+    
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -440,6 +481,7 @@ export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const user = await prisma.user.findUnique({
       where: { email },
+      include: { userDetails: true }
     });
 
     if (!user) {
@@ -453,6 +495,46 @@ export const forgotPassword = async (req: Request, res: Response) => {
         otp: otp,
     });
 
+    const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
+    const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
+    const smsPassword = process.env.SMS_API_PASSWORD; // Store in environment variables
+    const smsAlias = process.env.SMS_API_ALIAS || 'QuickSeats'; // Store in environment variables, provide a default or make it mandatory
+
+    if (!smsUsername || !smsPassword) {
+      console.warn('SMS API credentials not fully configured. OTP will only be sent via email.');
+    } else {
+      try {
+        const smsResponse = await axios.post(
+          smsApiUrl,
+          {
+            username: smsUsername,
+            password: smsPassword,
+            from: smsAlias,
+            to: user.userDetails?.contact_number, // Use the contact_number from registration
+            text: `To reset your password, Please use the following One-Time Password (OTP) to proceed: ${otp}`, // Your message
+            mesageType: 1, // Promotional message type as per documentation
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+
+        // You might want to log the SMS API response for debugging
+        console.log('SMS API Response:', smsResponse.data);
+
+        // Check SMS response for success (e.g., status 200)
+        if (smsResponse.status !== 200) {
+          console.error(`Failed to send SMS OTP. Status: ${smsResponse.status}, Data:`, smsResponse.data);
+          // Decide whether to return an error or continue registration
+        }
+      } catch (smsError) {
+        console.error('Error sending SMS OTP:', smsError);
+        // Decide whether to return an error or continue registration
+      }
+    }
+    // --- End Send OTP via SMS ---
     await transporter.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
         to: email,
