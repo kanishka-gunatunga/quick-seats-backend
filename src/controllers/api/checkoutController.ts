@@ -599,7 +599,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
                     password: smsPassword,
                     from: smsAlias,
                     to: order.contact_number, // Use the contact_number from registration
-                    text: `Your booking is compelte: order ID #${order.id}`, // Your message
+                    text: `Your booking is successfully complete: Order ID #${order.id}`, // Your message
                     mesageType: 1, // Promotional message type as per documentation
                 },
                 {

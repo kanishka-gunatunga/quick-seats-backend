@@ -96,7 +96,7 @@ export const register = async (req: Request, res: Response) => {
             password: smsPassword,
             from: smsAlias,
             to: contact_number, // Use the contact_number from registration
-            text: `Your OTP for account confirmation is: ${otp}`, // Your message
+            text: `${otp} is your verification code. Don't share it.`, // Your message
             mesageType: 1, // Promotional message type as per documentation
           },
           {
