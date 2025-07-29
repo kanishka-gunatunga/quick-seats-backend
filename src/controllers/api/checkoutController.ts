@@ -585,7 +585,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             let orderInfoUrl = '';
             const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://your-nextjs-frontend.com'; // Make this configurable
 
-            orderInfoUrl = `${FRONTEND_BASE_URL}/order-info?identifier=${order.cybersource_transaction_uuid}`;
+            orderInfoUrl = `${FRONTEND_BASE_URL}order-info?identifier=${order.cybersource_transaction_uuid}`;
 
             const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
             const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
