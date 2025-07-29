@@ -747,22 +747,7 @@ export const resendOtp = async (req: Request, res: Response) => {
 
 
 export const getOrderDetails = async (req: Request, res: Response) => {
-    const schema = z.object({
-        order_id: z.string().min(1, 'Order ID is required'),
-    });
-
-    const result = schema.safeParse(req.body);
-
-    if (!result.success) {
-        return res.status(400).json({
-            message: 'Invalid input',
-            errors: result.error.flatten(),
-        });
-    }
-
-    const {
-        order_id,
-    } = result.data;
+    const order_id = req.params.id;
 
     const order = await prisma.order.findUnique({
         where: {
