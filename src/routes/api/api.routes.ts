@@ -20,6 +20,8 @@ router.get('/booking-history/:id',authenticate, bookingHistory);
 router.get('/payment-history/:id',authenticate, paymentHistory);
 router.post('/resend-otp', resendOtp);
 router.get('/get-order-details/:id',authenticate, getOrderDetails);
+router.get('/order-info/:id', orderInfo);
+
 
 //Events
 router.get('/get-all-events', getAllEvents);

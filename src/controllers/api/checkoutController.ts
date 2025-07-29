@@ -582,7 +582,11 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             }).join('; ');
 
             const all_booked_details = [booked_seats_details, booked_tickets_without_seats_details].filter(Boolean).join('; ');
-            
+            let orderInfoUrl = '';
+            const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://your-nextjs-frontend.com'; // Make this configurable
+
+            orderInfoUrl = `${FRONTEND_BASE_URL}/order-info?identifier=${order.cybersource_transaction_uuid}`;
+
             const smsApiUrl = 'https://msmsenterpriseapi.mobitel.lk/EnterpriseSMSV3/esmsproxyURL.php';
             const smsUsername = process.env.SMS_API_USERNAME; // Store in environment variables
             const smsPassword = process.env.SMS_API_PASSWORD; // Store in environment variables
@@ -599,7 +603,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
                     password: smsPassword,
                     from: smsAlias,
                     to: order.contact_number, // Use the contact_number from registration
-                    text: `Your booking is successfully complete: Order ID #${order.id}`, // Your message
+                    text: `Your booking has been successfully completed. You can view your order details here: ${orderInfoUrl}`,
                     mesageType: 1, // Promotional message type as per documentation
                 },
                 {
