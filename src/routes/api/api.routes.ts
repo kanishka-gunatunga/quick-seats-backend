@@ -1,6 +1,6 @@
 import express from 'express';
 import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,
-validateOtp, resetPassword,resendOtp,getOrderDetails } from '../../controllers/api/userController';
+validateOtp, resetPassword,resendOtp,getOrderDetails,orderInfo } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect} from '../../controllers/api/checkoutController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount} from '../../controllers/api/seatController';
