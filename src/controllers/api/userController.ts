@@ -9,6 +9,18 @@ import path from 'path';
 import axios from 'axios';
 const JWT_SECRET = process.env.JWT_SECRET!;
 
+interface Seat {
+    seatId: string | number;
+    status: string;
+    price: number;
+    ticketTypeName: string;
+    type_id: number;
+}
+
+interface TicketWithoutSeat {
+    ticket_type_id: number;
+    ticket_count: number;
+}
 export const register = async (req: Request, res: Response) => {
     const schema = z
     .object({
@@ -730,4 +742,151 @@ export const resendOtp = async (req: Request, res: Response) => {
     console.error('Error during forgot password process:', err);
     return res.status(500).json({ message: 'An unexpected error occurred.' });
   }
+};
+
+
+
+export const getOrderDetails = async (req: Request, res: Response) => {
+    const schema = z.object({
+        order_id: z.string().min(1, 'Order ID is required'),
+    });
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            message: 'Invalid input',
+            errors: result.error.flatten(),
+        });
+    }
+
+    const {
+        order_id,
+    } = result.data;
+
+    const order = await prisma.order.findUnique({
+        where: {
+            id: parseInt(order_id),
+        },
+    });
+
+    if (!order) {
+        console.error(`Order with ID ${order_id} not found.`);
+        return res.status(404).send('Order not found.');
+    }
+
+    const event = await prisma.event.findUnique({
+        where: { id: parseInt(order.event_id) },
+        select: {
+            name: true,
+            seats: true, // Needed to retrieve seat details for the order
+            ticket_details: true, // Needed to retrieve ticket type details (e.g., price, name)
+        },
+    });
+
+    if (!event) {
+        console.error(`Event ${order.event_id} not found for order ${order.id}.`);
+        return res.status(404).send('Event details missing.');
+    }
+
+    // Safely parse event seats
+    const eventSeats: Seat[] = typeof event.seats === 'string'
+        ? JSON.parse(event.seats)
+        : event.seats || [];
+
+    // Safely parse event ticket details
+    const eventTicketDetails: any[] = typeof event.ticket_details === 'string'
+        ? JSON.parse(event.ticket_details)
+        : event.ticket_details || [];
+
+    let orderSeatIds: string[] = [];
+    if (order.seat_ids !== null) {
+        try {
+            const parsedSeatIds = JSON.parse(order.seat_ids as string);
+            if (Array.isArray(parsedSeatIds)) {
+                orderSeatIds = parsedSeatIds.map((id: any) => String(id));
+            }
+        } catch (e) {
+            console.error("Failed to parse order.seat_ids:", e);
+        }
+    }
+
+    let orderTicketsWithoutSeats: TicketWithoutSeat[] = [];
+    if (order.tickets_without_seats !== null) {
+        try {
+            const parsedTickets = JSON.parse(order.tickets_without_seats as string);
+            if (Array.isArray(parsedTickets) && parsedTickets.every((item: any) =>
+                typeof item === 'object' && 'ticket_type_id' in item && 'ticket_count' in item
+            )) {
+                orderTicketsWithoutSeats = parsedTickets;
+            }
+        } catch (e) {
+            console.error("Failed to parse order.tickets_without_seats:", e);
+        }
+    }
+
+    // Group seats by ticket type for easier processing and display
+    const groupedSeats: { [ticketTypeName: string]: string[] } = {};
+    const seatDetailsMap: { [seatId: string]: { price: number; ticketTypeName: string; type_id: number } } = {};
+
+    for (const seatId of orderSeatIds) {
+        const foundSeat: Seat | undefined = eventSeats.find((seat: Seat) => seat.seatId.toString() === seatId.toString());
+        if (foundSeat) {
+            const ticketTypeName = foundSeat.ticketTypeName;
+            if (!groupedSeats[ticketTypeName]) {
+                groupedSeats[ticketTypeName] = [];
+            }
+            groupedSeats[ticketTypeName].push(seatId.toString());
+            seatDetailsMap[seatId.toString()] = { price: foundSeat.price, ticketTypeName: foundSeat.ticketTypeName, type_id: foundSeat.type_id };
+        }
+    }
+
+    // Prepare details for tickets without seats
+    const ticketsWithoutSeatsDetails: { ticketTypeName: string; count: number; type_id: number; price: number }[] = [];
+
+    for (const ticket of orderTicketsWithoutSeats) {
+        const ticketDetail = eventTicketDetails.find((td: any) => td.ticketTypeId === ticket.ticket_type_id);
+        if (ticketDetail) {
+            // Fetch ticket type name from DB or use a fallback
+            const ticket_type = await prisma.ticketType.findUnique({
+                where: { id: parseInt(ticketDetail.ticketTypeId) },
+                select: { name: true },
+            });
+
+            ticketsWithoutSeatsDetails.push({
+                ticketTypeName: ticket_type?.name || `Type ${ticket.ticket_type_id}`,
+                count: ticket.ticket_count,
+                type_id: ticket.ticket_type_id,
+                price: ticketDetail.price,
+            });
+        }
+    }
+
+    // Call your existing generateQRCodesAndAttachments function
+    // We only need 'qrCodes' for the downloadable response
+
+    // Prepare the final response object for the customer
+    const responseDetails = {
+        order: order,
+        event: {
+            name: event.name,
+        },
+        bookedTickets: {
+            // Structured for clarity in the summary
+            seats: Object.keys(groupedSeats).map(ticketTypeName => ({
+                ticketTypeName: ticketTypeName,
+                seatIds: groupedSeats[ticketTypeName],
+                // Include price and type_id for each seat if needed in the summary
+                seatDetails: groupedSeats[ticketTypeName].map(seatId => ({
+                    seatId: seatId,
+                    price: seatDetailsMap[seatId]?.price,
+                    type_id: seatDetailsMap[seatId]?.type_id,
+                }))
+            })),
+            ticketsWithoutSeats: ticketsWithoutSeatsDetails,
+        },
+    };
+
+    return res.status(200).json({ responseDetails });
+
 };
