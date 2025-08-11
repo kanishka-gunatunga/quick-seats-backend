@@ -141,9 +141,16 @@ export const getTrendingEvents = async (req: Request, res: Response) => {
         ? (event.artist_details as any[]).map(Number)
         : [];
 
-      const ticketDetails: any[] = Array.isArray(event.ticket_details)
-        ? (event.ticket_details as any[])
-        : [];
+      const ticketDetails: any[] = (() => {
+      if (!event.ticket_details) return [];
+      if (Array.isArray(event.ticket_details)) return event.ticket_details;
+      try {
+        return JSON.parse(event.ticket_details as any);
+      } catch (err) {
+        console.error("Invalid ticket_details format", err);
+        return [];
+      }
+    })();
 
       const artists = await prisma.artist.findMany({
         where: { id: { in: artistIds } },
