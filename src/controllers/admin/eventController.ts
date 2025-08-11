@@ -284,8 +284,20 @@ export const editEventGet = async (req: Request, res: Response) => {
       ? event.artist_details.map(Number)
       : [];
 
-    const enrichedTickets = Array.isArray(event.ticket_details)
-      ? event.ticket_details.map((ticket: any) => {
+    let ticketDetails = event.ticket_details;
+
+    // If ticket_details is a string, parse it
+    if (typeof ticketDetails === 'string') {
+      try {
+        ticketDetails = JSON.parse(ticketDetails);
+      } catch (e) {
+        console.error('Invalid JSON in ticket_details for event ID:', id);
+        ticketDetails = [];
+      }
+    }
+
+    const enrichedTickets = Array.isArray(ticketDetails)
+      ? ticketDetails.map((ticket: any) => {
           const ticketType = ticket_types.find(tt => tt.id === ticket.ticketTypeId);
           return {
             type_id: ticket.ticketTypeId,

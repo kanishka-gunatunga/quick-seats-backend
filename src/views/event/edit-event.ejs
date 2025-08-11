@@ -177,7 +177,7 @@ height: auto;
             const ticketsToRender = formData?.tickets?.length > 0 ? formData.tickets : enrichedEvent.ticket_details;
         %>
 
-        <% if (ticketsToRender && ticketsToRender.length > 0) { %>
+        <% if (ticketsToRender && ticketsToRender.length > 0) { %> 
             <% ticketsToRender.forEach((ticket, index) => { %>
                 <%
                     // Determine which properties to use based on source (formData vs. DB)
