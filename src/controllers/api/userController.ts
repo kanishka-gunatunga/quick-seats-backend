@@ -444,6 +444,7 @@ export const bookingHistory = async (req: Request, res: Response) => {
           event_name: event.name,
           start_date_time: event.start_date_time,
           tickets,
+          order_status: order.status
         };
       })
     );
