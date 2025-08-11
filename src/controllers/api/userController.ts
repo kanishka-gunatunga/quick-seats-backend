@@ -366,33 +366,75 @@ export const bookingHistory = async (req: Request, res: Response) => {
       orders.map(async (order) => {
         const event = await prisma.event.findUnique({
           where: { id: parseInt(order.event_id) },
+          select: {
+            name: true,
+            start_date_time: true,
+            seats: true,
+            ticket_details: true,
+          },
         });
 
         if (!event) return null;
 
-        const ticketCounts: { [key: string]: number } = {};
-        
-          if (Array.isArray(order.seat_ids)) {
-            if (Array.isArray(event.seats)) {
-              const seats = event.seats as Array<{ seatId: number; ticketTypeName: string }>;
+        // --- Parse event.seats ---
+        const eventSeats: Array<{ seatId: string | number; ticketTypeName: string; type_id: number }> =
+          typeof event.seats === "string" ? JSON.parse(event.seats) : event.seats || [];
 
-              order.seat_ids.forEach((seatId) => {
-                const seat = seats.find((s) => s.seatId === seatId);
-                if (seat) {
-                  if (!ticketCounts[seat.ticketTypeName]) {
-                    ticketCounts[seat.ticketTypeName] = 1;
-                  } else {
-                    ticketCounts[seat.ticketTypeName]++;
-                  }
-                }
-              });
-            } else {
-              console.warn(`Event seats is not an array for event ${event.id}`);
+        // --- Parse event.ticket_details ---
+        const eventTicketDetails: any[] =
+          typeof event.ticket_details === "string"
+            ? JSON.parse(event.ticket_details)
+            : event.ticket_details || [];
+
+        // --- Ticket count map ---
+        const ticketCounts: { [typeName: string]: number } = {};
+
+        // --- Handle seat_ids ---
+        let orderSeatIds: string[] = [];
+        if (order.seat_ids) {
+          try {
+            const parsedSeatIds = JSON.parse(order.seat_ids as string);
+            if (Array.isArray(parsedSeatIds)) {
+              orderSeatIds = parsedSeatIds.map((id) => String(id));
             }
-          } else {
-            console.warn(`Order ${order.id} seat_ids is not an array`);
+          } catch (e) {
+            console.error(`Failed to parse seat_ids for order ${order.id}`, e);
           }
+        }
 
+        orderSeatIds.forEach((seatId) => {
+          const seat = eventSeats.find((s) => String(s.seatId) === seatId);
+          if (seat) {
+            ticketCounts[seat.ticketTypeName] = (ticketCounts[seat.ticketTypeName] || 0) + 1;
+          }
+        });
+
+        // --- Handle tickets_without_seats ---
+        if (order.tickets_without_seats) {
+          try {
+            const parsedTickets = JSON.parse(order.tickets_without_seats as string);
+            if (Array.isArray(parsedTickets)) {
+              for (const t of parsedTickets) {
+                const ticketDetail = eventTicketDetails.find(
+                  (td: any) => parseInt(td.ticketTypeId) === parseInt(t.ticket_type_id)
+                );
+                if (ticketDetail) {
+                  const ticketType = await prisma.ticketType.findUnique({
+                    where: { id: parseInt(ticketDetail.ticketTypeId) },
+                    select: { name: true },
+                  });
+
+                  const typeName = ticketType?.name || `Type ${t.ticket_type_id}`;
+                  ticketCounts[typeName] = (ticketCounts[typeName] || 0) + t.ticket_count;
+                }
+              }
+            }
+          } catch (e) {
+            console.error(`Failed to parse tickets_without_seats for order ${order.id}`, e);
+          }
+        }
+
+        // --- Final tickets array ---
         const tickets = Object.entries(ticketCounts).map(([type, count]) => ({
           type,
           count,
@@ -407,13 +449,14 @@ export const bookingHistory = async (req: Request, res: Response) => {
     );
 
     return res.json({
-      booking_history: bookingHistory.filter(Boolean), 
+      booking_history: bookingHistory.filter(Boolean),
     });
   } catch (error) {
-    console.error('Error fetching booking history:', error);
-    return res.status(500).json({ message: 'Failed to fetch booking history' });
+    console.error("Error fetching booking history:", error);
+    return res.status(500).json({ message: "Failed to fetch booking history" });
   }
 };
+
 export const paymentHistory = async (req: Request, res: Response) => {
   const userId = req.params.id;
 
