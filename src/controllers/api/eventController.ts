@@ -414,6 +414,26 @@ export const getEventDetails = async (req: Request, res: Response) => {
     }
     // If it's null/undefined or an invalid format, ticketDetails remains []
 
+    let seats: any[] = [];
+    const rawSeats = event.seats;
+
+    if (typeof rawSeats === 'string') {
+      try {
+        const parsed = JSON.parse(rawSeats);
+        if (Array.isArray(parsed)) {
+          seats = parsed;
+        } else {
+          console.warn('seats is a string but not a JSON array:', rawSeats);
+        }
+      } catch (e) {
+        console.error('Error parsing event.seats as JSON string:', e);
+      }
+    } else if (Array.isArray(rawSeats)) {
+      seats = rawSeats;
+    } else if (rawSeats !== null && rawSeats !== undefined) {
+      console.warn('event.seats is neither an array nor a string:', rawSeats);
+    }
+
     const ticketTypeIds = ticketDetails.map(t => t.ticketTypeId).filter(id => id !== undefined); // Ensure valid IDs
 
     const ticketTypes = await prisma.ticketType.findMany({
@@ -428,10 +448,29 @@ export const getEventDetails = async (req: Request, res: Response) => {
       };
     });
 
+    let all_seats_booked = 0;
+    if (seats.length > 0 && seats.every(seat => seat.status === "booked")) {
+      all_seats_booked = 1;
+    }
+
+    // ✅ Check all tickets without seats booked
+    let all_ticket_without_seats_booked = 0;
+    if (
+      ticketDetails.length > 0 &&
+      ticketDetails.every(ticket =>
+        ticket.hasTicketCount === true &&
+        ticket.bookedTicketCount >= ticket.ticketCount
+      )
+    ) {
+      all_ticket_without_seats_booked = 1;
+    }
+
     const enrichedEvent = {
       ...event,
       artist_details: enrichedArtists,
       ticket_details: enrichedTickets,
+      all_seats_booked,
+      all_ticket_without_seats_booked
     };
 
     return res.json(enrichedEvent);
