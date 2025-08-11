@@ -52,8 +52,8 @@ export const getAllEvents = async (req: Request, res: Response) => {
       });
     }
 
-    // Step 4: Enrich each event with artists and ticket types
-    const enhancedEvents = await Promise.all(events.map(async (event) => {
+      // Step 4: Enrich each event with artists and ticket types
+      const enhancedEvents = await Promise.all(events.map(async (event) => {
       const artistIds: number[] = Array.isArray(event.artist_details)
         ? event.artist_details.map(Number)
         : [];
@@ -67,6 +67,17 @@ export const getAllEvents = async (req: Request, res: Response) => {
         console.error("Invalid ticket_details format", err);
         return [];
       }
+      })();
+
+      const seats: any[] = (() => {
+        if (!event.seats) return [];
+        if (Array.isArray(event.seats)) return event.seats;
+        try {
+          return JSON.parse(event.seats as any);
+        } catch (err) {
+          console.error("Invalid seats format", err);
+          return [];
+        }
       })();
 
       const artists = await prisma.artist.findMany({
@@ -94,10 +105,28 @@ export const getAllEvents = async (req: Request, res: Response) => {
         };
       });
 
+      let all_seats_booked = 0;
+      if (seats.length > 0 && seats.every(seat => seat.status === "booked")) {
+        all_seats_booked = 1;
+      }
+
+      let all_ticket_without_seats_booked = 0;
+      if (
+        ticketDetails.length > 0 &&
+        ticketDetails.every(ticket =>
+          ticket.hasTicketCount === true &&
+          ticket.bookedTicketCount >= ticket.ticketCount
+        )
+      ) {
+        all_ticket_without_seats_booked = 1;
+      }
+
       return {
         ...event,
         ticket_details: enrichedTickets,
-        artist_details: enrichedArtists
+        artist_details: enrichedArtists,
+        all_seats_booked,
+        all_ticket_without_seats_booked
       };
     }));
 
@@ -159,6 +188,17 @@ export const getTrendingEvents = async (req: Request, res: Response) => {
       }
       })();
 
+      const seats: any[] = (() => {
+        if (!event.seats) return [];
+        if (Array.isArray(event.seats)) return event.seats;
+        try {
+          return JSON.parse(event.seats as any);
+        } catch (err) {
+          console.error("Invalid seats format", err);
+          return [];
+        }
+      })();
+
       const artists = await prisma.artist.findMany({
         where: { id: { in: artistIds } },
       });
@@ -187,11 +227,29 @@ export const getTrendingEvents = async (req: Request, res: Response) => {
       // Remove the temporary 'orderCount' property if you don't want it in the final response
       const { orderCount, ...eventWithoutOrderCount } = event;
 
+       let all_seats_booked = 0;
+      if (seats.length > 0 && seats.every(seat => seat.status === "booked")) {
+        all_seats_booked = 1;
+      }
+
+      let all_ticket_without_seats_booked = 0;
+      if (
+        ticketDetails.length > 0 &&
+        ticketDetails.every(ticket =>
+          ticket.hasTicketCount === true &&
+          ticket.bookedTicketCount >= ticket.ticketCount
+        )
+      ) {
+        all_ticket_without_seats_booked = 1;
+      }
+
       return {
         ...eventWithoutOrderCount,
         ticket_details: enrichedTickets,
         artist_details: enrichedArtists,
         orderCount: orderCount, // Keep orderCount if you want to expose it
+        all_seats_booked,
+        all_ticket_without_seats_booked
       };
     })
   );
@@ -234,6 +292,17 @@ export const getUpcomingEvents = async (req: Request, res: Response) => {
       }
       })();
 
+      const seats: any[] = (() => {
+        if (!event.seats) return [];
+        if (Array.isArray(event.seats)) return event.seats;
+        try {
+          return JSON.parse(event.seats as any);
+        } catch (err) {
+          console.error("Invalid seats format", err);
+          return [];
+        }
+      })();
+
     const artists = await prisma.artist.findMany({
       where: { id: { in: artistIds } }
     });
@@ -259,10 +328,28 @@ export const getUpcomingEvents = async (req: Request, res: Response) => {
       };
     });
 
+     let all_seats_booked = 0;
+      if (seats.length > 0 && seats.every(seat => seat.status === "booked")) {
+        all_seats_booked = 1;
+      }
+
+      let all_ticket_without_seats_booked = 0;
+      if (
+        ticketDetails.length > 0 &&
+        ticketDetails.every(ticket =>
+          ticket.hasTicketCount === true &&
+          ticket.bookedTicketCount >= ticket.ticketCount
+        )
+      ) {
+        all_ticket_without_seats_booked = 1;
+      }
+
     return {
       ...event,
       ticket_details: enrichedTickets,
-      artist_details: enrichedArtists
+      artist_details: enrichedArtists,
+      all_seats_booked,
+      all_ticket_without_seats_booked
     };
   }));
 
