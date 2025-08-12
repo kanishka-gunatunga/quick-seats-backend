@@ -651,8 +651,11 @@ document.addEventListener('DOMContentLoaded', () => {
 // const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
 // const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
-const mapedSeats = <%- JSON.stringify(enrichedEvent.seats || []) %>;
-const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
+// const mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
+// const seatTicketTypes = JSON.parse('<%- JSON.stringify(enrichedEvent.ticket_details || []) %>');
+
+const mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []).replace(/'/g, "\\'") %>');
+const seatTicketTypes = JSON.parse('<%- JSON.stringify(enrichedEvent.ticket_details || []).replace(/'/g, "\\'") %>');
 
 document.addEventListener('DOMContentLoaded', () => {
     const ticketTypes = [
