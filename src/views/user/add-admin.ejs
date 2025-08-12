@@ -28,7 +28,7 @@
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Phone No</label>
+                                                        <label class="form-label">Phone No <span style="color:red;"> *</span></label>
                                                         <input type="text" class="form-control" name="phone" value="<%= formData?.phone || '' %>">
                                                         <% if (validationErrors?.phone) { %>
                                                             <small class="text-danger"><%= validationErrors.phone[0] %></small>
@@ -36,7 +36,7 @@
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Email</label>
+                                                        <label class="form-label">Email <span style="color:red;"> *</span></label>
                                                         <input type="email" class="form-control" name="email" value="<%= formData?.email || '' %>">
                                                         <% if (validationErrors?.email) { %>
                                                             <small class="text-danger"><%= validationErrors.email[0] %></small>
@@ -44,7 +44,7 @@
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Password</label>
+                                                        <label class="form-label">Password <span style="color:red;"> *</span></label>
                                                         <input type="password" class="form-control" name="password">
                                                         <% if (validationErrors?.password) { %>
                                                             <small class="text-danger"><%= validationErrors.password[0] %></small>
@@ -52,7 +52,7 @@
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Confirm Password</label>
+                                                        <label class="form-label">Confirm Password <span style="color:red;"> *</span></label>
                                                         <input type="password" class="form-control" name="confirm_password">
                                                         <% if (validationErrors?.confirm_password) { %>
                                                             <small class="text-danger"><%= validationErrors.confirm_password[0] %></small>

@@ -26,7 +26,7 @@ height: auto;
 
                                                     <div class="row">
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Customer</label>
+                                                        <label class="form-label">Customer <span style="color:red;"> *</span></label>
                                                         <select class="form-control" data-toggle="select2" name="customer" id="customerSelect" data-width="100%">
                                                                 <option value="guest">Guest</option>
                                                                 <% customers.forEach(customer => { %>
@@ -39,7 +39,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">First Name</label>
+                                                            <label class="form-label">First Name <span style="color:red;"> *</span></label>
                                                             <input type="text" class="form-control" name="first_name" id="firstName" value="<%= formData?.first_name || '' %>">
                                                             <% if (validationErrors?.first_name) { %>
                                                                 <small class="text-danger"><%= validationErrors.first_name[0] %></small>
@@ -47,7 +47,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">Last Name</label>
+                                                            <label class="form-label">Last Name <span style="color:red;"> *</span></label>
                                                             <input type="text" class="form-control" name="last_name" id="lastName" value="<%= formData?.last_name || '' %>">
                                                             <% if (validationErrors?.last_name) { %>
                                                                 <small class="text-danger"><%= validationErrors.last_name[0] %></small>
@@ -55,7 +55,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">Email</label>
+                                                            <label class="form-label">Email <span style="color:red;"> *</span></label>
                                                             <input type="email" class="form-control" name="email" id="emailField" value="<%= formData?.email || '' %>">
                                                             <% if (validationErrors?.email) { %>
                                                                 <small class="text-danger"><%= validationErrors.email[0] %></small>
@@ -63,7 +63,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">Contact Number</label>
+                                                            <label class="form-label">Contact Number <span style="color:red;"> *</span></label>
                                                             <input type="text" class="form-control" name="contact_number" id="contactNumber" value="<%= formData?.contact_number || '' %>">
                                                             <% if (validationErrors?.contact_number) { %>
                                                                 <small class="text-danger"><%= validationErrors.contact_number[0] %></small>
@@ -71,7 +71,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">NIC/Passport</label>
+                                                            <label class="form-label">NIC/Passport <span style="color:red;"> *</span></label>
                                                             <input type="text" class="form-control" name="nic_passport" id="nicPassport" value="<%= formData?.nic_passport || '' %>">
                                                             <% if (validationErrors?.nic_passport) { %>
                                                                 <small class="text-danger"><%= validationErrors.nic_passport[0] %></small>
@@ -79,7 +79,7 @@ height: auto;
                                                         </div>
 
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">Country</label>
+                                                            <label class="form-label">Country <span style="color:red;"> *</span></label>
                                                             <select class="form-control" data-toggle="select2" name="country" id="country" data-width="100%">
                                                                 <option value="Afghanistan">Afghanistan</option>
                                                                 <option value="Åland Islands">Åland Islands</option>
@@ -331,7 +331,7 @@ height: auto;
                                                             <% } %>
                                                         </div>
                                                         <div class="col-md-4 mb-3">
-                                                            <label class="form-label">Event</label>
+                                                            <label class="form-label">Event <span style="color:red;"> *</span></label>
                                                             <select class="form-control" data-toggle="select2" name="event_id" id="eventSelect" data-width="100%">
                                                                     <option>Select....</option>
                                                                     <% events.forEach(event => { %>

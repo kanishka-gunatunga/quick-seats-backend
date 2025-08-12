@@ -20,14 +20,14 @@
 
                                                     <div class="row">
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Name</label>
+                                                        <label class="form-label">Name <span style="color:red;"> *</span></label>
                                                         <input type="text" class="form-control" name="name" value="<%= formData?.name || '' %>">
                                                         <% if (validationErrors?.name) { %>
                                                             <small class="text-danger"><%= validationErrors.name[0] %></small>
                                                         <% } %>
                                                         </div>
                                                         <div class="col-md-4 mb-3">
-                                                        <label class="form-label">Color</label>
+                                                        <label class="form-label">Color <span style="color:red;"> *</span></label>
                                                         <input class="form-control" id="example-color" type="color" name="color" value="<%= formData?.color || '' %>">
                                                         <% if (validationErrors?.color) { %>
                                                             <small class="text-danger"><%= validationErrors.color[0] %></small>

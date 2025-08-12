@@ -41,49 +41,49 @@ height: auto;
 
                                     <div class="row">
                                         <div class="col-md-4 mb-3">
-                                        <label class="form-label">Name</label>
+                                        <label class="form-label">Name <span style="color:red;"> *</span></label>
                                         <input type="text" class="form-control" name="name" value="<%= formData?.name || enrichedEvent.name || '' %>">
                                         <% if (validationErrors?.name) { %>
                                         <small class="text-danger"><%= validationErrors.name[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                        <label class="form-label">Start Date Time</label>
+                                        <label class="form-label">Start Date Time <span style="color:red;"> *</span></label>
                                         <input type="text" name="start_date_time" class="form-control datetime-datepicker" placeholder="Start Date and Time" value="<%= formData?.start_date_time || new Date(enrichedEvent.start_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
                                         <% if (validationErrors?.start_date_time) { %>
                                         <small class="text-danger"><%= validationErrors.start_date_time[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                        <label class="form-label">End Date Time</label>
+                                        <label class="form-label">End Date Time <span style="color:red;"> *</span></label>
                                         <input type="text" name="end_date_time" class="form-control datetime-datepicker" placeholder="End Date and Time" value="<%= formData?.end_date_time || new Date(enrichedEvent.end_date_time).toISOString().slice(0, 16).replace('T', ' ') || '' %>">
                                         <% if (validationErrors?.end_date_time) { %>
                                         <small class="text-danger"><%= validationErrors.end_date_time[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                        <label class="form-label">Description</label>
+                                        <label class="form-label">Description <span style="color:red;"> *</span></label>
                                         <textarea class="form-control" id="example-textarea" name="discription" rows="5"><%= formData?.discription || enrichedEvent.description || '' %></textarea>
                                         <% if (validationErrors?.discription) { %>
                                         <small class="text-danger"><%= validationErrors.discription[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-6 mb-3">
-                                        <label class="form-label">Ticket Policy</label>
+                                        <label class="form-label">Ticket Policy <span style="color:red;"> *</span></label>
                                         <textarea class="form-control" id="example-textarea" name="policy" rows="5"><%= formData?.policy || enrichedEvent.policy || '' %></textarea>
                                         <% if (validationErrors?.policy) { %>
                                         <small class="text-danger"><%= validationErrors.policy[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                        <label class="form-label">Organized By</label>
+                                        <label class="form-label">Organized By <span style="color:red;"> *</span></label>
                                         <input type="text" class="form-control" name="organized_by" value="<%= formData?.organized_by || enrichedEvent.organized_by || '' %>">
                                         <% if (validationErrors?.organized_by) { %>
                                         <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
                                         <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
-                                        <label class="form-label">Location</label>
+                                        <label class="form-label">Location <span style="color:red;"> *</span></label>
                                         <select class="form-control" data-toggle="select2" name="location" data-width="100%">
                                             <option value="BMICH" <%= (formData?.location || enrichedEvent.location) === 'BMICH' ? 'selected' : '' %>>BMICH</option>
                                             <option value="Nelum Pokuna" <%= (formData?.location || enrichedEvent.location) === 'Nelum Pokuna' ? 'selected' : '' %>>Nelum Pokuna</option>

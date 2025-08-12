@@ -48,12 +48,12 @@
                                 <% } %>
                                  <form method="POST" action="/staff/login">
                                     <div class="mb-3">
-                                        <label for="emailaddress" class="form-label">Email address</label>
+                                        <label for="emailaddress" class="form-label">Email address <span style="color:red;"> *</span></label>
                                         <input class="form-control" type="email" id="emailaddress" name="email" required="" placeholder="Enter your email" value="<%= formData?.email || '' %>">
                                     </div>
 
                                     <div class="mb-3">
-                                        <label for="password" class="form-label">Password</label>
+                                        <label for="password" class="form-label">Password <span style="color:red;"> *</span></label>
                                         <input class="form-control" type="password" required="" id="password" name="password" placeholder="Enter your password">
                                     </div>
 
