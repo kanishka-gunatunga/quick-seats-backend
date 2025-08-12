@@ -657,7 +657,7 @@ let mapedSeats;
 try {
   mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
 } catch {
-  mapedSeats = <%- JSON.stringify(enrichedEvent.seats || []) %>;
+  mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
 }
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
