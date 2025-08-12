@@ -655,16 +655,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // const seatTicketTypes = JSON.parse('<%- JSON.stringify(enrichedEvent.ticket_details || []) %>');
 let mapedSeats;
 try {
-  // Try parsing as string (wrapped in quotes)
   mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
-} catch (e) {
-  try {
-    mapedSeats = <%- JSON.stringify(enrichedEvent.seats || []) %>;
-  } catch (e2) {
-    mapedSeats = [];
-    seatTicketTypes = [];
-    console.error('Failed to parse seat data:', e, e2);
-  }
+} catch {
+  mapedSeats = <%- JSON.stringify(enrichedEvent.seats || []) %>;
 }
 const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
 
