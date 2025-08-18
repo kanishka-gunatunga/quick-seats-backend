@@ -224,7 +224,7 @@
             const countToIssue = parseInt(issueCountInput.value);
             const statusEl = document.getElementById(`status-no-seat-${ticketTypeId}`);
             const cardBody = issueCountInput.closest('.card-body');
-
+            console.log(countToIssue);
             if (isNaN(countToIssue) || countToIssue <= 0) {
                 if (statusEl) {
                     statusEl.innerText = "❌ Invalid number.";
