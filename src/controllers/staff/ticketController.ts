@@ -283,6 +283,24 @@ export const issueTicketsManual = async (req: Request, res: Response) => {
           ],
         },
       });
+
+      const ordersWithEventNames = await Promise.all(
+                orders.map(async (order) => {
+                    const event = await prisma.event.findUnique({
+                        where: { id: Number(order.event_id) },
+                        select: { name: true }, // Only get the name to be efficient
+                    });
+
+                    // Add the event name directly to the order object
+                    return {
+                        ...order,
+                        eventName: event?.name || 'Unknown Event',
+                    };
+                })
+            );
+
+            // Replace the original orders array with the new one
+            orders = ordersWithEventNames;
     } catch (err) {
       console.error('Error fetching orders:', err);
       return res.render('staff/ticket/issue_maual', {
