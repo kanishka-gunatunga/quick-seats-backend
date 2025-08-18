@@ -38,7 +38,15 @@ height: auto;
                                                                 <small class="text-danger"><%= validationErrors.event[0] %></small>
                                                             <% } %>
                                                         </div>
+                                                        <div class="col-md-4 mb-3">
+                                                        <label class="form-label">Report Format <span style="color:red;"> *</span></label>
+                                                        <select class="form-control" name="format" id="formatSelect" data-width="100%">
+                                                            <option value="excel">Excel (.xlsx)</option>
+                                                            <option value="pdf">PDF (.pdf)</option>
+                                                        </select>
+                                                    </div>
                                                     </div> 
+                                                    
                                                     <button type="submit" class="btn btn-primary">Submit</button>
                                                 </form>
 
