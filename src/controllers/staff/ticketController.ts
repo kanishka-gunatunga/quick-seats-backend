@@ -303,3 +303,73 @@ export const issueTicketsManual = async (req: Request, res: Response) => {
     orders,
   });
 };
+export const getOrderTickets = async (req: Request, res: Response) => {
+    try {
+        const { orderId, eventId } = req.body;
+
+        if (!orderId || !eventId) {
+            return res.status(400).json({ message: 'Missing orderId or eventId in request body.' });
+        }
+
+        // 1. Fetch the order
+        const order = await prisma.order.findUnique({
+            where: { id: parseInt(orderId as string) },
+        });
+
+        if (!order) {
+            return res.status(404).json({ message: 'Order not found.' });
+        }
+
+        // 2. Fetch the related event
+        const event = await prisma.event.findUnique({
+            where: { id: parseInt(eventId as string) },
+        });
+
+        if (!event) {
+            return res.status(404).json({ message: 'Event not found.' });
+        }
+
+        // 3. Prepare ticket data for the frontend
+        const eventSeats: any[] = typeof event.seats === 'string' ? JSON.parse(event.seats) : (event.seats as any[]) || [];
+        const eventTicketDetails: any[] = typeof event.ticket_details === 'string' ? JSON.parse(event.ticket_details) : (event.ticket_details as any[]) || [];
+        const orderSeats: any[] = typeof order.seat_ids === 'string' ? JSON.parse(order.seat_ids) : (order.seat_ids as any[]) || [];
+        const orderTicketsWithoutSeats: any[] = typeof order.tickets_without_seats === 'string' ? JSON.parse(order.tickets_without_seats) : (order.tickets_without_seats as any[]) || [];
+
+        // Combine order and event seat data
+        const seatedTickets = orderSeats.map(seatId => {
+            const eventSeat = eventSeats.find(es => es.seatId === seatId);
+            const ticketType = eventTicketDetails.find(td => td.ticketTypeId === eventSeat?.type_id);
+                
+            return {
+                seatId: seatId,
+                ticketTypeName: ticketType?.ticketTypeName || 'Unknown',
+                status: eventSeat?.status || 'unknown'
+            };
+        });
+
+        // Add ticket type names to non-seated tickets
+        const withoutSeatTickets = orderTicketsWithoutSeats.map(ticket => {
+             const ticketType = eventTicketDetails.find(td => td.ticketTypeId === ticket.ticket_type_id);
+             return {
+                 ...ticket,
+                 ticket_type_name: ticketType?.ticketTypeName || 'Unknown'
+             };
+        });
+
+        const allTickets = {
+            seated: seatedTickets,
+            withoutSeats: withoutSeatTickets
+        };
+
+        // 4. Send all the data back in one response
+        return res.json({
+            order,
+            event,
+            allTickets,
+        });
+
+    } catch (err) {
+        console.error('Error fetching order details:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+};
