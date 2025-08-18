@@ -3,7 +3,7 @@ import { login, register, updateProfileSettings, updateSecuritySettings,bookingH
 validateOtp, resetPassword,resendOtp,getOrderDetails,orderInfo } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect} from '../../controllers/api/checkoutController';
-import { inquiry} from '../../controllers/api/otherController';
+import { inquiry,newsletter} from '../../controllers/api/otherController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
@@ -47,5 +47,6 @@ router.post('/checkout-client-redirect', checkoutClientRedirect);
 
 //Other
 router.post('/inquiry', inquiry);
+router.post('/newsletter', newsletter);
 export default router;
  

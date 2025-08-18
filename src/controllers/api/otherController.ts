@@ -55,3 +55,42 @@ export const inquiry = async (req: Request, res: Response) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
+export const newsletter = async (req: Request, res: Response) => {
+    const schema = z
+    .object({
+      email: z.string({ required_error: 'Email is required' }).email('Invalid email format'),
+    });
+
+  const result = schema.safeParse(req.body);
+
+  if (!result.success) {
+    return res.status(400).json({
+    message: 'Invalid input',
+    errors: result.error.flatten(),
+  });
+  }
+  const { email} =  result.data;
+
+  try {
+    
+    const templatePath = path.join(__dirname, '../../views/email-templates/newsletter-email-template.ejs');
+    const emailHtml = await ejs.renderFile(templatePath, {
+        email: email,
+    });
+    
+    await transporter.sendMail({
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: 'nejat27921@ahvin.com',
+        subject: 'New Newsletter Submission',
+        html: emailHtml,
+    });
+
+    
+    return res.status(201).json({ message: 'Newsletter submited successfully.' });
+  } catch (err) {
+    console.error('Registration error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
