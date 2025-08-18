@@ -311,48 +311,59 @@ export const getOrderTickets = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Missing orderId or eventId in request body.' });
         }
 
-        // 1. Fetch the order
-        const order = await prisma.order.findUnique({
-            where: { id: parseInt(orderId as string) },
-        });
+        // 1. Fetch the order and event concurrently
+        const [order, event] = await Promise.all([
+            prisma.order.findUnique({ where: { id: parseInt(orderId as string) } }),
+            prisma.event.findUnique({ where: { id: parseInt(eventId as string) } })
+        ]);
 
-        if (!order) {
-            return res.status(404).json({ message: 'Order not found.' });
+        if (!order || !event) {
+            return res.status(404).json({ message: 'Order or Event not found.' });
         }
 
-        // 2. Fetch the related event
-        const event = await prisma.event.findUnique({
-            where: { id: parseInt(eventId as string) },
-        });
-
-        if (!event) {
-            return res.status(404).json({ message: 'Event not found.' });
-        }
-
-        // 3. Prepare ticket data for the frontend
+        // 2. Parse necessary JSON data
         const eventSeats: any[] = typeof event.seats === 'string' ? JSON.parse(event.seats) : (event.seats as any[]) || [];
         const eventTicketDetails: any[] = typeof event.ticket_details === 'string' ? JSON.parse(event.ticket_details) : (event.ticket_details as any[]) || [];
         const orderSeats: any[] = typeof order.seat_ids === 'string' ? JSON.parse(order.seat_ids) : (order.seat_ids as any[]) || [];
         const orderTicketsWithoutSeats: any[] = typeof order.tickets_without_seats === 'string' ? JSON.parse(order.tickets_without_seats) : (order.tickets_without_seats as any[]) || [];
 
-        // Combine order and event seat data
+        // 3. Collect all unique ticket type IDs from the order to query the database
+        const seatTicketTypeIds = orderSeats.map(seatId => {
+            const eventSeat = eventSeats.find(es => es.seatId === seatId);
+            return eventSeat?.type_id;
+        }).filter(id => id !== undefined);
+
+        const withoutSeatTicketTypeIds = orderTicketsWithoutSeats.map(ticket => ticket.ticket_type_id);
+
+        const allTicketTypeIds = [...new Set([...seatTicketTypeIds, ...withoutSeatTicketTypeIds])];
+
+        // 4. Fetch the ticket type names from the TicketType table
+        const ticketTypes = await prisma.ticketType.findMany({
+            where: {
+                id: {
+                    in: allTicketTypeIds.map(id => parseInt(id))
+                }
+            }
+        });
+
+        const ticketTypeNameMap = new Map(ticketTypes.map(tt => [tt.id, tt.name]));
+
+        // 5. Combine order data with ticket type names
         const seatedTickets = orderSeats.map(seatId => {
             const eventSeat = eventSeats.find(es => es.seatId === seatId);
-            const ticketType = eventTicketDetails.find(td => td.ticketTypeId === eventSeat?.type_id);
-                
+            const ticketTypeName = ticketTypeNameMap.get(eventSeat?.type_id) || 'Unknown';
             return {
                 seatId: seatId,
-                ticketTypeName: ticketType?.ticketTypeName || 'Unknown',
+                ticketTypeName: ticketTypeName,
                 status: eventSeat?.status || 'unknown'
             };
         });
 
-        // Add ticket type names to non-seated tickets
         const withoutSeatTickets = orderTicketsWithoutSeats.map(ticket => {
-             const ticketType = eventTicketDetails.find(td => td.ticketTypeId === ticket.ticket_type_id);
+             const ticketTypeName = ticketTypeNameMap.get(ticket.ticket_type_id) || 'Unknown';
              return {
                  ...ticket,
-                 ticket_type_name: ticketType?.ticketTypeName || 'Unknown'
+                 ticket_type_name: ticketTypeName
              };
         });
 
@@ -361,7 +372,7 @@ export const getOrderTickets = async (req: Request, res: Response) => {
             withoutSeats: withoutSeatTickets
         };
 
-        // 4. Send all the data back in one response
+        // 6. Send all the data back in one response
         return res.json({
             order,
             event,

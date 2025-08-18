@@ -182,7 +182,7 @@
             orderDetailsContent.innerHTML = `
                 <h4>Order #${order.id} | ${order.first_name} ${order.last_name}</h4>
                 <p><strong>Event:</strong> ${event.name}</p>
-                <p><strong>Status:</strong> <span class="badge badge-info">${order.status}</span></p>
+                <p><strong>Status:</strong> <span class="badge badge-pill bg-info">${order.status}</span></p>
                 <hr>
                 ${ticketsHtml}
             `;
