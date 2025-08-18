@@ -51,14 +51,14 @@
                                                     <td><%= order.status %></td>
                                                     <td><%= order.total %></td>
                                                     <td>
-                                                        <button type="button" class="btn btn-info btn-sm view-btn" data-order='<%= JSON.stringify(order) %>'>View</button>
+                                                        <button type="button" class="btn btn-info btn-sm view-btn" data-order-id="<%= order.id %>" data-event-id="<%= order.event_id %>">View</button>
                                                     </td>
                                                 </tr>
                                             <% }) %>
                                         </tbody>
                                     </table>
                                 </div>
-                            <% } else if (typeof name_nic !== 'undefined' && orders.length === 0) { %>
+                            <% } else if (typeof formData.name_nic !== 'undefined' && orders.length === 0) { %>
                                 <div class="alert alert-warning mt-4">
                                     No orders found for the given search criteria.
                                 </div>
@@ -72,7 +72,7 @@
 </div>
 
 <div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
@@ -92,31 +92,190 @@
 <%- include('../../layouts/staff-footer.ejs') %>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
-    const viewButtons = document.querySelectorAll('.view-btn');
-    const modalBody = document.getElementById('orderDetailsContent');
+    document.addEventListener('DOMContentLoaded', () => {
+        const orderDetailsContent = document.getElementById("orderDetailsContent");
 
-    viewButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            const orderData = JSON.parse(e.target.dataset.order);
+        document.querySelectorAll('.view-btn').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const orderId = e.target.dataset.orderId;
+                const eventId = e.target.dataset.eventId;
 
-            modalBody.innerHTML = `
-                <p><strong>Order ID:</strong> ${orderData.id}</p>
-                <p><strong>Customer Name:</strong> ${orderData.first_name} ${orderData.last_name}</p>
-                <p><strong>Email:</strong> ${orderData.email}</p>
-                <p><strong>Contact Number:</strong> ${orderData.contact_number}</p>
-                <p><strong>NIC/Passport:</strong> ${orderData.nic_passport}</p>
-                <p><strong>Country:</strong> ${orderData.country}</p>
-                <p><strong>Event ID:</strong> ${orderData.event_id}</p>
-                <p><strong>Sub Total:</strong> ${orderData.sub_total}</p>
-                <p><strong>Discount:</strong> ${orderData.discount}</p>
-                <p><strong>Total:</strong> ${orderData.total}</p>
-                <p><strong>Status:</strong> ${orderData.status}</p>
-                <p><strong>Created At:</strong> ${new Date(orderData.createdAt).toLocaleString()}</p>
-            `;
+                try {
+                    // Make a POST request to get detailed order info
+                    const res = await fetch("/staff/get-order-tickets", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ orderId, eventId })
+                    });
 
-            $('#orderDetailsModal').modal('show');
+                    if (!res.ok) {
+                        const errorData = await res.json();
+                        throw new Error(errorData.message || "Failed to fetch order details.");
+                    }
+
+                    const { order, event, allTickets } = await res.json();
+                    renderOrderDetailsInModal(order, event, allTickets);
+                    $('#orderDetailsModal').modal('show');
+                } catch (err) {
+                    orderDetailsContent.innerHTML = `<p style="color: red;">❌ Error: ${err.message}</p>`;
+                    $('#orderDetailsModal').modal('show');
+                    console.error("Error fetching order details:", err);
+                }
+            });
         });
+
+        // The following functions are shared logic from the QR page
+        function renderOrderDetailsInModal(order, event, allTickets) {
+            let ticketsHtml = '';
+
+            // Render seated tickets
+            if (allTickets.seated.length > 0) {
+                ticketsHtml += `
+                    <div class="mt-4">
+                        <h5>Seated Tickets</h5>
+                        <ul class="list-group">
+                            ${allTickets.seated.map(ticket => `
+                                <li id="seat-ticket-${ticket.seatId}" class="list-group-item">
+                                    Ticket Type: <strong>${ticket.ticketTypeName}</strong>, Seat: <strong>${ticket.seatId}</strong>
+                                    <span class="badge badge-${ticket.status === 'issued' ? 'success' : 'warning'} float-right">${ticket.status}</span>
+                                    <div class="float-right mr-3">
+                                        ${ticket.status === 'issued'
+                                            ? '<span style="color: green;">✅ Already Issued</span>'
+                                            : `<button onclick="issueSeatTicket('${order.id}', '${ticket.seatId}')" class="btn btn-warning btn-sm">Issue</button>`
+                                        }
+                                        <span id="status-${ticket.seatId}"></span>
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // Render un-seated tickets
+            if (allTickets.withoutSeats.length > 0) {
+                ticketsHtml += `
+                    <div class="mt-4">
+                        <h5>Non-Seated Tickets</h5>
+                        ${allTickets.withoutSeats.map(ticket => `
+                            <div id="no-seat-ticket-${ticket.ticket_type_id}" class="card mt-2">
+                                <div class="card-body">
+                                    <h6>Ticket Type: ${ticket.ticket_type_name}</h6>
+                                    <p>Total: <strong>${ticket.ticket_count}</strong>, Issued: <strong class="issued-count">${ticket.issued_count || 0}</strong>, Remaining: <strong>${ticket.ticket_count - (ticket.issued_count || 0)}</strong></p>
+                                    <div class="form-group row">
+                                        <div class="col-sm-6">
+                                            <label for="issueCount-${ticket.ticket_type_id}">Tickets to Issue:</label>
+                                            <input type="number" id="issueCount-${ticket.ticket_type_id}" class="form-control" value="1" min="1" max="${ticket.ticket_count - (ticket.issued_count || 0)}">
+                                        </div>
+                                        <div class="col-sm-6 d-flex align-items-end">
+                                            <button onclick="issueNoSeatTickets('${order.id}', '${ticket.ticket_type_id}', 'issueCount-${ticket.ticket_type_id}')" class="btn btn-warning btn-sm">Issue Tickets</button>
+                                            <span id="status-no-seat-${ticket.ticket_type_id}" class="ml-2"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            orderDetailsContent.innerHTML = `
+                <h4>Order #${order.id} | ${order.first_name} ${order.last_name}</h4>
+                <p><strong>Event:</strong> ${event.name}</p>
+                <p><strong>Status:</strong> <span class="badge badge-info">${order.status}</span></p>
+                <hr>
+                ${ticketsHtml}
+            `;
+        }
+
+        async function issueSeatTicket(orderId, seatId) {
+            try {
+                const res = await fetch("/staff/confirm-ticket-issue", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ orderId, seatId })
+                });
+
+                const result = await res.json();
+                const statusEl = document.getElementById(`status-${seatId}`);
+                const listItem = document.getElementById(`seat-ticket-${seatId}`);
+
+                if (res.ok) {
+                    if (listItem) {
+                        const button = listItem.querySelector('button');
+                        if (button) button.remove();
+                        listItem.querySelector('.badge').classList.remove('badge-warning');
+                        listItem.querySelector('.badge').classList.add('badge-success');
+                        listItem.querySelector('.badge').textContent = 'issued';
+                    }
+                    if (statusEl) statusEl.innerHTML = '<span style="color: green;">✅ Issued</span>';
+                } else {
+                    if (statusEl) statusEl.innerText = `❌ ${result.message || 'Error issuing'}`;
+                }
+            } catch (err) {
+                const errorStatusEl = document.getElementById(`status-${seatId}`);
+                if (errorStatusEl) errorStatusEl.innerText = "❌ Network error or server issue.";
+                console.error("Error issuing seat ticket:", err);
+            }
+        }
+
+        async function issueNoSeatTickets(orderId, ticketTypeId, inputElementId) {
+            const issueCountInput = document.getElementById(inputElementId);
+            const countToIssue = parseInt(issueCountInput.value);
+            const statusEl = document.getElementById(`status-no-seat-${ticketTypeId}`);
+            const cardBody = issueCountInput.closest('.card-body');
+
+            if (isNaN(countToIssue) || countToIssue <= 0) {
+                if (statusEl) {
+                    statusEl.innerText = "❌ Invalid number.";
+                    statusEl.style.color = "red";
+                }
+                return;
+            }
+
+            try {
+                const res = await fetch("/staff/issue-no-seat-tickets", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        orderId: orderId,
+                        ticketTypeId: ticketTypeId,
+                        countToIssue: countToIssue,
+                        type: "no seat"
+                    })
+                });
+
+                const result = await res.json();
+
+                if (res.ok) {
+                    if (statusEl) statusEl.innerHTML = '<span style="color: green;">✅ Issued</span>';
+                    
+                    const issuedCountEl = cardBody.querySelector('.issued-count');
+                    const newIssuedCount = parseInt(issuedCountEl.textContent) + countToIssue;
+                    const remainingCountEl = issuedCountEl.nextElementSibling;
+                    const newRemaining = parseInt(issueCountInput.max) - countToIssue;
+                    
+                    issuedCountEl.textContent = newIssuedCount;
+                    remainingCountEl.textContent = newRemaining;
+
+                    issueCountInput.max = newRemaining;
+                    
+                    if (newRemaining <= 0) {
+                        cardBody.innerHTML = `<p style="color: green;">✅ All tickets for this type have been issued.</p>`;
+                    }
+                } else {
+                    if (statusEl) {
+                        statusEl.innerText = `❌ ${result.message || 'Error issuing'}`;
+                        statusEl.style.color = "red";
+                    }
+                }
+            } catch (err) {
+                if (statusEl) {
+                    statusEl.innerText = "❌ Network error or server issue.";
+                    statusEl.style.color = "red";
+                }
+                console.error("Error issuing no-seat ticket:", err);
+            }
+        }
     });
-});
 </script>
