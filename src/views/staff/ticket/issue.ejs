@@ -122,10 +122,10 @@
         }
     }
     function renderCustomerDetails(order) {
-  document.getElementById('customer-name').textContent = order.customer_name || 'N/A';
-  document.getElementById('customer-email').textContent = order.customer_email || 'N/A';
-  document.getElementById('customer-contact').textContent = order.customer_contact || 'N/A';
-  document.getElementById('customer-nic').textContent = order.customer_nic_passport || 'N/A';
+  document.getElementById('customer-name').textContent = order.first_name + ' ' + order.last_name;
+  document.getElementById('customer-email').textContent = order.email || 'N/A';
+  document.getElementById('customer-contact').textContent = order.contact_number || 'N/A';
+  document.getElementById('customer-nic').textContent = order.nic_passport || 'N/A';
 }
     function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats,ticketTypeId) {
         ticketDetails.innerHTML = `
