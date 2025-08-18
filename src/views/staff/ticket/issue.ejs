@@ -22,6 +22,10 @@
                                             <div id="qr-result" style="margin-top: 20px;">
                                                 <h4>Scanned QR Code Data:</h4>
                                                 <pre id="decoded-data" class="d-none">Waiting for scan...</pre>
+                                                <p class="mb-0"><strong>Customer Name:</strong> <span id="customer-name"></span></p>
+                                                <p class="mb-0"><strong>Email:</strong> <span id="customer-email"></span></p>
+                                                <p class="mb-0"><strong>Contact Number:</strong> <span id="customer-contact"></span></p>
+                                                <p class="mb-2"><strong>NIC/Passport:</strong> <span id="customer-nic"></span></p>
                                             </div>
                                         </div>
 
@@ -103,8 +107,8 @@
             }
 
             // Destructure relevant data from the backend response
-            const { eventName, verifiedTicketDetails } = await res.json();
-
+            const { eventName, verifiedTicketDetails,order } = await res.json();
+            renderCustomerDetails(order);
             // Render details based on the ticket type
             if (type === "seat") {
                 renderSeatedTicketDetails(orderId, eventName, verifiedTicketDetails.ticketTypeName, verifiedTicketDetails.seats,verifiedTicketDetails.ticketTypeId);
@@ -117,7 +121,12 @@
             console.error("Error verifying ticket:", err);
         }
     }
-
+    function renderCustomerDetails(order) {
+  document.getElementById('customer-name').textContent = order.customer_name || 'N/A';
+  document.getElementById('customer-email').textContent = order.customer_email || 'N/A';
+  document.getElementById('customer-contact').textContent = order.customer_contact || 'N/A';
+  document.getElementById('customer-nic').textContent = order.customer_nic_passport || 'N/A';
+}
     function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats,ticketTypeId) {
         ticketDetails.innerHTML = `
             <h4>Event Name: ${eventName}</h4>

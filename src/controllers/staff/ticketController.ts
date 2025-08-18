@@ -99,6 +99,7 @@ export const ticketVerify = async (req: Request, res: Response) => {
         return res.json({
             eventName: event.name,
             verifiedTicketDetails, // Send back the combined details
+            order
         });
 
     } catch (err) {
