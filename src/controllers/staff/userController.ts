@@ -41,7 +41,7 @@ export const loginPost = async (req: Request, res: Response) => {
   if (!user || user.user_role !== 3 || user.status !== 'active') {
     req.session.error = 'Access denied or user not found';
     req.session.formData = { email };
-    return res.redirect('/');
+    return res.redirect('/staff');
   }
 
   const match = await bcrypt.compare(password, user.password);
