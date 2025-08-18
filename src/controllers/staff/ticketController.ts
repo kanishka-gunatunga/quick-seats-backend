@@ -196,7 +196,7 @@ export const issueNoSeatTickets = async (req: Request, res: Response) => {
 
         let ticketTypeFoundAndUpdated = false;
         const updatedTicketsWithoutSeats = ticketsWithoutSeats.map((ticketDetail: any) => {
-            if (ticketDetail.ticket_type_id === ticketTypeId) {
+            if (ticketDetail.ticket_type_id === parseInt(ticketTypeId as string, 10)) {
                 ticketTypeFoundAndUpdated = true;
 
                 // Ensure 'issued_count' exists and is a number, default to 0 if not
