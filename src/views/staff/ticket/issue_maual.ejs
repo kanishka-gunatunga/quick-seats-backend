@@ -1,0 +1,122 @@
+<%- include('../../layouts/staff-header.ejs') %>
+<div class="content-page">
+    <div class="content">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="header-title">Issue Ticket (Manual)</h4>
+
+                            <form class="mt-4" method="GET" action="/staff/issue-tickets-manual">
+                                <% if (success) { %>
+                                    <div class="alert alert-success"><%= success %></div>
+                                <% } %>
+                                <% if (error) { %>
+                                    <div class="alert alert-danger"><%= error %></div>
+                                <% } %>
+
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <label class="form-label">Search (Name/NIC) <span style="color:red;"> *</span></label>
+                                        <input type="text" class="form-control" name="name_nic" placeholder="Enter Name or NIC" value="<%= formData.name_nic || '' %>">
+                                        <% if (validationErrors?.name_nic) { %>
+                                            <small class="text-danger"><%= validationErrors.name_nic[0] %></small>
+                                        <% } %>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Search</button>
+                            </form>
+
+                            <% if (orders && orders.length > 0) { %>
+                                <div class="mt-4">
+                                    <h4>Search Results</h4>
+                                    <table class="table table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Order ID</th>
+                                                <th>Customer Name</th>
+                                                <th>NIC/Passport</th>
+                                                <th>Status</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% orders.forEach(order => { %>
+                                                <tr>
+                                                    <td><%= order.id %></td>
+                                                    <td><%= order.first_name %> <%= order.last_name %></td>
+                                                    <td><%= order.nic_passport %></td>
+                                                    <td><%= order.status %></td>
+                                                    <td><%= order.total %></td>
+                                                    <td>
+                                                        <button type="button" class="btn btn-info btn-sm view-btn" data-order='<%= JSON.stringify(order) %>'>View</button>
+                                                    </td>
+                                                </tr>
+                                            <% }) %>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <% } else if (typeof name_nic !== 'undefined' && orders.length === 0) { %>
+                                <div class="alert alert-warning mt-4">
+                                    No orders found for the given search criteria.
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="orderDetailsModal" tabindex="-1" role="dialog" aria-labelledby="orderDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="orderDetailsContent">
+                </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<%- include('../../layouts/staff-footer.ejs') %>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const viewButtons = document.querySelectorAll('.view-btn');
+    const modalBody = document.getElementById('orderDetailsContent');
+
+    viewButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const orderData = JSON.parse(e.target.dataset.order);
+
+            modalBody.innerHTML = `
+                <p><strong>Order ID:</strong> ${orderData.id}</p>
+                <p><strong>Customer Name:</strong> ${orderData.first_name} ${orderData.last_name}</p>
+                <p><strong>Email:</strong> ${orderData.email}</p>
+                <p><strong>Contact Number:</strong> ${orderData.contact_number}</p>
+                <p><strong>NIC/Passport:</strong> ${orderData.nic_passport}</p>
+                <p><strong>Country:</strong> ${orderData.country}</p>
+                <p><strong>Event ID:</strong> ${orderData.event_id}</p>
+                <p><strong>Sub Total:</strong> ${orderData.sub_total}</p>
+                <p><strong>Discount:</strong> ${orderData.discount}</p>
+                <p><strong>Total:</strong> ${orderData.total}</p>
+                <p><strong>Status:</strong> ${orderData.status}</p>
+                <p><strong>Created At:</strong> ${new Date(orderData.createdAt).toLocaleString()}</p>
+            `;
+
+            $('#orderDetailsModal').modal('show');
+        });
+    });
+});
+</script>

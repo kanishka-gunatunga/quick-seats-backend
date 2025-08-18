@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Order } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { z } from 'zod';
 
@@ -239,4 +239,67 @@ export const issueNoSeatTickets = async (req: Request, res: Response) => {
         }
         return res.status(500).json({ message: 'Internal server error' });
     }
+};
+export const issueTicketsManual = async (req: Request, res: Response) => {
+  // Define the schema for the search query, which comes from req.query
+  const schema = z.object({
+    name_nic: z.string().min(1, 'Name or NIC is required').optional(), // .optional() because the initial page load won't have it
+  });
+
+  // Parse the query data from req.query
+  const result = schema.safeParse(req.query);
+
+  const error = req.session.error;
+  const success = req.session.success;
+  req.session.error = undefined;
+  req.session.success = undefined;
+
+  let orders: Order[] = [];
+  let validationErrors = {};
+  let formData = req.query;
+
+  // Check for validation errors and set appropriate variables
+  if (!result.success && req.query.name_nic) {
+    validationErrors = result.error.flatten().fieldErrors;
+    return res.render('staff/ticket/issue_maual', {
+      error: null,
+      success: null,
+      formData,
+      validationErrors,
+      orders: [],
+    });
+  }
+
+  // If validation is successful and a search term exists
+  if (result.success && result.data.name_nic) {
+    const { name_nic } = result.data;
+    try {
+      orders = await prisma.order.findMany({
+        where: {
+          OR: [
+            { first_name: { contains: name_nic, mode: 'insensitive' } },
+            { last_name: { contains: name_nic, mode: 'insensitive' } },
+            { nic_passport: { contains: name_nic, mode: 'insensitive' } },
+          ],
+        },
+      });
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+      return res.render('staff/ticket/issue_maual', {
+        error: 'Error fetching data from the database.',
+        success: null,
+        formData,
+        validationErrors: {},
+        orders: [],
+      });
+    }
+  }
+
+  res.render('staff/ticket/issue_maual', {
+    error,
+    success,
+    formData,
+    validationErrors,
+    orders,
+  });
 };
