@@ -49,5 +49,6 @@ router.post('/checkout-client-cancel', checkoutClientCancel);
 //Other
 router.post('/inquiry', inquiry);
 router.post('/newsletter', newsletter);
+
 export default router;
  
