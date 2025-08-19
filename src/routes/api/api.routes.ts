@@ -2,7 +2,7 @@ import express from 'express';
 import { login, register, updateProfileSettings, updateSecuritySettings,bookingHistory,paymentHistory,getUserDetails,forgotPassword,
 validateOtp, resetPassword,resendOtp,getOrderDetails,orderInfo } from '../../controllers/api/userController';
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
-import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect} from '../../controllers/api/checkoutController';
+import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect,checkoutClientCancel} from '../../controllers/api/checkoutController';
 import { inquiry,newsletter} from '../../controllers/api/otherController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
@@ -44,6 +44,7 @@ router.post('/checkout', checkout);
 router.post('/cybersource-callback', cybersourceCallback);
 router.post('/get-checkout-status', getCheckoutStatus);
 router.post('/checkout-client-redirect', checkoutClientRedirect);
+router.post('/checkout-client-cancel', checkoutClientCancel);
 
 //Other
 router.post('/inquiry', inquiry);

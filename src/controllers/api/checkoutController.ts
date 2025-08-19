@@ -941,3 +941,26 @@ export const checkoutClientRedirect = async (req: Request, res: Response) => {
     console.log(`Redirecting user to frontend: ${frontendRedirectUrl}`);
     res.redirect(302, frontendRedirectUrl);
 };
+
+export const checkoutClientCancel = async (req: Request, res: Response) => {
+    // Log the received callback data for debugging.
+    console.log('Cybersource Browser CANCEL Callback Received:', req.body);
+
+    // Extract the order ID from the callback data.
+    // Cybersource typically sends back the same fields you passed in the initial request.
+    const {
+        req_reference_number: orderId, // Your internal order ID
+    } = req.body;
+
+    // Define the base URL for your frontend.
+    const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'https://your-nextjs-frontend.com';
+
+    // Construct the frontend redirect URL for the cancellation page.
+    // Use a status code like 400 (Bad Request) or 409 (Conflict) to indicate a cancellation.
+    // You can customize the status and parameters as needed for your frontend logic.
+    const frontendRedirectUrl = `${FRONTEND_BASE_URL}/order-status?status=409&orderId=${orderId}`;
+
+    // Perform the HTTP 302 redirect to the frontend.
+    console.log(`Redirecting user to frontend cancel page: ${frontendRedirectUrl}`);
+    res.redirect(302, frontendRedirectUrl);
+};
