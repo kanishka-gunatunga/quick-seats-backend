@@ -24,6 +24,17 @@
                                             <small class="text-danger"><%= validationErrors.name_nic[0] %></small>
                                         <% } %>
                                     </div>
+                                     <div class="col-md-4 mb-3">
+                                        <label class="form-label">Event <span style="color:red;"> *</span></label>
+                                        <select class="form-control" data-toggle="select2" name="event" data-width="100%">
+                                            <% events.forEach(event => { %>
+                                                <option value="<%= event.id %>" <%= formData?.event?.includes(event.id.toString()) ? 'selected' : '' %>><%= event.name %></option>
+                                            <% }); %>
+                                        </select>
+                                        <% if (validationErrors?.event) { %>
+                                            <small class="text-danger"><%= validationErrors.event[0] %></small>
+                                        <% } %>
+                                    </div>
                                 </div>
                                 <button type="submit" class="btn btn-primary">Search</button>
                             </form>
@@ -78,7 +89,7 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="orderDetailsModalLabel">Order Details</h5>
-               <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+               <button type="button" class="close btn btn-danger" data-bs-dismiss="modal" aria-label="Close">
     <span aria-hidden="true">&times;</span>
 </button>
             </div>
