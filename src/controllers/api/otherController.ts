@@ -43,7 +43,7 @@ export const inquiry = async (req: Request, res: Response) => {
     
     await transporter.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-        to: 'nejat27921@ahvin.com',
+        to: 'kasupamu300@gmail.com',
         subject: 'New Inquiry Form Submission',
         html: emailHtml,
     });
@@ -82,7 +82,7 @@ export const newsletter = async (req: Request, res: Response) => {
     
     await transporter.sendMail({
         from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
-        to: 'nejat27921@ahvin.com',
+        to: 'kasupamu300@gmail.com',
         subject: 'New Newsletter Submission',
         html: emailHtml,
     });
