@@ -3,16 +3,15 @@ import { PrismaClient } from '@prisma/client';
 
 
 const prisma = new PrismaClient();
-
 export const getAllEvents = async (req: Request, res: Response) => {
   try {
     const {
-      startDate,  
-      endDate,    
-      artistId,  
+      startDate,
+      endDate,
+      artistId,
       location,
-      minPrice,  
-      maxPrice  
+      minPrice,
+      maxPrice
     } = req.query;
 
     // Step 1: Get all active events
@@ -20,8 +19,8 @@ export const getAllEvents = async (req: Request, res: Response) => {
       where: {
         status: 'active',
         ...(location && { location: String(location) }),
-         start_date_time: {
-          gt: new Date(), 
+        start_date_time: {
+          gt: new Date(),
           ...(startDate && endDate && {
             gte: new Date(String(startDate)),
             lte: new Date(String(endDate)),
@@ -47,26 +46,38 @@ export const getAllEvents = async (req: Request, res: Response) => {
       const max = Number(maxPrice) || Infinity;
 
       events = events.filter(event => {
-        const tickets: any[] = Array.isArray(event.ticket_details) ? event.ticket_details : [];
+        // Corrected logic: Safely parse the ticket_details JSON string
+        const tickets: any[] = (() => {
+          if (!event.ticket_details) return [];
+          if (Array.isArray(event.ticket_details)) return event.ticket_details;
+          try {
+            return JSON.parse(event.ticket_details as any);
+          } catch (err) {
+            console.error("Invalid ticket_details format during filtering", err);
+            return [];
+          }
+        })();
+
+        // Now, you can correctly filter the parsed tickets
         return tickets.some(ticket => ticket.price >= min && ticket.price <= max);
       });
     }
 
-      // Step 4: Enrich each event with artists and ticket types
-      const enhancedEvents = await Promise.all(events.map(async (event) => {
+    // Step 4: Enrich each event with artists and ticket types
+    const enhancedEvents = await Promise.all(events.map(async (event) => {
       const artistIds: number[] = Array.isArray(event.artist_details)
         ? event.artist_details.map(Number)
         : [];
 
       const ticketDetails: any[] = (() => {
-      if (!event.ticket_details) return [];
-      if (Array.isArray(event.ticket_details)) return event.ticket_details;
-      try {
-        return JSON.parse(event.ticket_details as any);
-      } catch (err) {
-        console.error("Invalid ticket_details format", err);
-        return [];
-      }
+        if (!event.ticket_details) return [];
+        if (Array.isArray(event.ticket_details)) return event.ticket_details;
+        try {
+          return JSON.parse(event.ticket_details as any);
+        } catch (err) {
+          console.error("Invalid ticket_details format", err);
+          return [];
+        }
       })();
 
       const seats: any[] = (() => {
