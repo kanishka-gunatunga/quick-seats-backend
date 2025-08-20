@@ -83,6 +83,13 @@ export const selectSeat = async (req: Request, res: Response) => {
 
         seats[seatIndex].status = 'pending';
 
+        await prisma.seatReservation.create({
+                data: {
+                    event_id: event_id,
+                    seat_id: seat_id,
+                },
+            });
+
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
@@ -162,6 +169,12 @@ export const unselectSeat = async (req: Request, res: Response) => {
 
         seats[seatIndex].status = 'available';
 
+           await prisma.seatReservation.deleteMany({
+                where: {
+                    event_id: event_id,
+                    seat_id: seat_id,
+                },
+            });
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
@@ -255,7 +268,7 @@ export const resetSeats = async (req: Request, res: Response) => {
                 notFoundSeatIds: notFoundSeatIds,
             });
         }
-
+     
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {

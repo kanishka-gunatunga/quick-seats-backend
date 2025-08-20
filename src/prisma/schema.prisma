@@ -144,3 +144,11 @@ model canceledTicket {
   price Float?
   createdAt DateTime? @default(now())
 }
+
+model SeatReservation {
+  id             Int      @id @default(autoincrement())
+  order_id       Int
+  event_id     String 
+  seat_id      String
+  createdAt DateTime? @default(now())
+}
