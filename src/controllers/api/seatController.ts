@@ -268,7 +268,15 @@ export const resetSeats = async (req: Request, res: Response) => {
                 notFoundSeatIds: notFoundSeatIds,
             });
         }
-     
+        
+        await prisma.seatReservation.deleteMany({
+                where: {
+                    event_id: event_id,
+                    seat_id: { in: updatedSeatIds },
+                },
+            });
+
+
         await prisma.event.update({
             where: { id: parseInt(event_id) },
             data: {
