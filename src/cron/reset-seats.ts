@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 },
             },
         });
-
+        console.log('expiredReservations',expiredReservations);
         // Loop through each expired reservation to release the seat and delete the record
         for (const reservation of expiredReservations) {
             console.log(`Processing expired reservation for seat: ${reservation.seat_id} in event: ${reservation.event_id}`);
@@ -57,6 +57,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (seatIndex !== -1) {
                 // If the seat exists, update its status
+               if (seats[seatIndex].status === 'pending') {
+                // If the seat exists and is pending, update its status
                 seats[seatIndex].status = 'available';
 
                 // Update the event record in the database
@@ -67,6 +69,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     },
                 });
                 console.log(`Seat ${reservation.seat_id} in event ${event.id} marked as 'available'.`);
+            } else {
+                console.warn(`Seat ${reservation.seat_id} is not in 'pending' status. Skipping update.`);
+            }
             } else {
                 console.warn(`Seat ${reservation.seat_id} not found in event ${event.id}. It may have been booked or deleted. Skipping.`);
             }
