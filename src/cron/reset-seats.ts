@@ -16,7 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 },
             },
         });
-        console.log('expiredReservations',expiredReservations);
+        console.log('expiredReservations', expiredReservations);
+        
         // Loop through each expired reservation to release the seat and delete the record
         for (const reservation of expiredReservations) {
             console.log(`Processing expired reservation for seat: ${reservation.seat_id} in event: ${reservation.event_id}`);
@@ -28,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
 
             if (!event || event.seats === null) {
-                console.warn(`Event or seat data not found for event ID: ${reservation.event_id}. Skipping.`);
+                console.warn(`Event or seat data not found for event ID: ${reservation.event_id}. Skipping and deleting reservation.`);
                 await prisma.seatReservation.delete({ where: { id: reservation.id } });
                 continue;
             }
@@ -40,14 +41,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 try {
                     seats = JSON.parse(event.seats) as Array<{ seatId: string; status: string; [key: string]: any }>;
                 } catch (parseError) {
-                    console.error("Failed to parse event.seats as JSON. Skipping.", parseError);
+                    console.error("Failed to parse event.seats as JSON. Skipping and deleting reservation.", parseError);
                     await prisma.seatReservation.delete({ where: { id: reservation.id } });
                     continue;
                 }
             } else if (Array.isArray(event.seats)) {
                 seats = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
             } else {
-                console.error("Invalid format for seat data in database. Skipping.", event.seats);
+                console.error("Invalid format for seat data in database. Skipping and deleting reservation.", event.seats);
                 await prisma.seatReservation.delete({ where: { id: reservation.id } });
                 continue;
             }
@@ -57,21 +58,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             if (seatIndex !== -1) {
                 // If the seat exists, update its status
-               if (seats[seatIndex].status === 'pending') {
-                // If the seat exists and is pending, update its status
-                seats[seatIndex].status = 'available';
+                if (seats[seatIndex].status === 'pending') {
+                    // If the seat exists and is pending, update its status
+                    seats[seatIndex].status = 'available';
 
-                // Update the event record in the database
-                await prisma.event.update({
-                    where: { id: event.id },
-                    data: {
-                        seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
-                    },
-                });
-                console.log(`Seat ${reservation.seat_id} in event ${event.id} marked as 'available'.`);
-            } else {
-                console.warn(`Seat ${reservation.seat_id} is not in 'pending' status. Skipping update.`);
-            }
+                    // Update the event record in the database
+                    await prisma.event.update({
+                        where: { id: event.id },
+                        data: {
+                            seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
+                        },
+                    });
+                    console.log(`Seat ${reservation.seat_id} in event ${event.id} marked as 'available'.`);
+                } else {
+                    console.warn(`Seat ${reservation.seat_id} is not in 'pending' status. Skipping update.`);
+                }
             } else {
                 console.warn(`Seat ${reservation.seat_id} not found in event ${event.id}. It may have been booked or deleted. Skipping.`);
             }
