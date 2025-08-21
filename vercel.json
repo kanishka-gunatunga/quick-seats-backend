@@ -15,7 +15,7 @@
   "crons": [
     {
       "path": "/cron/reset-seats",
-      "schedule": "* * * * *"
+      "schedule": "*/5 * * * *"
     }
   ]
 }
