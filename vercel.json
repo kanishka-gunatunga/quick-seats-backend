@@ -1,15 +1,20 @@
 {
   "version": 2,
   "builds": [
-    { "src": "src/index.ts", "use": "@vercel/node" },
-    { "src": "api/reset-seats.ts", "use": "@vercel/node" }
+    {
+      "src": "src/index.ts",
+      "use": "@vercel/node"
+    }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "src/index.ts" }
+    {
+      "src": "/(.*)",
+      "dest": "src/index.ts"
+    }
   ],
   "crons": [
     {
-      "path": "/api/reset-seats",
+      "path": "/cron/reset-seats",
       "schedule": "* * * * *"
     }
   ]
