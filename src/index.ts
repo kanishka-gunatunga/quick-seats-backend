@@ -9,8 +9,6 @@ import adminRoutes from './routes/admin/admin.routes';
 import staffRoutes from './routes/staff/staff.routes';
 import path from 'path';
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import { PrismaClient } from '@prisma/client';
-const prisma = new PrismaClient();
 
 const PgSession = pgSession(session);
 const pool = new Pool({
@@ -58,92 +56,7 @@ app.use('/api', apiRoutes);
 app.use('/', adminRoutes);
 app.use('/staff', staffRoutes);
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.url === '/cron/reset-seats') {
-    await resetSeats();
-    return res.status(200).json({ success: true });
-  }
-  return res.status(404).send('Not found');
-}
 
-async function resetSeats() {
-  // Calculate the timestamp for 15 minutes ago
-  const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
-
-  // Find all seat reservations that are older than 15 minutes
-  const expiredReservations = await prisma.seatReservation.findMany({
-    where: {
-      createdAt: { lt: fifteenMinutesAgo },
-    },
-  });
-
-  console.log('expiredReservations', expiredReservations);
-
-  for (const reservation of expiredReservations) {
-    console.log(
-      `Processing expired reservation for seat: ${reservation.seat_id} in event: ${reservation.event_id}`
-    );
-
-    // Step 1: Find the event and seat data
-    const event = await prisma.event.findUnique({
-      where: { id: parseInt(reservation.event_id) },
-      select: { seats: true, id: true },
-    });
-
-    if (!event || event.seats === null) {
-      console.warn(`Event or seat data not found for event ID: ${reservation.event_id}. Skipping.`);
-      await prisma.seatReservation.delete({ where: { id: reservation.id } });
-      continue;
-    }
-
-    let seats: Array<{ seatId: string; status: string; [key: string]: any }>;
-
-    if (typeof event.seats === 'string') {
-      try {
-        seats = JSON.parse(event.seats) as Array<{ seatId: string; status: string; [key: string]: any }>;
-      } catch (parseError) {
-        console.error("Failed to parse event.seats as JSON. Skipping.", parseError);
-        await prisma.seatReservation.delete({ where: { id: reservation.id } });
-        continue;
-      }
-    } else if (Array.isArray(event.seats)) {
-      seats = event.seats as Array<{ seatId: string; status: string; [key: string]: any }>;
-    } else {
-      console.error("Invalid format for seat data in database. Skipping.", event.seats);
-      await prisma.seatReservation.delete({ where: { id: reservation.id } });
-      continue;
-    }
-
-    // Step 2: Update the seat status to 'available'
-    const seatIndex = seats.findIndex((seat) => seat.seatId === reservation.seat_id);
-
-    if (seatIndex !== -1) {
-      if (seats[seatIndex].status === 'pending') {
-        seats[seatIndex].status = 'available';
-
-        await prisma.event.update({
-          where: { id: event.id },
-          data: {
-            seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
-          },
-        });
-
-        console.log(`Seat ${reservation.seat_id} in event ${event.id} marked as 'available'.`);
-      } else {
-        console.warn(`Seat ${reservation.seat_id} is not in 'pending' status. Skipping update.`);
-      }
-    } else {
-      console.warn(`Seat ${reservation.seat_id} not found in event ${event.id}. Skipping.`);
-    }
-
-    // Step 3: Delete the expired reservation record
-    await prisma.seatReservation.delete({
-      where: { id: reservation.id },
-    });
-
-    console.log(`Expired reservation record ${reservation.id} deleted.`);
-  }
-}
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
