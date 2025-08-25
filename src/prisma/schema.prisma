@@ -93,18 +93,18 @@ model Event {
   id            Int       @id @default(autoincrement())
   name          String
   slug            String   @unique
-  start_date_time DateTime
-  end_date_time   DateTime
-  description   String
-  policy  String
-  organized_by   String
-  location      String
+  start_date_time DateTime?
+  end_date_time   DateTime?
+  description   String?
+  policy  String?
+  organized_by   String?
+  location      String?
   banner_image   String?
   featured_image String?
   ticket_details Json?     
   artist_details Json?   
   gallery_media Json?
-
+  upcoming_event Int?
   seats Json?  
   status String
 }

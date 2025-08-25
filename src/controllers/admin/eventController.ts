@@ -9,7 +9,7 @@ import { del } from '@vercel/blob';
 import { DateTime } from "luxon";
 
 const prisma = new PrismaClient();
-
+ 
 export const addEventGet = async (req: Request, res: Response) => {
   const error = req.session.error;
   const success = req.session.success;
@@ -36,24 +36,60 @@ export const addEventGet = async (req: Request, res: Response) => {
 
 export const addEventPost = async (req: Request, res: Response) => {
 
-    const schema = z.object({
-        name: z.string().min(1, 'Name is required'),
-        start_date_time: z.string().min(1, 'Start date and time is required'),
-        end_date_time: z.string().min(1, 'End date and time is required'),
-        discription: z.string().min(1, 'Description is required'),
-        policy: z.string().min(1, 'Ticket Policy is required'),
-        organized_by: z.string().min(1, 'Organized by is required'),
-        location: z.string().min(1, 'Location is required'),
-        artists: z
-            .union([z.string(), z.array(z.string())])
-            .optional()
-            .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
-        tickets: z.array(z.object({
-            type_id: z.string().min(1, 'Ticket type is required'),
-            price: z.string().min(1, 'Ticket price is required'),
-            has_ticket_count: z.string().optional().transform(val => val === '1'), // '1' if checked, undefined otherwise
-            count: z.string().optional(),
-        })).optional().default([]),
+  const upcomingEvent = req.body.upcoming_event === '1' ? 1 : 0;
+
+     const schema = z.object({
+      name: z.string().min(1, 'Name is required'),
+      start_date_time: z.string().min(1, 'Start date and time is required'),
+      end_date_time: z.string().optional(),
+      discription: z.string().optional(),
+      policy: z.string().optional(),
+      organized_by: z.string().optional(),
+      location: z.string().min(1, 'Location is required'),
+      upcoming_event: z.string().optional(),
+      artists: z
+        .union([z.string(), z.array(z.string())])
+        .optional()
+        .transform((val) => (Array.isArray(val) ? val : val ? [val] : [])),
+      tickets: z.array(z.object({
+        type_id: z.string().min(1, 'Ticket type is required'),
+        price: z.string().min(1, 'Ticket price is required'),
+        has_ticket_count: z.string().optional().transform(val => val === '1'),
+        count: z.string().optional(),
+      })).optional().default([]),
+    }).superRefine((data, ctx) => {
+      const upcomingEvent = data.upcoming_event === '1';
+
+      if (!upcomingEvent) {
+        if (!data.end_date_time) {
+          ctx.addIssue({
+            path: ['end_date_time'],
+            code: 'custom',
+            message: 'End date and time is required',
+          });
+        }
+        if (!data.discription) {
+          ctx.addIssue({
+            path: ['discription'],
+            code: 'custom',
+            message: 'Description is required',
+          });
+        }
+        if (!data.policy) {
+          ctx.addIssue({
+            path: ['policy'],
+            code: 'custom',
+            message: 'Ticket Policy is required',
+          });
+        }
+        if (!data.organized_by) {
+          ctx.addIssue({
+            path: ['organized_by'],
+            code: 'custom',
+            message: 'Organized by is required',
+          });
+        }
+      }
     });
 
     const result = schema.safeParse(req.body);
@@ -78,13 +114,14 @@ export const addEventPost = async (req: Request, res: Response) => {
         tickets,
     } = result.data;
 
-    // Manual validation for tickets based on has_ticket_count
     const ticketValidationErrors: { [key: string]: string[] } = {};
-    tickets.forEach((ticket, index) => {
-        if (ticket.has_ticket_count && (!ticket.count || isNaN(parseInt(ticket.count, 10)) || parseInt(ticket.count, 10) <= 0)) {
-            ticketValidationErrors[`tickets[${index}][count]`] = ['Ticket count is required and must be a positive number when "Has Ticket Count" is checked.'];
-        }
-    });
+    if (!upcomingEvent) {
+        tickets.forEach((ticket, index) => {
+            if (ticket.has_ticket_count && (!ticket.count || isNaN(parseInt(ticket.count, 10)) || parseInt(ticket.count, 10) <= 0)) {
+                ticketValidationErrors[`tickets[${index}][count]`] = ['Ticket count is required and must be a positive number when "Has Ticket Count" is checked.'];
+            }
+        });
+    }
 
     if (Object.keys(ticketValidationErrors).length > 0) {
         req.session.error = 'Please fix the errors below.';
@@ -116,8 +153,7 @@ export const addEventPost = async (req: Request, res: Response) => {
                 addRandomSuffix: true,
             });
             bannerImageUrl = url;
-        } else {
-            // If banner image is required, add a validation error
+        } else if (!upcomingEvent) {
             req.session.error = 'Banner image is required.';
             req.session.formData = req.body;
             req.session.validationErrors = { ...req.session.validationErrors, banner_image: ['Banner image is required.'] };
@@ -137,7 +173,6 @@ export const addEventPost = async (req: Request, res: Response) => {
             });
             featuredImageUrl = url;
         } else {
-            // If featured image is required, add a validation error
             req.session.error = 'Featured image is required.';
             req.session.formData = req.body;
             req.session.validationErrors = { ...req.session.validationErrors, featured_image: ['Featured image is required.'] };
@@ -193,6 +228,7 @@ export const addEventPost = async (req: Request, res: Response) => {
                 gallery_media: galleryMedia,
                 ticket_details: ticketDetailsForDb, 
                 artist_details: artists,
+                upcoming_event: upcomingEvent,
                 status: 'active',
             },
         });
