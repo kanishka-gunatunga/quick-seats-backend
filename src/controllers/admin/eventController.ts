@@ -369,7 +369,7 @@ export const editEventGet = async (req: Request, res: Response) => {
 };
 export const editEventPost = async (req: Request, res: Response) => {
     const eventId = Number(req.params.id);
-
+    const upcomingEvent = req.body.upcoming_event === '1' ? 1 : 0;
     const schema = z.object({
         name: z.string().min(1, 'Name is required'),
         start_date_time: z.string().min(1, 'Start date and time is required'),
@@ -553,6 +553,7 @@ export const editEventPost = async (req: Request, res: Response) => {
                 gallery_media: galleryMedia,
                 ticket_details: newTicketDetailsForDb, 
                 artist_details: artists,
+                upcoming_event: upcomingEvent,
             },
         });
 
