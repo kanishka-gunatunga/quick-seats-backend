@@ -228,8 +228,8 @@ height: auto;
 </div>
       <div class="col-md-12 mb-3">
                                     <div class="col-md-2 form-check mb-3 d-flex align-items-center">
-                                        <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="upcoming_event" name="upcoming_event" value="1" {{ $enrichedEvent->upcoming_event == 1 ? 'checked' : '' }}>
-                                        <label class="form-check-label ms-2" for="upcoming_event">Has Ticket Count</label>
+                                        <input type="checkbox" class="form-check-input has-ticket-count-checkbox" id="upcoming_event" name="upcoming_event" value="1" <%= $enrichedEvent->upcoming_event == 1 ? 'checked' : '' %>>
+                                        <label class="form-check-label ms-2" for="upcoming_event">Is Upcoming Event</label>
                                     </div>
                                     </div>
 
