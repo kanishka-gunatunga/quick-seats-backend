@@ -218,7 +218,7 @@ export const addEventPost = async (req: Request, res: Response) => {
                 name,
                 slug: uniqueSlug,
                 start_date_time: new Date(start_date_time),
-                end_date_time: new Date(end_date_time),
+                 end_date_time: end_date_time ? new Date(end_date_time) : null,
                 description: discription,
                 policy: policy,
                 organized_by: organized_by,
