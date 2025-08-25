@@ -456,6 +456,7 @@ export const getEventDetails = async (req: Request, res: Response) => {
       return {
         ...ticket,
         ticketTypeName: ticketType?.name || 'Unknown',
+        ticketColor: ticketType?.color || 'Unknown',
       };
     });
 
