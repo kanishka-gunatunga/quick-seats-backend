@@ -367,6 +367,13 @@ export const editEventGet = async (req: Request, res: Response) => {
     return res.redirect('/events'); 
   }
 };
+interface TicketDetails {
+    price: number;
+    ticketCount: number | null;
+    ticketTypeId: number;
+    hasTicketCount: boolean;
+    bookedTicketCount: number;
+}
 export const editEventPost = async (req: Request, res: Response) => {
     const eventId = Number(req.params.id);
     const upcomingEvent = req.body.upcoming_event === '1' ? 1 : 0;
@@ -518,24 +525,23 @@ export const editEventPost = async (req: Request, res: Response) => {
         }
 
      
-        const existingTicketDetails = existingEvent.ticket_details as Array<any> || [];
+   const existingTicketDetails = (existingEvent.ticket_details as unknown as TicketDetails[]) || [];
 
-        const newTicketDetailsForDb = tickets.map((ticket) => {
- 
-            const existingTicket = existingTicketDetails.find(
-                (extTicket: any) => extTicket.ticketTypeId === parseInt(ticket.type_id, 10)
-            );
+const newTicketDetailsForDb = tickets.map((ticket) => {
+    const existingTicket = existingTicketDetails.find(
+        (extTicket) => extTicket.ticketTypeId === parseInt(ticket.type_id, 10)
+    );
 
-            const bookedTicketCount = existingTicket ? existingTicket.bookedTicketCount : 0;
+    const bookedTicketCount = existingTicket ? existingTicket.bookedTicketCount : 0;
 
-            return {
-                ticketTypeId: parseInt(ticket.type_id, 10),
-                price: parseFloat(ticket.price),
-                hasTicketCount: ticket.has_ticket_count,
-                ticketCount: ticket.has_ticket_count ? parseInt(ticket.count || '0', 10) : null,
-                bookedTicketCount: bookedTicketCount, 
-            };
-        });
+    return {
+        ticketTypeId: parseInt(ticket.type_id, 10),
+        price: parseFloat(ticket.price),
+        hasTicketCount: ticket.has_ticket_count,
+        ticketCount: ticket.has_ticket_count ? parseInt(ticket.count || '0', 10) : null,
+        bookedTicketCount: bookedTicketCount, 
+    };
+});
 
         const updatedEvent = await prisma.event.update({
             where: { id: eventId },
