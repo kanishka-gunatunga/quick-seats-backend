@@ -374,6 +374,7 @@ interface TicketDetails {
     hasTicketCount: boolean;
     bookedTicketCount: number;
 }
+
 export const editEventPost = async (req: Request, res: Response) => {
     const eventId = Number(req.params.id);
     const upcomingEvent = req.body.upcoming_event === '1' ? 1 : 0;
@@ -525,7 +526,17 @@ export const editEventPost = async (req: Request, res: Response) => {
         }
 
      
-   const existingTicketDetails = (existingEvent.ticket_details as unknown as TicketDetails[]) || [];
+const existingTicketDetails = (existingEvent.ticket_details && Array.isArray(existingEvent.ticket_details)
+    ? existingEvent.ticket_details
+    : existingEvent.ticket_details && typeof existingEvent.ticket_details === 'string'
+    ? JSON.parse(existingEvent.ticket_details)
+    : []) as {
+    price: number;
+    ticketCount: number | null;
+    ticketTypeId: number;
+    hasTicketCount: boolean;
+    bookedTicketCount: number;
+}[];
 
 const newTicketDetailsForDb = tickets.map((ticket) => {
     const existingTicket = existingTicketDetails.find(
