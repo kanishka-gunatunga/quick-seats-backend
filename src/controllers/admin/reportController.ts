@@ -410,10 +410,18 @@ export const salesReportPost = async (req: Request, res: Response) => {
       });
 
       // Manually fetch user details for each order
-      const user = await prisma.userDetails.findUnique({
-        where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
-      });
-
+      // const user = await prisma.userDetails.findUnique({
+      //   where: { id: Number(order.user_id) }, // Convert user_id to a number for lookup
+      // });
+      let user = null;
+        if (order.user_id) {
+          const userId = Number(order.user_id);
+          if (!isNaN(userId)) {
+            user = await prisma.userDetails.findUnique({
+              where: { id: userId },
+            });
+          }
+        }
       // --- CRUCIAL FIX: Safely parse ALL JSON fields that are arrays ---
 
       // Process order.seat_ids
