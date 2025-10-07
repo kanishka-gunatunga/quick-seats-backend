@@ -454,6 +454,7 @@ export const addBookingPost = async (req: Request, res: Response) => {
             event_name: event.name,
             booked_seats_details: all_booked_details, // Combine details for email
             qrCodes: qrCodes,
+            order_id: order.id,
         });
 
         // --- Send email ---
