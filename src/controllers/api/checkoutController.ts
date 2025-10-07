@@ -349,13 +349,14 @@ async function generateQRCodesAndAttachments(order: any, event: any, seatDetails
 }
 
 
-async function sendQREmail(email: string, first_name: string, event_name: string, all_booked_details: string, qrCodes: any[], attachments: any[]) {
+async function sendQREmail(email: string, first_name: string, event_name: string, all_booked_details: string, qrCodes: any[], attachments: any[],orderId: number) {
     const templatePath = path.join(__dirname, '../../views/email-templates/qr-template.ejs');
     const qrEmailHtml = await ejs.renderFile(templatePath, {
         first_name: first_name,
         event_name: event_name,
         booked_seats_details: all_booked_details,
         qrCodes: qrCodes,
+        order_id: orderId,
     });
 
     await transporter.sendMail({
@@ -628,7 +629,7 @@ export const cybersourceCallback = async (req: Request, res: Response) => {
             }
             // --- End Send OTP via SMS ---
             // Send email
-            await sendQREmail(order.email, order.first_name, event.name, all_booked_details, qrCodes, attachments);
+            await sendQREmail(order.email, order.first_name, event.name, all_booked_details, qrCodes, attachments, order.id);
             
             // Respond to Cybersource (important for acknowledging the callback)
             res.status(200).send('Payment successful and order fulfilled.');

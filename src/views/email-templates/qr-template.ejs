@@ -30,24 +30,30 @@
             margin-bottom: 10px;
         }
         .qr-section {
-            margin-top: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 20px;
-        }
-        .qr-item {
-            background-color: #f9f9f9;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 15px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .qr-item img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
+margin-top: 20px;
+border-top: 1px solid #eee;
+padding-top: 20px;
+}
+.qr-item {
+background-color: #f9f9f9;
+border: 1px solid #ddd;
+border-radius: 5px;
+padding: 15px;
+margin-bottom: 15px;
+text-align: center;
+}
+.qr-item img {
+max-width: 100%;
+height: auto;
+border-radius: 5px;
+margin-top: 10px;
+}
+.seat-list {
+font-size: 0.85em;
+color: #555;
+margin-top: 5px;
+word-break: break-all;
+}
         .footer {
             text-align: center;
             margin-top: 30px;
@@ -71,17 +77,28 @@
         <p>Hey <b><%= first_name %>,</b> Thank you for your recent booking! Here are your QR tickets for the event. Please keep this email safe as it contains your entry tickets.</p>
         <p>If you have any questions, feel free to contact us.</p>
         <hr>
+        <p><b>Order No : </b><span style="color: #d9534f; font-weight: bold;">#<%= order_id %></span></p>
         <p><b>Event : </b><%= event_name %></p>
         <p><b>Booked Seats : </b><%= booked_seats_details %></p>
         <div class="qr-section">
-            <h4>QR Codes:</h4>
-            <% qrCodes.forEach((qr, index) => { %>
-                <div class="qr-item">
-                    <p><strong><%= qr.ticketTypeName %></strong> - <%= qr.count %> ticket(s)</p>
-                    <img src="cid:qr<%= index %>@event.com" alt="QR Code for <%= qr.ticketTypeName %>" />
-                </div>
-            <% }); %>
-        </div>
+        <h4>Your Entry QR Codes:</h4>
+        <% qrCodes.forEach((qr, index) => { %>
+            <div class="qr-item">
+                <p><strong><%= qr.ticketTypeName %></strong> - <%= qr.count %> ticket(s)</p>
+                
+                <% // Conditionally display Seat IDs for seated tickets %>
+                <% if (qr.type === 'seat' && qr.seat_ids_for_type && qr.seat_ids_for_type.length > 0) { %>
+                    <div class="seat-list">
+                        <p style="margin: 5px 0 0;">Seat IDs: <b><%= qr.seat_ids_for_type.join(', ') %></b></p>
+                    </div>
+                <% } else { %>
+
+                <% } %>
+
+                <img src="cid:qr<%= index %>@event.com" alt="QR Code for <%= qr.ticketTypeName %>" />
+            </div>
+        <% }); %>
+    </div>
         <p>We look forward to seeing you at the event!</p>
         <div class="contact-info">
             <p>For support, contact us at: <a href="mailto:info@quickseats.lk">info@quickseats.lk</a> or call us at 011121451242</p>
