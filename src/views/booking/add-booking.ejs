@@ -599,44 +599,106 @@ height: auto;
 
             // After SVG is injected, iterate through its seat groups and apply initial colors/cursors
             // Use a slight delay to ensure the SVG elements are fully parsed and available in the DOM
+            // setTimeout(() => {
+            //     const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
+            //     if (seatsInSvg.length === 0) {
+            //         console.warn("No elements with class 'seat-group' found in the loaded SVG. Ensure your SVG seats have class='seat-group' and a unique ID.");
+            //         // Display a message or visual cue if no seats found in SVG
+            //         seatMapContainer.innerHTML += '<p class="text-info">No individual seat groups found in the SVG map. Check SVG structure.</p>';
+            //         return; // Exit if no seat groups are found
+            //     }
+
+            //     seatsInSvg.forEach(seatGroup => {
+            //         const seatId = seatGroup.id;
+            //         if (!seatId) {
+            //             console.warn("Skipping seat group without an ID:", seatGroup);
+            //             return; // Skip if a seat group doesn't have an ID (crucial for mapping)
+            //         }
+
+            //         const seatInfo = currentSeatsData[seatId];
+            //         // Get status and color from the backend data
+            //         const status = seatInfo ? seatInfo.status : 'unavailable'; // Defaults to 'unavailable' if seat not provided by backend
+            //         const color = seatInfo ? seatInfo.color : '#C4C4C4'; // Defaults to gray if color not provided by backend
+
+            //         updateSeatVisual(seatGroup, status, color); // Apply initial color/style using the backend color
+
+            //         // Only add click listener if the seat is 'available' based on backend data
+            //         if (status === 'available') {
+            //             seatGroup.style.cursor = 'pointer';
+            //             seatGroup.classList.add('clickable-seat'); // Add a class for CSS cursor
+            //             seatGroup.addEventListener('click', () => {
+            //                 toggleSeatSelection(seatId);
+            //             });
+            //         } else {
+            //             seatGroup.style.cursor = 'not-allowed';
+            //             seatGroup.classList.remove('clickable-seat'); // Remove clickable class
+            //             // No click listener for unavailable/booked/etc. seats
+            //         }
+            //     });
+            //     console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
+            // }, 100); // Increased delay slightly to ensure DOM readiness, especially for large SVGs
             setTimeout(() => {
+                // --- Tooltip setup ---
+                let seatTooltip = document.createElement('div');
+                seatTooltip.id = 'seatTooltip';
+                seatTooltip.style.position = 'absolute';
+                seatTooltip.style.background = 'rgba(0,0,0,0.75)';
+                seatTooltip.style.color = '#fff';
+                seatTooltip.style.padding = '4px 8px';
+                seatTooltip.style.borderRadius = '4px';
+                seatTooltip.style.fontSize = '12px';
+                seatTooltip.style.pointerEvents = 'none';
+                seatTooltip.style.display = 'none';
+                seatTooltip.style.zIndex = '9999';
+                document.body.appendChild(seatTooltip);
+
                 const seatsInSvg = seatMapContainer.querySelectorAll('.seat-group');
                 if (seatsInSvg.length === 0) {
-                    console.warn("No elements with class 'seat-group' found in the loaded SVG. Ensure your SVG seats have class='seat-group' and a unique ID.");
-                    // Display a message or visual cue if no seats found in SVG
+                    console.warn("No elements with class 'seat-group' found in the loaded SVG.");
                     seatMapContainer.innerHTML += '<p class="text-info">No individual seat groups found in the SVG map. Check SVG structure.</p>';
-                    return; // Exit if no seat groups are found
+                    return;
                 }
 
                 seatsInSvg.forEach(seatGroup => {
                     const seatId = seatGroup.id;
                     if (!seatId) {
                         console.warn("Skipping seat group without an ID:", seatGroup);
-                        return; // Skip if a seat group doesn't have an ID (crucial for mapping)
+                        return;
                     }
 
                     const seatInfo = currentSeatsData[seatId];
-                    // Get status and color from the backend data
-                    const status = seatInfo ? seatInfo.status : 'unavailable'; // Defaults to 'unavailable' if seat not provided by backend
-                    const color = seatInfo ? seatInfo.color : '#C4C4C4'; // Defaults to gray if color not provided by backend
+                    const status = seatInfo ? seatInfo.status : 'unavailable';
+                    const color = seatInfo ? seatInfo.color : '#C4C4C4';
 
-                    updateSeatVisual(seatGroup, status, color); // Apply initial color/style using the backend color
+                    updateSeatVisual(seatGroup, status, color);
 
-                    // Only add click listener if the seat is 'available' based on backend data
+                    // Hover tooltip logic
+                    seatGroup.addEventListener('mouseenter', (e) => {
+                        seatTooltip.textContent = `Seat: ${seatId}`;
+                        seatTooltip.style.display = 'block';
+                    });
+                    seatGroup.addEventListener('mousemove', (e) => {
+                        seatTooltip.style.left = `${e.pageX + 10}px`;
+                        seatTooltip.style.top = `${e.pageY - 20}px`;
+                    });
+                    seatGroup.addEventListener('mouseleave', () => {
+                        seatTooltip.style.display = 'none';
+                    });
+
+                    // Click logic (only for available)
                     if (status === 'available') {
                         seatGroup.style.cursor = 'pointer';
-                        seatGroup.classList.add('clickable-seat'); // Add a class for CSS cursor
+                        seatGroup.classList.add('clickable-seat');
                         seatGroup.addEventListener('click', () => {
                             toggleSeatSelection(seatId);
                         });
                     } else {
                         seatGroup.style.cursor = 'not-allowed';
-                        seatGroup.classList.remove('clickable-seat'); // Remove clickable class
-                        // No click listener for unavailable/booked/etc. seats
+                        seatGroup.classList.remove('clickable-seat');
                     }
                 });
                 console.log('Seat map and initial states rendered successfully for', seatsInSvg.length, 'seats.');
-            }, 100); // Increased delay slightly to ensure DOM readiness, especially for large SVGs
+            }, 100);
 
             const ticketsWithoutSeatsResponse = await fetch(`/get-tickets-without-seats/${eventId}`);
 
