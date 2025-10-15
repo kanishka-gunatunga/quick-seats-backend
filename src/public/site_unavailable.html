@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Unavailable</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: white;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .error-container {
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        h4 {
+            color: #333;
+            font-size: clamp(18px, 4vw, 24px);
+            line-height: 1.4;
+            font-weight: normal;
+            margin: 0;
+            padding: 0 20px;
+        }
+
+        /* Additional responsive adjustments */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+            }
+            
+            h4 {
+                padding: 0 10px;
+                font-size: 16px;
+            }
+        }
+
+        @media (max-width: 320px) {
+            h4 {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="error-container">
+        <h4>This site can't be reached. Please contact your Hostinger service provider.</h4>
+    </div>
+</body>
+</html>
