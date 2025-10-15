@@ -9,8 +9,7 @@
   "routes": [
     {
       "src": "/(.*)",
-      "status": 503,
-      "dest": "/site_unavailable.html"
+      "dest": "src/index.ts"
     }
   ],
   "crons": [
