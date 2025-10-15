@@ -52,10 +52,10 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
 
-app.use('/api', apiRoutes);
-app.use('/', adminRoutes);
-app.use('/staff', staffRoutes);
-app.use('/cron', cronRoutes);
+// app.use('/api', apiRoutes);
+// app.use('/', adminRoutes);
+// app.use('/staff', staffRoutes);
+// app.use('/cron', cronRoutes);
 
 app.use((req, res) => {
   const filePath = path.join(__dirname, 'public', 'site_unavailable.html');
