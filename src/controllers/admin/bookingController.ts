@@ -84,17 +84,22 @@ export const getTicketsWithoutSeats = async (req: Request, res: Response) => {
     // Ensure it's an array, default to empty array if null or parsing fails
     let allTicketDetails: any[] = [];
     if (event.ticket_details) {
-      try {
-        allTicketDetails = JSON.parse(event.ticket_details as string);
-        if (!Array.isArray(allTicketDetails)) {
-          console.warn("event.ticket_details parsed but is not an array:", allTicketDetails);
-          allTicketDetails = [];
-        }
-      } catch (parseError) {
-        console.error("Error parsing event.ticket_details JSON:", parseError);
-        allTicketDetails = [];
-      }
+  try {
+    // If it's a string, parse it; if it's already an object, use it directly
+    const details =
+      typeof event.ticket_details === 'string'
+        ? JSON.parse(event.ticket_details)
+        : event.ticket_details;
+
+    if (Array.isArray(details)) {
+      allTicketDetails = details;
+    } else {
+      console.warn("event.ticket_details exists but is not an array:", details);
     }
+  } catch (parseError) {
+    console.error("Error parsing event.ticket_details JSON:", parseError);
+  }
+}
 
     // Filter for ticket types that are designated as 'tickets without seats'
     // These are the ones where hasTicketCount is true
