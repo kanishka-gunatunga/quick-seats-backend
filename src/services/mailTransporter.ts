@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 
 const transporter = nodemailer.createTransport({
-    host: 'mail.genaitech.dev',
+    host:  process.env.MAIL_SERVER,
     port: 465,
     secure: true,
     auth: {

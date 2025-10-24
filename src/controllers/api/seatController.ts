@@ -3,16 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import QRCode from 'qrcode';
 import nodemailer from 'nodemailer';
-
-const transporter = nodemailer.createTransport({
-    host: 'mail.techvoice.lk',
-    port: 465,
-    secure: true,
-    auth: {
-        user: process.env.MAIL_USERNAME,
-        pass: process.env.MAIL_PASSWORD, 
-    },
-});
+import transporter from '../../services/mailTransporter';
 
 const prisma = new PrismaClient();
 interface Seat {
@@ -364,5 +355,34 @@ export const checkSeatCount = async (req: Request, res: Response) => {
     } catch (err) {
         console.error('Seat selection error:', err);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
+export const testEmail = async (req: Request, res: Response) => {
+    const schema = z.object({
+        email: z.string().min(1, 'Email is required')
+    });
+
+    const result = schema.safeParse(req.body);
+
+    if (!result.success) {
+        return res.status(400).json({
+            message: 'Invalid input',
+            errors: result.error.flatten(),
+        });
+    }
+    const { email} = result.data;
+    try {
+    await transporter.sendMail({
+        from: `"${process.env.MAIL_FROM_NAME}" <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: email,
+        subject: 'Test Mail',
+        html: '<h1>This is Test Mail</h1>',
+    });
+
+    return res.status(200).json({ message: 'Test Mail Sent'});
+    }
+    catch (err) {
+        return res.status(500).json({ message: err });
     }
 };

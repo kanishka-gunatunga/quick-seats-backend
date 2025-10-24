@@ -4,7 +4,7 @@ validateOtp, resetPassword,resendOtp,getOrderDetails,orderInfo } from '../../con
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect,checkoutClientCancel} from '../../controllers/api/checkoutController';
 import { inquiry,newsletter} from '../../controllers/api/otherController';
-import { selectSeat,resetSeats,unselectSeat,checkSeatCount} from '../../controllers/api/seatController';
+import { selectSeat,resetSeats,unselectSeat,checkSeatCount,testEmail} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
 
@@ -38,6 +38,7 @@ router.post('/reset-seats', resetSeats);
 router.get('/get-event-seats/:id', getEventSeats);
 router.post('/unselect-seat', unselectSeat);
 router.post('/check-seat-count', checkSeatCount);
+router.post('/test-email', testEmail);
 
 //Checkout
 router.post('/checkout', checkout);
