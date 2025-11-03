@@ -653,12 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
     );
   }
 </script> -->
-<script>
-// const mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
-// const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
-
-// const mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
-// const seatTicketTypes = JSON.parse('<%- JSON.stringify(enrichedEvent.ticket_details || []) %>');
+<!-- <script>
 let mapedSeats;
 try {
   mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
@@ -937,6 +932,265 @@ document.addEventListener('DOMContentLoaded', () => {
     document.head.appendChild(style);
 
     // Initial population of the hidden input field
+    seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+    console.log('Initial Seat Configuration:', seatConfiguration);
+});
+</script> -->
+<script>
+let mapedSeats;
+try {
+  mapedSeats = JSON.parse('<%- JSON.stringify(enrichedEvent.seats || []) %>');
+} catch {
+  mapedSeats = JSON.parse(<%- JSON.stringify(enrichedEvent.seats || "[]") %>);
+}
+const seatTicketTypes = <%- JSON.stringify(enrichedEvent.ticket_details || []) %>;
+
+document.addEventListener('DOMContentLoaded', () => {
+    const ticketTypes = [
+        { price: 0, type_id: 0, count: null, has_ticket_count: false, isUnavailable: true, ticketTypeName: 'Unavailable', color: '#000000', hasTicketCount: false },
+        ...seatTicketTypes
+    ];
+
+    let seatConfiguration = mapedSeats.map(seat => {
+        const ticketType = ticketTypes.find(type => type.type_id === seat.type_id);
+        const color = ticketType ? ticketType.color : '#C4C4C4';
+        const status = seat.status || (ticketType && ticketType.isUnavailable ? 'unavailable' : 'available');
+        return {
+            ...seat,
+            color: color,
+            status: status
+        };
+    });
+
+    let selectedTicketType = null;
+
+    const ticketTypeSelect = document.getElementById('ticket-type-select');
+    const seatConfigurationInput = document.getElementById('seat_configuration');
+    const seats = document.querySelectorAll('.seat-group');
+    const svg = document.getElementById("seat-map-svg");
+
+    // Populate ticket type dropdown
+    ticketTypes.forEach((type) => {
+        if (!type.has_ticket_count) {
+            const option = document.createElement('option');
+            option.value = JSON.stringify(type);
+            option.textContent = type.ticketTypeName;
+            ticketTypeSelect.appendChild(option);
+        }
+    });
+
+    // Ticket type selection event
+    ticketTypeSelect.addEventListener('change', (event) => {
+        if (event.target.value) {
+            selectedTicketType = JSON.parse(event.target.value);
+            console.log('Selected Ticket Type:', selectedTicketType);
+        } else {
+            selectedTicketType = null;
+            console.log('No ticket type selected. Please select a ticket type.');
+        }
+    });
+
+    // Update visual state of a seat
+    function updateSeatVisual(seatGroup, ticketType) {
+        const seatPaths = seatGroup.querySelectorAll('path');
+        if (ticketType && ticketType.color) {
+            seatPaths.forEach(path => path.style.fill = ticketType.color);
+        } else {
+            seatPaths.forEach(path => path.style.fill = '#C4C4C4');
+        }
+    }
+
+    // Apply ticket type to a single seat
+    function applyTicketTypeToSeat(seatId) {
+        const seatGroup = document.getElementById(seatId);
+        if (!seatGroup) {
+            console.warn(`Seat group with ID ${seatId} not found.`);
+            return;
+        }
+
+        const existingSeatIndex = seatConfiguration.findIndex(seat => seat.seatId === seatId);
+        const currentSeatStatus = existingSeatIndex > -1 ? seatConfiguration[existingSeatIndex].status : null;
+
+        // Skip booked/issued/pending seats
+        if (currentSeatStatus === 'booked' || currentSeatStatus === 'issued' || currentSeatStatus === 'pending') {
+            return;
+        }
+
+        if (existingSeatIndex > -1) {
+            if (
+                (selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].status === 'unavailable') ||
+                (!selectedTicketType.isUnavailable && seatConfiguration[existingSeatIndex].type_id === selectedTicketType.type_id)
+            ) {
+                seatConfiguration.splice(existingSeatIndex, 1);
+                updateSeatVisual(seatGroup, null);
+            } else {
+                seatConfiguration[existingSeatIndex].price = selectedTicketType.price;
+                seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
+                seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
+                seatConfiguration[existingSeatIndex].status = selectedTicketType.isUnavailable ? 'unavailable' : 'available';
+                seatConfiguration[existingSeatIndex].color = selectedTicketType.color ?? '#C4C4C4';
+                updateSeatVisual(seatGroup, selectedTicketType);
+            }
+        } else {
+            const newSeat = {
+                price: selectedTicketType.price,
+                seatId: seatId,
+                status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
+                type_id: selectedTicketType.type_id,
+                ticketTypeName: selectedTicketType.ticketTypeName,
+                color: selectedTicketType.color ?? '#C4C4C4',
+            };
+            seatConfiguration.push(newSeat);
+            updateSeatVisual(seatGroup, selectedTicketType);
+        }
+
+        seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
+    }
+
+    // --- Initial Rendering of Mapped Seats ---
+    seatConfiguration.forEach(configuredSeat => {
+        const seatGroup = document.getElementById(configuredSeat.seatId);
+        if (seatGroup) {
+            const correspondingTicketType = ticketTypes.find(type => type.type_id === configuredSeat.type_id);
+            if (correspondingTicketType) {
+                updateSeatVisual(seatGroup, correspondingTicketType);
+            } else if (configuredSeat.status === 'unavailable') {
+                const unavailableType = ticketTypes.find(type => type.isUnavailable);
+                updateSeatVisual(seatGroup, unavailableType);
+            }
+            seatGroup.style.cursor = 'pointer';
+
+            if (configuredSeat.status === 'booked' || configuredSeat.status === 'issued' || configuredSeat.status === 'pending') {
+                seatGroup.style.cursor = 'not-allowed';
+            }
+        }
+    });
+
+    // --- Tooltip + Click Logic for Each Seat ---
+    seats.forEach((seatGroup) => {
+        seatGroup.classList.add('clickable-seat');
+
+        // ✅ Add tooltip showing seat ID
+        seatGroup.setAttribute('title', `Seat ID: ${seatGroup.id}`);
+
+        seatGroup.addEventListener('click', () => {
+            if (!selectedTicketType) {
+                alert('Please select a ticket type first from the dropdown!');
+                return;
+            }
+            applyTicketTypeToSeat(seatGroup.id);
+            console.log('Current Seat Configuration:', seatConfiguration);
+        });
+    });
+
+    // --- Area Selection (Rubber Band) Logic ---
+    let selectionRect = null;
+    let startX, startY;
+    let isDragging = false;
+
+    svg.addEventListener("mousedown", (e) => {
+        if (e.target.closest('.seat-group')) return;
+
+        if (!selectedTicketType) {
+            alert('Please select a ticket type first from the dropdown before selecting an area!');
+            return;
+        }
+
+        isDragging = true;
+        const pt = getSVGPoint(e);
+        startX = pt.x;
+        startY = pt.y;
+
+        selectionRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        selectionRect.setAttribute("x", startX);
+        selectionRect.setAttribute("y", startY);
+        selectionRect.setAttribute("width", 0);
+        selectionRect.setAttribute("height", 0);
+        selectionRect.setAttribute("fill", "rgba(0, 0, 255, 0.2)");
+        selectionRect.setAttribute("stroke", "blue");
+        selectionRect.setAttribute("stroke-dasharray", "4");
+        selectionRect.setAttribute("id", "selectionBox");
+        svg.appendChild(selectionRect);
+
+        svg.addEventListener("mousemove", onMouseMove);
+        svg.addEventListener("mouseup", onMouseUp);
+    });
+
+    function onMouseMove(e) {
+        if (!isDragging) return;
+        const pt = getSVGPoint(e);
+        const x = Math.min(pt.x, startX);
+        const y = Math.min(pt.y, startY);
+        const width = Math.abs(pt.x - startX);
+        const height = Math.abs(pt.y - startY);
+        selectionRect.setAttribute("x", x);
+        selectionRect.setAttribute("y", y);
+        selectionRect.setAttribute("width", width);
+        selectionRect.setAttribute("height", height);
+    }
+
+    function onMouseUp(e) {
+        if (!isDragging) return;
+        isDragging = false;
+
+        if (selectionRect) {
+            const rectBox = selectionRect.getBBox();
+            const selectedIds = [];
+
+            const seatGroups = svg.querySelectorAll("g.seat-group");
+            seatGroups.forEach(group => {
+                const groupBBox = group.getBBox();
+                if (rectsIntersect(rectBox, groupBBox)) {
+                    selectedIds.push(group.id);
+                }
+            });
+
+            console.log("Selected seat groups by area:", selectedIds);
+
+            selectedIds.forEach(seatId => applyTicketTypeToSeat(seatId));
+
+            svg.removeChild(selectionRect);
+            selectionRect = null;
+        }
+
+        svg.removeEventListener("mousemove", onMouseMove);
+        svg.removeEventListener("mouseup", onMouseUp);
+        console.log('Current Seat Configuration after area selection:', seatConfiguration);
+    }
+
+    function getSVGPoint(event) {
+        const pt = svg.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function rectsIntersect(a, b) {
+        return !(
+            a.x + a.width < b.x ||
+            a.x > b.x + b.width ||
+            a.y + a.height < b.y ||
+            a.y > b.y + b.height
+        );
+    }
+
+    // --- Tooltip + Hover CSS ---
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .clickable-seat {
+            cursor: pointer;
+        }
+        .clickable-seat:hover {
+            opacity: 0.8;
+            transition: opacity 0.2s ease-in-out;
+        }
+        .seat-status-locked {
+            cursor: not-allowed !important;
+            filter: grayscale(50%);
+        }
+    `;
+    document.head.appendChild(style);
+
     seatConfigurationInput.value = JSON.stringify(seatConfiguration, null, 2);
     console.log('Initial Seat Configuration:', seatConfiguration);
 });
