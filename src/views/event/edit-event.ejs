@@ -1068,20 +1068,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Tooltip + Click Logic for Each Seat ---
     seats.forEach((seatGroup) => {
-        seatGroup.classList.add('clickable-seat');
+    seatGroup.classList.add('clickable-seat');
 
-        // ✅ Add tooltip showing seat ID
-        seatGroup.setAttribute('title', `Seat ID: ${seatGroup.id}`);
+    // ✅ Proper SVG tooltip using <title>
+    let existingTitle = seatGroup.querySelector('title');
+    if (existingTitle) existingTitle.remove();
 
-        seatGroup.addEventListener('click', () => {
-            if (!selectedTicketType) {
-                alert('Please select a ticket type first from the dropdown!');
-                return;
-            }
-            applyTicketTypeToSeat(seatGroup.id);
-            console.log('Current Seat Configuration:', seatConfiguration);
-        });
+    let titleElement = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    titleElement.textContent = `Seat ID: ${seatGroup.id}`;
+    seatGroup.appendChild(titleElement);
+
+    seatGroup.addEventListener('click', () => {
+        if (!selectedTicketType) {
+            alert('Please select a ticket type first from the dropdown!');
+            return;
+        }
+        applyTicketTypeToSeat(seatGroup.id);
+        console.log('Current Seat Configuration:', seatConfiguration);
     });
+});
+
 
     // --- Area Selection (Rubber Band) Logic ---
     let selectionRect = null;
