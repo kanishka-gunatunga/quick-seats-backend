@@ -1075,7 +1075,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (existingTitle) existingTitle.remove();
 
     let titleElement = document.createElementNS('http://www.w3.org/2000/svg', 'title');
-    titleElement.textContent = `Seat ID: ${seatGroup.id}`;
+    titleElement.textContent = seatGroup.id;
     seatGroup.appendChild(titleElement);
 
     seatGroup.addEventListener('click', () => {
