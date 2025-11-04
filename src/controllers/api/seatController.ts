@@ -72,7 +72,11 @@ export const selectSeat = async (req: Request, res: Response) => {
             return res.status(400).json({ message: `Seat ${seat_id} is currently ${selectedSeat.status}. Only 'available' seats can be selected.` });
         }
 
-        seats[seatIndex].status = 'pending';
+        seats[seatIndex] = {
+            ...selectedSeat,
+            status: 'pending',
+            selected_time: new Date().toISOString(), 
+        };
 
         await prisma.seatReservation.create({
                 data: {
@@ -158,7 +162,13 @@ export const unselectSeat = async (req: Request, res: Response) => {
             return res.status(400).json({ message: `Seat ${seat_id} is currently ${selectedSeat.status}. Only 'pending' seats can be unselected.` });
         }
 
-        seats[seatIndex].status = 'available';
+        // ✅ Reset the seat status and remove selected_time
+        seats[seatIndex] = {
+            ...selectedSeat,
+            status: 'available',
+        };
+        delete seats[seatIndex].selected_time; 
+
 
            await prisma.seatReservation.deleteMany({
                 where: {
@@ -246,7 +256,11 @@ export const resetSeats = async (req: Request, res: Response) => {
             const seatIndex = seats.findIndex(seat => seat.seatId === seatIdToReset);
 
             if (seatIndex !== -1) {
+                // ✅ Reset status and remove selected_time if exists
                 seats[seatIndex].status = 'available';
+                if ('selected_time' in seats[seatIndex]) {
+                    delete seats[seatIndex].selected_time;
+                }
                 updatedSeatIds.push(seatIdToReset);
             } else {
                 notFoundSeatIds.push(seatIdToReset);

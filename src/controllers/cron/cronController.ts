@@ -91,3 +91,86 @@ export const restSeats = async (req: VercelRequest, res: VercelResponse) => {
         await prisma.$disconnect();
     }
 };
+export const cleanupPendingSeats = async (req: VercelRequest, res: VercelResponse) => {
+  try {
+    const now = new Date();
+    const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000);
+
+    // Fetch all active events with seat data
+    const events = await prisma.event.findMany({
+      where: { status: 'active' },
+      select: { id: true, seats: true },
+    });
+
+    let updatedCount = 0;
+
+    for (const event of events) {
+      if (!event.seats) continue;
+
+      let seats: Array<{ seatId: string; status: string; selected_time?: string; [key: string]: any }>;
+
+      // ✅ Safe parsing like in your first function
+      if (typeof event.seats === 'string') {
+        try {
+          seats = JSON.parse(event.seats) as Array<{ seatId: string; status: string; selected_time?: string; [key: string]: any }>;
+        } catch (parseError) {
+          console.error(`Failed to parse event.seats for event ${event.id}. Skipping.`, parseError);
+          continue;
+        }
+      } else if (Array.isArray(event.seats)) {
+        seats = event.seats as Array<{ seatId: string; status: string; selected_time?: string; [key: string]: any }>;
+      } else {
+        console.error(`Invalid format for seat data in event ${event.id}. Skipping.`, event.seats);
+        continue;
+      }
+
+      let modified = false;
+
+      // ✅ Loop through all seats
+      for (const seat of seats) {
+        if (seat.status === 'pending') {
+          // Case 1: Has selected_time and it’s expired
+          if (seat.selected_time) {
+            try {
+              const selectedTime = new Date(seat.selected_time);
+              if (selectedTime < fifteenMinutesAgo) {
+                seat.status = 'available';
+                delete seat.selected_time;
+                modified = true;
+                console.log(`Seat ${seat.seatId} in event ${event.id} reset (expired pending).`);
+              }
+            } catch {
+              console.warn(`Invalid selected_time format for seat ${seat.seatId} in event ${event.id}.`);
+            }
+          } 
+          // Case 2: No selected_time at all
+          else {
+            seat.status = 'available';
+            modified = true;
+            console.log(`Seat ${seat.seatId} in event ${event.id} reset (pending without selected_time).`);
+          }
+        }
+      }
+
+      // ✅ Update DB only if modified
+      if (modified) {
+        await prisma.event.update({
+          where: { id: event.id },
+          data: {
+            seats: typeof event.seats === 'string' ? JSON.stringify(seats) : seats,
+          },
+        });
+        updatedCount++;
+      }
+    }
+
+    return res.status(200).json({
+      message: `Cleanup completed. Updated ${updatedCount} event(s).`,
+    });
+  } catch (error) {
+    console.error('Error in cleanupPendingSeats cron:', error);
+    return res.status(500).json({ message: 'Internal Server Error' });
+  } finally {
+    await prisma.$disconnect();
+  }
+};

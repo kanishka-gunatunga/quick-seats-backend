@@ -16,6 +16,10 @@
     {
       "path": "/cron/reset-seats",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/cron/cleanup-pending-seats",
+      "schedule": "*/5 * * * *"
     }
   ]
 }
