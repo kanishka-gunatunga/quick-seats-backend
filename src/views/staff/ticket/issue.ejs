@@ -26,6 +26,7 @@
                                                 <p class="mb-0"><strong>Email:</strong> <span id="customer-email"></span></p>
                                                 <p class="mb-0"><strong>Contact Number:</strong> <span id="customer-contact"></span></p>
                                                 <p class="mb-2"><strong>NIC/Passport:</strong> <span id="customer-nic"></span></p>
+                                                <p class="mb-2"><strong>Order Satus:</strong> <span id="order-status"></span></p>
                                             </div>
                                         </div>
 
@@ -126,6 +127,7 @@
   document.getElementById('customer-email').textContent = order.email || 'N/A';
   document.getElementById('customer-contact').textContent = order.contact_number || 'N/A';
   document.getElementById('customer-nic').textContent = order.nic_passport || 'N/A';
+  document.getElementById('order-status').textContent = order.status || 'N/A';
 }
     function renderSeatedTicketDetails(orderId, eventName, ticketTypeName, seats,ticketTypeId) {
         ticketDetails.innerHTML = `
