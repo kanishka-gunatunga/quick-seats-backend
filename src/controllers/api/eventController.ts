@@ -522,7 +522,8 @@ export const getLocations = async (req: Request, res: Response) => {
       "BMICH",
       "Nelum Pokuna",
       "Musaeus College",
-      "Bishop Collage"
+      "Bishop Collage",
+      "Dharmaraja College"
     ];
     return res.json(locations);
   } catch (error) {

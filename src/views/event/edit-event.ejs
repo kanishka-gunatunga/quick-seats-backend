@@ -89,6 +89,7 @@ height: auto;
                                             <option value="Nelum Pokuna" <%= (formData?.location || enrichedEvent.location) === 'Nelum Pokuna' ? 'selected' : '' %>>Nelum Pokuna</option>
                                             <option value="Musaeus College" <%= (formData?.location || enrichedEvent.location) === 'Musaeus College' ? 'selected' : '' %>>Musaeus College</option>
                                             <option value="Bishop Collage" <%= (formData?.location || enrichedEvent.location) === 'Bishop Collage' ? 'selected' : '' %>>Bishop Collage</option>
+                                            <option value="Dharmaraja College" <%= (formData?.location || enrichedEvent.location) === 'Dharmaraja College' ? 'selected' : '' %>>Dharmaraja College</option>
                                         </select>
                                         <% if (validationErrors?.location) { %>
                                         <small class="text-danger"><%= validationErrors.location[0] %></small>
@@ -259,6 +260,9 @@ height: auto;
                                 <% } %>
                                 <% if (enrichedEvent.location ==  "Bishop Collage") { %>
                                     <%- include('../seat-maps/bishop.ejs') %>
+                                <% } %>
+                                <% if (enrichedEvent.location ==  "Dharmaraja College") { %>
+                                    <%- include('../seat-maps/dharmaraja.ejs') %>
                                 <% } %>
 
                                    
