@@ -971,10 +971,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Populate ticket type dropdown
     ticketTypes.forEach((type) => {
-        const option = document.createElement('option');
-        option.value = JSON.stringify(type);
-        option.textContent = type.ticketTypeName;
-        ticketTypeSelect.appendChild(option);
+        if (!type.has_ticket_count) {
+            const option = document.createElement('option');
+            option.value = JSON.stringify(type);
+            option.textContent = type.ticketTypeName;
+            ticketTypeSelect.appendChild(option);
+        }
     });
 
     // Ticket type selection event
@@ -1025,7 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 seatConfiguration[existingSeatIndex].price = selectedTicketType.price;
                 seatConfiguration[existingSeatIndex].type_id = selectedTicketType.type_id;
                 seatConfiguration[existingSeatIndex].ticketTypeName = selectedTicketType.ticketTypeName;
-                seatConfiguration[existingSeatIndex].status = (selectedTicketType.isUnavailable || selectedTicketType.has_ticket_count) ? 'unavailable' : 'available';
+                seatConfiguration[existingSeatIndex].status = selectedTicketType.isUnavailable ? 'unavailable' : 'available';
                 seatConfiguration[existingSeatIndex].color = selectedTicketType.color ?? '#C4C4C4';
                 updateSeatVisual(seatGroup, selectedTicketType);
             }
@@ -1033,7 +1035,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const newSeat = {
                 price: selectedTicketType.price,
                 seatId: seatId,
-                status: (selectedTicketType.isUnavailable || selectedTicketType.has_ticket_count) ? 'unavailable' : 'available',
+                status: selectedTicketType.isUnavailable ? 'unavailable' : 'available',
                 type_id: selectedTicketType.type_id,
                 ticketTypeName: selectedTicketType.ticketTypeName,
                 color: selectedTicketType.color ?? '#C4C4C4',
