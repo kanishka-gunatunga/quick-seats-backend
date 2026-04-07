@@ -4,6 +4,7 @@ validateOtp, resetPassword,resendOtp,getOrderDetails,orderInfo } from '../../con
 import { getAllEvents,getTrendingEvents,getUpcomingEvents,getEventDetails,getEventSeats,getLocations,getArtists } from '../../controllers/api/eventController';
 import { checkout,cybersourceCallback,getCheckoutStatus,checkoutClientRedirect,checkoutClientCancel} from '../../controllers/api/checkoutController';
 import { inquiry,newsletter} from '../../controllers/api/otherController';
+import { exportEventBookings } from '../../controllers/api/reportController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount,testEmail} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
 const router = express.Router();
@@ -50,6 +51,9 @@ router.post('/checkout-client-cancel', checkoutClientCancel);
 //Other
 router.post('/inquiry', inquiry);
 router.post('/newsletter', newsletter);
+
+//Reports
+router.get('/export-bookings/:eventId', exportEventBookings);
 
 export default router;
  
