@@ -523,7 +523,8 @@ export const getLocations = async (req: Request, res: Response) => {
       "Nelum Pokuna",
       "Musaeus College",
       "Bishop Collage",
-      "Dharmaraja College"
+      "Dharmaraja College",
+      "Mahinda Rajapaksha Auditorium"
     ];
     return res.json(locations);
   } catch (error) {

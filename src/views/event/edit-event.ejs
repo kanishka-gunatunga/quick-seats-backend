@@ -90,6 +90,7 @@ height: auto;
                                             <option value="Musaeus College" <%= (formData?.location || enrichedEvent.location) === 'Musaeus College' ? 'selected' : '' %>>Musaeus College</option>
                                             <option value="Bishop Collage" <%= (formData?.location || enrichedEvent.location) === 'Bishop Collage' ? 'selected' : '' %>>Bishop Collage</option>
                                             <option value="Dharmaraja College" <%= (formData?.location || enrichedEvent.location) === 'Dharmaraja College' ? 'selected' : '' %>>Dharmaraja College</option>
+                                            <option value="Mahinda Rajapaksha Auditorium" <%= (formData?.location || enrichedEvent.location) === 'Mahinda Rajapaksha Auditorium' ? 'selected' : '' %>>Mahinda Rajapaksha Auditorium</option>
                                         </select>
                                         <% if (validationErrors?.location) { %>
                                         <small class="text-danger"><%= validationErrors.location[0] %></small>
@@ -264,7 +265,9 @@ height: auto;
                                 <% if (enrichedEvent.location ==  "Dharmaraja College") { %>
                                     <%- include('../seat-maps/dharmaraja.ejs') %>
                                 <% } %>
-
+                                <% if (enrichedEvent.location ==  "Mahinda Rajapaksha Auditorium") { %>
+                                    <%- include('../seat-maps/nicd.ejs') %>
+                                <% } %>
                                    
                                     <input type="hidden" name="seat_configuration" id="seat_configuration" >   
                                     <button type="submit" class="btn btn-primary mt-4">Save</button>
