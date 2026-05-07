@@ -507,7 +507,7 @@ export const getEventSeats = async (req: Request, res: Response) => {
     }
 
   
-    return res.json(event.seats);
+    return res.json(event.seats || []);
   } catch (error) {
     console.error('Error fetching event details:', error);
     return res.status(500).json({ error: 'Internal server error' });
