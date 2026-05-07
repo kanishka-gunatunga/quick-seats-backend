@@ -526,6 +526,8 @@ export const editEventPost = async (req: Request, res: Response) => {
                 addRandomSuffix: true,
             });
             featuredImageUrl = url;
+        }
+
         if (seatMapImageFile) {
             if (!seatMapImageFile.mimetype.startsWith('image/')) {
                 req.session.error = 'Seat map image must be an image file.';
