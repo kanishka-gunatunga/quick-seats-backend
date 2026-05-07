@@ -45,7 +45,8 @@ export const addEventPost = async (req: Request, res: Response) => {
       discription: z.string().optional(),
       policy: z.string().optional(),
       organized_by: z.string().optional(),
-      location: z.string().min(1, 'Location is required'),
+      location: z.string().optional(),
+      no_seat_map: z.string().optional(),
       upcoming_event: z.string().optional(),
       artists: z
         .union([z.string(), z.array(z.string())])
@@ -59,6 +60,15 @@ export const addEventPost = async (req: Request, res: Response) => {
       })).optional().default([]),
     }).superRefine((data, ctx) => {
       const upcomingEvent = data.upcoming_event === '1';
+      const noSeatMap = data.no_seat_map === '1';
+
+      if (!noSeatMap && !data.location) {
+        ctx.addIssue({
+          path: ['location'],
+          code: 'custom',
+          message: 'Location is required',
+        });
+      }
 
       if (!upcomingEvent) {
         if (!data.end_date_time) {
@@ -110,9 +120,12 @@ export const addEventPost = async (req: Request, res: Response) => {
         policy,
         organized_by,
         location,
+        no_seat_map,
         artists,
         tickets,
     } = result.data;
+
+    const isNoSeatMap = no_seat_map === '1';
 
     const ticketValidationErrors: { [key: string]: string[] } = {};
     if (!upcomingEvent) {
@@ -134,10 +147,12 @@ export const addEventPost = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const bannerImageFile = files?.banner_image?.[0];
     const featuredImageFile = files?.featured_image?.[0];
+    const seatMapImageFile = files?.seat_map_image?.[0];
     const galleryFiles = files?.gallery_files || [];
 
     let bannerImageUrl: string | null = null;
     let featuredImageUrl: string | null = null;
+    let seatMapImageUrl: string | null = null;
     let galleryMedia: { url: string; type: 'image' | 'video' }[] = [];
 
     try {
@@ -222,7 +237,8 @@ export const addEventPost = async (req: Request, res: Response) => {
                 description: discription,
                 policy: policy,
                 organized_by: organized_by,
-                location,
+                location: isNoSeatMap ? null : location,
+                seat_map_image: seatMapImageUrl,
                 banner_image: bannerImageUrl,
                 featured_image: featuredImageUrl,
                 gallery_media: galleryMedia,
@@ -385,7 +401,8 @@ export const editEventPost = async (req: Request, res: Response) => {
         discription: z.string().min(1, 'Description is required'),
         policy: z.string().min(1, 'Ticket Policy is required'),
         organized_by: z.string().min(1, 'Organized by is required'),
-        location: z.string().min(1, 'Location is required'),
+        location: z.string().optional(),
+        no_seat_map: z.string().optional(),
         artists: z
             .union([z.string(), z.array(z.string())])
             .optional()
@@ -400,11 +417,21 @@ export const editEventPost = async (req: Request, res: Response) => {
             url: z.string().url(),
             type: z.union([z.literal('image'), z.literal('video')]),
         })).optional().default([]),
+    }).superRefine((data, ctx) => {
+        const noSeatMap = data.no_seat_map === '1';
+        if (!noSeatMap && !data.location) {
+            ctx.addIssue({
+                path: ['location'],
+                code: 'custom',
+                message: 'Location is required',
+            });
+        }
     });
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const bannerImageFile = files?.banner_image?.[0];
     const featuredImageFile = files?.featured_image?.[0];
+    const seatMapImageFile = files?.seat_map_image?.[0];
     const newGalleryFiles = files?.gallery_files || [];
 
     try {
@@ -426,10 +453,13 @@ export const editEventPost = async (req: Request, res: Response) => {
             policy,
             organized_by,
             location,
+            no_seat_map,
             artists,
             tickets,
             existing_gallery_media,
         } = result.data;
+
+        const isNoSeatMap = no_seat_map === '1';
 
         const ticketValidationErrors: { [key: string]: string[] } = {};
         tickets.forEach((ticket, index) => {
@@ -451,6 +481,7 @@ export const editEventPost = async (req: Request, res: Response) => {
             select: {
                 banner_image: true,
                 featured_image: true,
+                seat_map_image: true,
                 slug: true,
                 name: true,
                 gallery_media: true,
@@ -465,6 +496,7 @@ export const editEventPost = async (req: Request, res: Response) => {
 
         let bannerImageUrl: string | null = existingEvent.banner_image;
         let featuredImageUrl: string | null = existingEvent.featured_image;
+        let seatMapImageUrl: string | null = existingEvent.seat_map_image;
         let galleryMedia: { url: string; type: 'image' | 'video' }[] = existing_gallery_media;
 
         // Handle banner image upload
@@ -494,6 +526,18 @@ export const editEventPost = async (req: Request, res: Response) => {
                 addRandomSuffix: true,
             });
             featuredImageUrl = url;
+        if (seatMapImageFile) {
+            if (!seatMapImageFile.mimetype.startsWith('image/')) {
+                req.session.error = 'Seat map image must be an image file.';
+                req.session.formData = req.body;
+                req.session.validationErrors = { ...req.session.validationErrors, seat_map_image: ['Seat map image must be an image file.'] };
+                return res.redirect(`/event/edit/${eventId}`);
+            }
+            const { url } = await put(seatMapImageFile.originalname, seatMapImageFile.buffer, {
+                access: 'public',
+                addRandomSuffix: true,
+            });
+            seatMapImageUrl = url;
         }
 
         for (const file of newGalleryFiles) {
@@ -564,7 +608,8 @@ const newTicketDetailsForDb = tickets.map((ticket) => {
                 description: discription,
                 policy: policy,
                 organized_by: organized_by,
-                location,
+                location: isNoSeatMap ? null : location,
+                seat_map_image: seatMapImageUrl,
                 banner_image: bannerImageUrl,
                 featured_image: featuredImageUrl,
                 gallery_media: galleryMedia,

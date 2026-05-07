@@ -21,12 +21,13 @@ height: auto;
                                    Basic Details
                                 </a>
                             </li>
+                            <% if (enrichedEvent.location) { %>
                             <li class="nav-item">
                                 <a href="#profile1" data-bs-toggle="tab" aria-expanded="true" class="nav-link ">
                                    Seat Configuration
                                 </a>
                             </li>
-                            
+                            <% } %>
                         </ul>
 
                         <div class="tab-content">
@@ -82,7 +83,17 @@ height: auto;
                                         <small class="text-danger"><%= validationErrors.organized_by[0] %></small>
                                         <% } %>
                                         </div>
-                                        <div class="col-md-4 mb-3">
+                                        <%# No Seat Map checkbox %>
+                                        <div class="col-md-12 mb-2">
+                                            <div class="form-check d-flex align-items-center">
+                                                <input type="checkbox" class="form-check-input" id="no_seat_map" name="no_seat_map" value="1"
+                                                    <%= (formData?.no_seat_map === '1' || (!enrichedEvent.location && !formData?.no_seat_map)) ? 'checked' : '' %>>
+                                                <label class="form-check-label ms-2" for="no_seat_map">No Seat Map (custom venue image instead)</label>
+                                            </div>
+                                        </div>
+
+                                        <%# Location field %>
+                                        <div class="col-md-4 mb-3" id="location-field">
                                         <label class="form-label">Location <span style="color:red;"> *</span></label>
                                         <select class="form-control" data-toggle="select2" name="location" data-width="100%">
                                             <option value="BMICH" <%= (formData?.location || enrichedEvent.location) === 'BMICH' ? 'selected' : '' %>>BMICH</option>
@@ -95,6 +106,21 @@ height: auto;
                                         <% if (validationErrors?.location) { %>
                                         <small class="text-danger"><%= validationErrors.location[0] %></small>
                                         <% } %>
+                                        </div>
+
+                                        <%# Seat Map Image field %>
+                                        <div class="col-md-4 mb-3" id="seat-map-image-field">
+                                            <label class="form-label">Seat Map / Venue Image</label>
+                                            <input type="file" class="form-control" name="seat_map_image" accept="image/*">
+                                            <% if (enrichedEvent.seat_map_image) { %>
+                                            <div class="mt-2">
+                                                <img src="<%= enrichedEvent.seat_map_image %>" alt="Current Seat Map" style="max-width:200px; height:auto; border-radius:4px;">
+                                                <small class="d-block text-muted mt-1">Current venue map image. Upload a new one to replace it.</small>
+                                            </div>
+                                            <% } %>
+                                            <% if (validationErrors?.seat_map_image) { %>
+                                            <small class="text-danger"><%= validationErrors.seat_map_image[0] %></small>
+                                            <% } %>
                                         </div>
                                         <div class="col-md-4 mb-3">
                                         <label class="form-label">Artists</label>
@@ -240,6 +266,7 @@ height: auto;
                                     <button type="submit" class="btn btn-primary">Update</button>
                                     </form>
                             </div>
+                            <% if (enrichedEvent.location) { %>
                             <div class="tab-pane " id="profile1">
                                 <form class="mt-4" method="POST" action="/event/update-event-seats/<%= enrichedEvent.id %>">
                                  <div class="col-md-4 mb-3 mt-3">
@@ -273,6 +300,7 @@ height: auto;
                                     <button type="submit" class="btn btn-primary mt-4">Save</button>
                                 </form>
                             </div>
+                            <% } %>
                            
                         </div>
 
@@ -288,7 +316,32 @@ height: auto;
 <%- include('../layouts/footer.ejs') %>
 
 <script>
+    // ── No Seat Map toggle ──────────────────────────────────────────────
+    const noSeatMapCheckbox = document.getElementById('no_seat_map');
+    const locationField     = document.getElementById('location-field');
+    const seatMapImageField = document.getElementById('seat-map-image-field');
+    const locationSelect    = locationField.querySelector('select');
+
+    function toggleSeatMapFields() {
+        if (noSeatMapCheckbox.checked) {
+            locationField.style.display     = 'none';
+            seatMapImageField.style.display = 'block';
+            locationSelect.removeAttribute('required');
+            locationSelect.disabled = true;
+        } else {
+            locationField.style.display     = 'block';
+            seatMapImageField.style.display = 'none';
+            locationSelect.disabled = false;
+        }
+    }
+
+    noSeatMapCheckbox.addEventListener('change', toggleSeatMapFields);
+
+    // Apply on page load (handles validation-error repopulation or existing data)
+    toggleSeatMapFields();
+
     const ticketTypes = <%- JSON.stringify(ticket_types) %>;
+
     let ticketIndex = 0;
 
     // Use the same logic for determining ticketsToRender as in the EJS HTML block
