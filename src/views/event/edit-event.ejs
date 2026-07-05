@@ -122,6 +122,15 @@ height: auto;
                                             <small class="text-danger"><%= validationErrors.seat_map_image[0] %></small>
                                             <% } %>
                                         </div>
+
+                                        <%# Venue Name field (shown when No Seat Map is checked) %>
+                                        <div class="col-md-4 mb-3" id="venue-name-field">
+                                            <label class="form-label">Venue Name <span style="color:red;"> *</span></label>
+                                            <input type="text" class="form-control" name="venue_name" placeholder="Enter venue name" value="<%= formData?.venue_name || enrichedEvent.venue_name || '' %>">
+                                            <% if (validationErrors?.venue_name) { %>
+                                            <small class="text-danger"><%= validationErrors.venue_name[0] %></small>
+                                            <% } %>
+                                        </div>
                                         <div class="col-md-4 mb-3">
                                         <label class="form-label">Artists</label>
                                         <select class="form-control select2-multiple" name="artists[]" data-toggle="select2" data-width="100%" multiple="multiple" data-placeholder="Choose ...">
@@ -320,17 +329,20 @@ height: auto;
     const noSeatMapCheckbox = document.getElementById('no_seat_map');
     const locationField     = document.getElementById('location-field');
     const seatMapImageField = document.getElementById('seat-map-image-field');
+    const venueNameField    = document.getElementById('venue-name-field');
     const locationSelect    = locationField.querySelector('select');
 
     function toggleSeatMapFields() {
         if (noSeatMapCheckbox.checked) {
             locationField.style.display     = 'none';
             seatMapImageField.style.display = 'block';
+            venueNameField.style.display    = 'block';
             locationSelect.removeAttribute('required');
             locationSelect.disabled = true;
         } else {
             locationField.style.display     = 'block';
             seatMapImageField.style.display = 'none';
+            venueNameField.style.display    = 'none';
             locationSelect.disabled = false;
         }
     }

@@ -47,6 +47,7 @@ export const addEventPost = async (req: Request, res: Response) => {
       organized_by: z.string().optional(),
       location: z.string().optional(),
       no_seat_map: z.string().optional(),
+      venue_name: z.string().optional(),
       upcoming_event: z.string().optional(),
       artists: z
         .union([z.string(), z.array(z.string())])
@@ -67,6 +68,14 @@ export const addEventPost = async (req: Request, res: Response) => {
           path: ['location'],
           code: 'custom',
           message: 'Location is required',
+        });
+      }
+
+      if (noSeatMap && !data.venue_name) {
+        ctx.addIssue({
+          path: ['venue_name'],
+          code: 'custom',
+          message: 'Venue name is required when no seat map is used',
         });
       }
 
@@ -121,6 +130,7 @@ export const addEventPost = async (req: Request, res: Response) => {
         organized_by,
         location,
         no_seat_map,
+        venue_name,
         artists,
         tickets,
     } = result.data;
@@ -238,6 +248,7 @@ export const addEventPost = async (req: Request, res: Response) => {
                 policy: policy,
                 organized_by: organized_by,
                 location: isNoSeatMap ? null : location,
+                venue_name: isNoSeatMap ? (venue_name || null) : null,
                 seat_map_image: seatMapImageUrl,
                 banner_image: bannerImageUrl,
                 featured_image: featuredImageUrl,
@@ -403,6 +414,7 @@ export const editEventPost = async (req: Request, res: Response) => {
         organized_by: z.string().min(1, 'Organized by is required'),
         location: z.string().optional(),
         no_seat_map: z.string().optional(),
+        venue_name: z.string().optional(),
         artists: z
             .union([z.string(), z.array(z.string())])
             .optional()
@@ -424,6 +436,13 @@ export const editEventPost = async (req: Request, res: Response) => {
                 path: ['location'],
                 code: 'custom',
                 message: 'Location is required',
+            });
+        }
+        if (noSeatMap && !data.venue_name) {
+            ctx.addIssue({
+                path: ['venue_name'],
+                code: 'custom',
+                message: 'Venue name is required when no seat map is used',
             });
         }
     });
@@ -454,6 +473,7 @@ export const editEventPost = async (req: Request, res: Response) => {
             organized_by,
             location,
             no_seat_map,
+            venue_name,
             artists,
             tickets,
             existing_gallery_media,
@@ -611,6 +631,7 @@ const newTicketDetailsForDb = tickets.map((ticket) => {
                 policy: policy,
                 organized_by: organized_by,
                 location: isNoSeatMap ? null : location,
+                venue_name: isNoSeatMap ? (venue_name || null) : null,
                 seat_map_image: seatMapImageUrl,
                 banner_image: bannerImageUrl,
                 featured_image: featuredImageUrl,

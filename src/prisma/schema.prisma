@@ -99,6 +99,7 @@ model Event {
   policy          String?
   organized_by    String?
   location        String?
+  venue_name      String?
   seat_map_image  String?
   banner_image    String?
   featured_image  String?
