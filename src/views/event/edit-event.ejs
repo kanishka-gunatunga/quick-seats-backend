@@ -126,7 +126,19 @@ height: auto;
                                         <%# Venue Name field (shown when No Seat Map is checked) %>
                                         <div class="col-md-4 mb-3" id="venue-name-field">
                                             <label class="form-label">Venue Name <span style="color:red;"> *</span></label>
-                                            <input type="text" class="form-control" name="venue_name" placeholder="Enter venue name" value="<%= formData?.venue_name || enrichedEvent.venue_name || '' %>">
+                                            <select class="form-control" data-toggle="select2" name="venue_name" data-width="100%" data-tags="true" data-placeholder="Select or enter venue name">
+                                                <option value=""></option>
+                                                <% 
+                                                  let currentVenue = formData?.venue_name || enrichedEvent.venue_name;
+                                                  let hasCustomVenue = currentVenue && !venueNames.includes(currentVenue);
+                                                  if (hasCustomVenue) { 
+                                                %>
+                                                    <option value="<%= currentVenue %>" selected><%= currentVenue %></option>
+                                                <% } %>
+                                                <% venueNames.forEach(venue => { %>
+                                                    <option value="<%= venue %>" <%= currentVenue === venue ? 'selected' : '' %>><%= venue %></option>
+                                                <% }); %>
+                                            </select>
                                             <% if (validationErrors?.venue_name) { %>
                                             <small class="text-danger"><%= validationErrors.venue_name[0] %></small>
                                             <% } %>

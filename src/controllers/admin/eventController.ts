@@ -19,6 +19,13 @@ export const addEventGet = async (req: Request, res: Response) => {
   const artists = await prisma.artist.findMany({where: { status:'active' } });
   const ticket_types = await prisma.ticketType.findMany({where: { status:'active' } });
 
+  const uniqueVenues = await prisma.event.findMany({
+      where: { venue_name: { not: null } },
+      select: { venue_name: true },
+      distinct: ['venue_name']
+  });
+  const venueNames = uniqueVenues.map(v => v.venue_name).filter(Boolean);
+
   req.session.error = undefined;
   req.session.success = undefined;
   req.session.formData = undefined;
@@ -31,6 +38,7 @@ export const addEventGet = async (req: Request, res: Response) => {
     validationErrors,
     artists,
     ticket_types,
+    venueNames,
   });
 };
 
@@ -343,6 +351,13 @@ export const editEventGet = async (req: Request, res: Response) => {
 
     const ticket_types = await prisma.ticketType.findMany({ where: { status: 'active' } });
 
+    const uniqueVenues = await prisma.event.findMany({
+        where: { venue_name: { not: null } },
+        select: { venue_name: true },
+        distinct: ['venue_name']
+    });
+    const venueNames = uniqueVenues.map(v => v.venue_name).filter(Boolean);
+
     const selectedArtistIds: number[] = Array.isArray(event.artist_details)
       ? event.artist_details.map(Number)
       : [];
@@ -386,7 +401,8 @@ export const editEventGet = async (req: Request, res: Response) => {
       validationErrors,
       enrichedEvent,
       allArtists, 
-      ticket_types, 
+      ticket_types,
+      venueNames, 
     });
   } catch (err) {
     console.error('Error fetching event for edit:', err);
