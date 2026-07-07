@@ -7,6 +7,7 @@ import { inquiry,newsletter} from '../../controllers/api/otherController';
 import { exportEventBookings } from '../../controllers/api/reportController';
 import { selectSeat,resetSeats,unselectSeat,checkSeatCount,testEmail} from '../../controllers/api/seatController';
 import { authenticate } from '../../middlewares/authMiddleware';
+import { healthCheck } from '../../controllers/api/healthController';
 const router = express.Router();
 
 //User
@@ -55,5 +56,7 @@ router.post('/newsletter', newsletter);
 //Reports
 router.get('/export-bookings/:eventId', exportEventBookings);
 
+//Health Check
+router.get('/health', healthCheck);
 export default router;
  
